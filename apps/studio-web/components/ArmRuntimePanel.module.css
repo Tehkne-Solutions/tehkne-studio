@@ -3,7 +3,7 @@
   z-index: 5;
   left: 18px;
   top: 76px;
-  width: min(340px, calc(100vw - 36px));
+  width: min(360px, calc(100vw - 36px));
   max-height: calc(100% - 180px);
   overflow: auto;
   padding: 14px;
@@ -54,7 +54,8 @@
 .empty { margin: 12px 0; color: #92938c; font-size: 10px; line-height: 1.45; }
 .button,
 .failureCases button,
-.whyButton {
+.whyButton,
+.variantButton {
   color: #deddd7;
   background: #232420;
   border: 1px solid #55564f;
@@ -66,7 +67,9 @@
 .button:focus-visible,
 .failureCases button:hover:not(:disabled),
 .whyButton:hover,
-.whyButton:focus-visible { border-color: #b29b69; outline: none; }
+.whyButton:focus-visible,
+.variantButton:hover,
+.variantButton:focus-visible { border-color: #b29b69; outline: none; }
 .button:disabled, .failureCases button:disabled { opacity: .38; cursor: default; }
 
 .failureLab {
@@ -75,14 +78,17 @@
   border-top: 1px solid #44463f;
   border-bottom: 1px solid #44463f;
 }
-.failureHeading {
+.failureHeading,
+.variantHeading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 9px;
 }
-.failureHeading span { color: #b29b69; font-size: 8px; letter-spacing: .14em; }
-.failureHeading small { color: #a7a99f; font-size: 8px; letter-spacing: .12em; }
+.failureHeading span,
+.variantHeading span { color: #b29b69; font-size: 8px; letter-spacing: .14em; }
+.failureHeading small,
+.variantHeading small { color: #a7a99f; font-size: 8px; letter-spacing: .12em; }
 .failureCases { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .failureCases button { padding: 7px 5px; font-size: 9px; }
 .failureMetrics {
@@ -99,7 +105,9 @@
 .failureMetrics[data-status="warning"] { border-color: #75684a; }
 .failureMetrics[data-status="fault"] { border-color: #755348; }
 .failureMessage { margin: 9px 0; color: #b8b7af; font-size: 9px; line-height: 1.45; }
-.whyButton { width: 100%; padding: 8px; font-size: 9px; }
+.whyButton,
+.variantButton { width: 100%; padding: 8px; font-size: 9px; }
+.variantButton { margin-top: 6px; border-color: #71664c; }
 .failureTrace { margin-top: 10px; }
 .failureTrace > span { color: #b29b69; font-size: 8px; letter-spacing: .13em; }
 .failureTrace > div {
@@ -112,6 +120,48 @@
 .failureTrace > div > small { color: #b29b69; padding-top: 1px; font-size: 8px; }
 .failureTrace section strong { color: #d1cfc7; font-size: 9px; font-weight: 540; }
 .failureTrace section p { margin: 3px 0 0; color: #878980; font-size: 8px; line-height: 1.4; }
+
+.variantLab {
+  margin: 12px 0;
+  padding: 11px;
+  border: 1px solid #4e4c42;
+  background: #1d1e1b;
+}
+.variantCompare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.variantCompare > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid #3b3d37;
+  background: #22231f;
+}
+.variantCompare > div[data-status="fault"] { border-color: #755348; }
+.variantCompare > div[data-status="pass"] { border-color: #56694e; }
+.variantCompare small { color: #85877e; font-size: 7px; letter-spacing: .1em; }
+.variantCompare strong { color: #d8d6ce; font-size: 13px; font-weight: 560; }
+.variantCompare span { color: #999b92; font-size: 8px; }
+.variantChanges,
+.variantImpacts { margin-top: 10px; }
+.variantChanges > span,
+.variantImpacts > span { color: #b29b69; font-size: 7px; letter-spacing: .12em; }
+.variantChanges > div,
+.variantImpacts > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid #343630;
+}
+.variantChanges small,
+.variantImpacts small { color: #81837a; font-size: 7px; line-height: 1.3; }
+.variantChanges strong,
+.variantImpacts strong { color: #c8c6be; font-size: 8px; font-weight: 520; text-align: right; }
 
 @media (max-width: 800px) {
   .panel { display: none; }
