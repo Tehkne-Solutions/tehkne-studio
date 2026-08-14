@@ -1,4 +1,4 @@
-name: S1 Alpha 01 Release Gate
+name: S2.1 Alpha Hardening & Security Gate
 
 on:
   pull_request:
@@ -6,12 +6,17 @@ on:
     branches: [main]
 
 jobs:
-  alpha01-release:
+  alpha-hardening:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
+          package-manager-cache: false
       - run: npm install --ignore-scripts
+      - name: Dependency security audit
+        run: npm audit --audit-level=high
       - run: npm run verify:s1.12
