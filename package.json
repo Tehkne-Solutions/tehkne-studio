@@ -4,12 +4,15 @@
   "private": true,
   "description": "Tehkne Studio — Virtual Engineering Atelier by Tehkne Solutions",
   "type": "module",
+  "packageManager": "npm@11.17.0",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "typecheck:core": "tsc -p tsconfig.core.json --noEmit",
     "build:core": "rm -rf dist && tsc -p tsconfig.core.json",
     "build:web": "npm run build --workspace @tehkne/studio-web",
     "test:domain": "npm run build:core && node --test tests/domain/*.test.mjs",
+    "security:audit": "npm audit --audit-level=high",
+    "smoke:browser": "playwright test --config=playwright.config.ts",
     "verify:structure": "node scripts/verify-structure.mjs",
     "verify:s1.1": "npm run verify:structure && npm run typecheck:core && npm run test:domain",
     "verify:s1.2": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web",
@@ -24,6 +27,13 @@
     "verify:s1.11": "npm run verify:structure && node scripts/verify-s1.10.mjs && node scripts/verify-s1.11.mjs && npm run typecheck:core && npm run test:domain && npm run build:web",
     "verify:s1.12": "npm run verify:structure && node scripts/verify-s1.10.mjs && node scripts/verify-s1.11.mjs && node scripts/verify-s1.12.mjs && npm run typecheck:core && npm run test:domain && npm run build:web"
   },
-  "devDependencies": { "typescript": "^5.8.0" },
+  "overrides": {
+    "postcss": "8.5.25",
+    "sharp": "0.35.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "typescript": "^5.8.0"
+  },
   "engines": { "node": ">=22" }
 }

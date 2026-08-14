@@ -1,17 +1,38 @@
-name: S1 Alpha 01 Release Gate
+name: S2.1 Alpha Hardening & Security Gate
 
 on:
   pull_request:
   push:
     branches: [main]
 
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
 jobs:
-  alpha01-release:
+  alpha-hardening:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
+          package-manager-cache: false
       - run: npm install --ignore-scripts
-      - run: npm run verify:s1.12
+      - name: Dependency security audit
+        run: npm run security:audit
+      - name: Alpha 01 regression gate
+        run: npm run verify:s1.12
+      - name: Install Chromium runtime
+        run: npx playwright install --with-deps chromium
+      - name: Alpha 01 browser smoke
+        run: npm run smoke:browser
+      - name: Capture reproducible dependency lock
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: s2-01-package-lock
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 1
