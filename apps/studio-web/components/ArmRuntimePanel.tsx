@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { FailureTraceStep } from "../../../packages/failure-simulation/src/index";
+import type { PrototypeManufacturingProfile } from "../../../packages/factory-runtime/src/index";
+import { ArmPrototypeFactory } from "../../../packages/studio-factory/src/index";
 import type { ArmFailureLab } from "../../../packages/studio-failure/src/index";
 import type { ArmVariantLab } from "../../../packages/studio-variants/src/index";
 import type { Arm01Controller } from "../../../packages/studio-robotics/src/index";
+import manufacturingProfile from "../../../presets/arm-01/manufacturing-profile.json";
 import styles from "./ArmRuntimePanel.module.css";
 
 // S1.9 compatibility: failureProfile is now injected through the shared ArmFailureLab owned by SpatialWorkbench.
@@ -29,17 +32,18 @@ function assessmentLabel(status: string): string {
   return "PASS";
 }
 
-export function ArmRuntimePanel({
-  controller,
-  failureLab,
-  variantLab,
-  revision,
-  onPick,
-  onEngineeringChange
-}: ArmRuntimePanelProps) {
+export function ArmRuntimePanel({ controller, failureLab, variantLab, revision, onPick, onEngineeringChange }: ArmRuntimePanelProps) {
   const [failureRevision, setFailureRevision] = useState(0);
   const [trace, setTrace] = useState<readonly FailureTraceStep[]>([]);
   const [failureMessage, setFailureMessage] = useState<string | null>(null);
+  const factory = useMemo(
+    () => new ArmPrototypeFactory(
+      controller.session,
+      variantLab,
+      manufacturingProfile as PrototypeManufacturingProfile
+    ),
+    [controller.session, variantLab]
+  );
 
   const robot = controller.session.getEntity("arm.root");
   const gripper = controller.session.getEntity("arm.gripper");
@@ -47,6 +51,7 @@ export function ArmRuntimePanel({
   const recent = controller.records().slice(-4);
   const latest = failureLab.latest();
   const variant = variantLab.latest();
+  const packageManifest = factory.latest();
 
   const runFailureCase = (massKg: number) => {
     try {
@@ -90,12 +95,22 @@ export function ArmRuntimePanel({
     }
   };
 
+  const generatePrototypePackage = () => {
+    try {
+      const manifest = factory.generate();
+      const message = `${manifest.packageId} gerado como PROTOTYPE PLAN · BOM estimada R$ ${manifest.estimatedBomCostBrl.toFixed(2)} · fabrication-ready = não.`;
+      setFailureMessage(message);
+      setFailureRevision((current) => current + 1);
+      onEngineeringChange(message);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível gerar o Prototype Package.";
+      setFailureMessage(message);
+      onEngineeringChange(message);
+    }
+  };
+
   return (
-    <aside
-      className={styles.panel}
-      aria-label="ARM-01 Robotics Runtime"
-      data-revision={`${revision}-${failureRevision}`}
-    >
+    <aside className={styles.panel} aria-label="ARM-01 Robotics Runtime" data-revision={`${revision}-${failureRevision}`}>
       <div className={styles.heading}>
         <span>ROBOTICS RUNTIME</span>
         <small>{String(robot.properties.taskState?.value ?? robot.state).toUpperCase()}</small>
@@ -109,119 +124,58 @@ export function ArmRuntimePanel({
       </div>
 
       <div className={styles.workpiece}>
-        <span>WORKPIECE</span>
-        <strong>{cube.name}</strong>
-        <small>{cube.state} · {String(cube.properties.massKg?.value)} kg</small>
+        <span>WORKPIECE</span><strong>{cube.name}</strong><small>{cube.state} · {String(cube.properties.massKg?.value)} kg</small>
       </div>
 
       {recent.length > 0 ? (
         <div className={styles.timeline} aria-label="Motion plan timeline">
           <span>MOTION PLAN</span>
-          {recent.map((record) => (
-            <div key={`${record.waypointId}-${record.occurredAt}`}>
-              <small>{record.waypointId.toUpperCase()}</small>
-              <strong>{record.label}</strong>
-            </div>
-          ))}
+          {recent.map((record) => <div key={`${record.waypointId}-${record.occurredAt}`}><small>{record.waypointId.toUpperCase()}</small><strong>{record.label}</strong></div>)}
         </div>
-      ) : (
-        <p className={styles.empty}>Diga “Pegue o cubo vermelho” ou use o Failure Lab para testar o envelope antes do movimento.</p>
-      )}
+      ) : <p className={styles.empty}>Diga “Pegue o cubo vermelho” ou use o Failure Lab para testar o envelope antes do movimento.</p>}
 
       <section className={styles.failureLab} aria-label="ARM-01 Failure Lab">
-        <div className={styles.failureHeading}>
-          <span>FAILURE LAB</span>
-          <small>{latest ? assessmentLabel(latest.assessment.status) : "READY"}</small>
-        </div>
+        <div className={styles.failureHeading}><span>FAILURE LAB</span><small>{latest ? assessmentLabel(latest.assessment.status) : "READY"}</small></div>
         <div className={styles.failureCases}>
           <button type="button" onClick={() => runFailureCase(0.35)} disabled={cube.state !== "free"}>0,35 kg</button>
           <button type="button" onClick={() => runFailureCase(1.25)} disabled={cube.state !== "free"}>1,25 kg</button>
           <button type="button" onClick={() => runFailureCase(1.6)} disabled={cube.state !== "free"}>1,60 kg</button>
         </div>
-
-        {latest ? (
-          <div className={styles.failureMetrics} data-status={latest.assessment.status}>
-            <div><small>TORQUE</small><strong>{latest.assessment.requiredTorqueNm} N·m</strong></div>
-            <div><small>CURRENT</small><strong>{latest.assessment.currentA} A</strong></div>
-            <div><small>THERMAL</small><strong>{latest.assessment.temperatureC} °C</strong></div>
-            <div><small>MARGIN</small><strong>{latest.assessment.limitingMarginPercent}%</strong></div>
-          </div>
-        ) : null}
-
+        {latest ? <div className={styles.failureMetrics} data-status={latest.assessment.status}>
+          <div><small>TORQUE</small><strong>{latest.assessment.requiredTorqueNm} N·m</strong></div>
+          <div><small>CURRENT</small><strong>{latest.assessment.currentA} A</strong></div>
+          <div><small>THERMAL</small><strong>{latest.assessment.temperatureC} °C</strong></div>
+          <div><small>MARGIN</small><strong>{latest.assessment.limitingMarginPercent}%</strong></div>
+        </div> : null}
         {failureMessage ? <p className={styles.failureMessage}>{failureMessage}</p> : null}
-
-        {latest ? (
-          <button className={styles.whyButton} type="button" onClick={explainFailure}>
-            Por que este resultado aconteceu?
-          </button>
-        ) : null}
-
-        {latest?.assessment.status === "fault" && !variant ? (
-          <button className={styles.variantButton} type="button" onClick={createVariant}>
-            Criar variante High Torque
-          </button>
-        ) : null}
-
-        {trace.length > 0 ? (
-          <div className={styles.failureTrace} aria-label="Failure causal trace">
-            <span>CAUSAL TRACE</span>
-            {trace.map((step, index) => (
-              <div key={step.id}>
-                <small>{index + 1}</small>
-                <section>
-                  <strong>{step.label}</strong>
-                  <p>{step.detail}</p>
-                </section>
-              </div>
-            ))}
-          </div>
-        ) : null}
+        {latest ? <button className={styles.whyButton} type="button" onClick={explainFailure}>Por que este resultado aconteceu?</button> : null}
+        {latest?.assessment.status === "fault" && !variant ? <button className={styles.variantButton} type="button" onClick={createVariant}>Criar variante High Torque</button> : null}
+        {trace.length > 0 ? <div className={styles.failureTrace} aria-label="Failure causal trace"><span>CAUSAL TRACE</span>{trace.map((step, index) => <div key={step.id}><small>{index + 1}</small><section><strong>{step.label}</strong><p>{step.detail}</p></section></div>)}</div> : null}
       </section>
 
-      {variant ? (
-        <section className={styles.variantLab} aria-label="ARM-01 Variant Comparison">
-          <div className={styles.variantHeading}>
-            <span>VARIANT COMPARISON</span>
-            <small>VALIDATED</small>
-          </div>
-          <div className={styles.variantCompare}>
-            <div data-status={variant.comparison.base.assessment.status}>
-              <small>ARM-01 BASE</small>
-              <strong>{assessmentLabel(variant.comparison.base.assessment.status)}</strong>
-              <span>{variant.comparison.base.assessment.requiredTorqueNm} N·m</span>
-              <span>margin {variant.comparison.base.assessment.limitingMarginPercent}%</span>
-            </div>
-            <div data-status={variant.comparison.candidate.assessment.status}>
-              <small>HIGH TORQUE</small>
-              <strong>{assessmentLabel(variant.comparison.candidate.assessment.status)}</strong>
-              <span>{variant.comparison.candidate.assessment.requiredTorqueNm} N·m</span>
-              <span>margin {variant.comparison.candidate.assessment.limitingMarginPercent}%</span>
-            </div>
-          </div>
-          <div className={styles.variantChanges}>
-            <span>DECLARED CHANGES</span>
-            {variant.comparison.changes.map((change) => (
-              <div key={change.id}>
-                <small>{change.label}</small>
-                <strong>{String(change.before)} → {String(change.after)}{change.unit ? ` ${change.unit}` : ""}</strong>
-              </div>
-            ))}
-          </div>
-          <div className={styles.variantImpacts}>
-            <span>TRADE-OFFS</span>
-            {variant.comparison.impacts.map((impact) => (
-              <div key={impact.id}>
-                <small>{impact.label} · {impact.provenance}</small>
-                <strong>{String(impact.before)} → {String(impact.after)}{impact.unit ? ` ${impact.unit}` : ""}</strong>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      {variant ? <section className={styles.variantLab} aria-label="ARM-01 Variant Comparison">
+        <div className={styles.variantHeading}><span>VARIANT COMPARISON</span><small>VALIDATED</small></div>
+        <div className={styles.variantCompare}>
+          <div data-status={variant.comparison.base.assessment.status}><small>ARM-01 BASE</small><strong>{assessmentLabel(variant.comparison.base.assessment.status)}</strong><span>{variant.comparison.base.assessment.requiredTorqueNm} N·m</span><span>margin {variant.comparison.base.assessment.limitingMarginPercent}%</span></div>
+          <div data-status={variant.comparison.candidate.assessment.status}><small>HIGH TORQUE</small><strong>{assessmentLabel(variant.comparison.candidate.assessment.status)}</strong><span>{variant.comparison.candidate.assessment.requiredTorqueNm} N·m</span><span>margin {variant.comparison.candidate.assessment.limitingMarginPercent}%</span></div>
+        </div>
+        <div className={styles.variantChanges}><span>DECLARED CHANGES</span>{variant.comparison.changes.map((change) => <div key={change.id}><small>{change.label}</small><strong>{String(change.before)} → {String(change.after)}{change.unit ? ` ${change.unit}` : ""}</strong></div>)}</div>
+        <div className={styles.variantImpacts}><span>TRADE-OFFS</span>{variant.comparison.impacts.map((impact) => <div key={impact.id}><small>{impact.label} · {impact.provenance}</small><strong>{String(impact.before)} → {String(impact.after)}{impact.unit ? ` ${impact.unit}` : ""}</strong></div>)}</div>
+      </section> : null}
 
-      <button className={styles.button} type="button" onClick={onPick} disabled={cube.state !== "free" || robot.state === "fault"}>
-        {cube.state === "free" ? "Executar Pick" : "Objeto na garra"}
-      </button>
+      {variant ? <section className={styles.factoryLab} aria-label="ARM-01 Virtual Factory">
+        <div className={styles.variantHeading}><span>VIRTUAL FACTORY</span><small>{packageManifest ? "PROTOTYPE PLAN" : "READY"}</small></div>
+        {!packageManifest ? <button className={styles.variantButton} type="button" onClick={generatePrototypePackage}>Preparar Prototype Package</button> : <>
+          <div className={styles.factoryGroups}>
+            {Object.entries(packageManifest.strategyCounts).map(([strategy, count]) => <div key={strategy}><small>{strategy.toUpperCase()}</small><strong>{count}</strong></div>)}
+          </div>
+          <p className={styles.failureMessage}>BOM estimada · R$ {packageManifest.estimatedBomCostBrl.toFixed(2)} · {packageManifest.revision}</p>
+          <div className={styles.factorySteps}><span>ASSEMBLY PLAN</span>{packageManifest.assemblySteps.map((step) => <div key={step.id}><small>{step.id}</small><strong>{step.label}</strong></div>)}</div>
+          <div className={styles.factoryLimit}><strong>NOT FABRICATION READY</strong><span>CAD/STEP/STL e wiring de produção continuam explicitamente pendentes.</span></div>
+        </>}
+      </section> : null}
+
+      <button className={styles.button} type="button" onClick={onPick} disabled={cube.state !== "free" || robot.state === "fault"}>{cube.state === "free" ? "Executar Pick" : "Objeto na garra"}</button>
     </aside>
   );
 }
