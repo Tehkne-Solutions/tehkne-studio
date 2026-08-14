@@ -7,8 +7,18 @@ import {
 import {
   resolveStudioIntent,
   type IntelligenceEntityDescriptor,
-  type StudioIntentResolution
+  type StudioIntentResolution,
+  type ThresholdBehaviorDraft
 } from "../../intelligence-runtime/src/index.js";
+
+export interface RegisteredBehaviorSummary {
+  readonly id: string;
+  readonly name: string;
+}
+
+export interface StudioBehaviorRegistrar {
+  registerDraft(draft: ThresholdBehaviorDraft): RegisteredBehaviorSummary;
+}
 
 export interface StudioIntelligenceExecution {
   readonly utterance: string;
@@ -16,6 +26,7 @@ export interface StudioIntelligenceExecution {
   readonly executed: boolean;
   readonly targetEntityId?: EntityId;
   readonly result?: CapabilityExecutionResult;
+  readonly behavior?: RegisteredBehaviorSummary;
   readonly message: string;
 }
 
@@ -33,6 +44,7 @@ function descriptor(entity: ReturnType<EngineeringSession["getEntity"]>): Intell
     name: entity.name,
     state: entity.state,
     capabilityIds: entity.capabilities.map((capability) => capability.id),
+    propertyIds: Object.keys(entity.properties),
     ...(Array.isArray(authoredAliases) && authoredAliases.every((item) => typeof item === "string")
       ? { aliases: authoredAliases as string[] }
       : {})
@@ -40,7 +52,10 @@ function descriptor(entity: ReturnType<EngineeringSession["getEntity"]>): Intell
 }
 
 export class StudioIntelligence {
-  constructor(readonly session: EngineeringSession) {}
+  constructor(
+    readonly session: EngineeringSession,
+    readonly behaviorRegistrar?: StudioBehaviorRegistrar
+  ) {}
 
   entities(): readonly IntelligenceEntityDescriptor[] {
     return this.session.graph.snapshot().entities.map(descriptor);
@@ -89,9 +104,50 @@ export class StudioIntelligence {
         intent: resolution.intent,
         targetEntityId: resolution.targetEntityId,
         capabilityId: resolution.capabilityId ?? null,
-        confidence: resolution.confidence
+        confidence: resolution.confidence,
+        action: resolution.action
       }
     });
+
+    if (resolution.action === "behavior") {
+      if (!resolution.behaviorDraft) {
+        return {
+          utterance,
+          resolution,
+          executed: false,
+          targetEntityId: resolution.targetEntityId,
+          message: "A intenção de comportamento não contém Behavior IR materializável."
+        };
+      }
+      if (!this.behaviorRegistrar) {
+        return {
+          utterance,
+          resolution,
+          executed: false,
+          targetEntityId: resolution.targetEntityId,
+          message: "O Behavior Runtime não está disponível nesta sessão."
+        };
+      }
+      try {
+        const behavior = this.behaviorRegistrar.registerDraft(resolution.behaviorDraft);
+        return {
+          utterance,
+          resolution,
+          executed: true,
+          targetEntityId: resolution.targetEntityId,
+          behavior,
+          message: `Comportamento criado: ${behavior.name}.`
+        };
+      } catch (error) {
+        return {
+          utterance,
+          resolution,
+          executed: false,
+          targetEntityId: resolution.targetEntityId,
+          message: error instanceof Error ? error.message : "Não foi possível registrar o comportamento."
+        };
+      }
+    }
 
     if (resolution.action === "focus") {
       const target = this.session.getEntity(resolution.targetEntityId);
