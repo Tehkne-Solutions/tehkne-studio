@@ -5,7 +5,7 @@ import type { TehkneStudioProject } from "../../project-format/src/index.js";
 import { CommandBus, type StudioCommand } from "../../command-bus/src/index.js";
 import { InMemoryEventSink, type StudioDomainEvent } from "../../observability/src/index.js";
 
-export type SupportedCapability = "inspect" | "explain" | "open" | "remove";
+export type SupportedCapability = "inspect" | "explain" | "open" | "explode" | "remove";
 
 export interface InspectionProperty {
   readonly id: string;
@@ -22,6 +22,7 @@ export interface CapabilityExecutionResult {
   readonly message: string;
   readonly inspection?: readonly InspectionProperty[];
   readonly explanation?: string;
+  readonly affectedEntityIds?: readonly EntityId[];
 }
 
 export interface SemanticHistoryEntry {
@@ -39,7 +40,13 @@ interface CapabilityPayload {
   readonly capabilityId: string;
 }
 
-const SUPPORTED_CAPABILITIES = new Set<SupportedCapability>(["inspect", "explain", "open", "remove"]);
+const SUPPORTED_CAPABILITIES = new Set<SupportedCapability>([
+  "inspect",
+  "explain",
+  "open",
+  "explode",
+  "remove"
+]);
 
 function cloneEntity(entity: EngineeringEntity): EngineeringEntity {
   return {
@@ -161,6 +168,52 @@ export class EngineeringSession {
     };
   }
 
+  #explode(command: StudioCommand<CapabilityPayload>, entity: EngineeringEntity): CapabilityExecutionResult {
+    if (entity.state === "closed") {
+      throw new Error(`${entity.name} must be open before explode`);
+    }
+    if (entity.state === "exploded") {
+      const affectedEntityIds = this.graph.getDependencies(entity.id, "contains").map((child) => child.id);
+      return {
+        entity,
+        capabilityId: "explode",
+        changed: false,
+        message: `${entity.name} já está explodido.`,
+        affectedEntityIds
+      };
+    }
+
+    const affectedEntityIds = this.graph.getDependencies(entity.id, "contains").map((child) => child.id);
+    if (affectedEntityIds.length === 0) {
+      throw new Error(`${entity.name} has no contained entities to explode`);
+    }
+
+    const exploded: EngineeringEntity = { ...entity, state: "exploded" };
+    this.graph.replaceEntity(exploded);
+    this.#recordEvent({
+      id: `event-${this.events.list().length + 1}`,
+      type: "EntityExploded",
+      occurredAt: command.issuedAt,
+      source: command.source,
+      payload: {
+        commandId: command.id,
+        entityId: exploded.id,
+        beforeState: entity.state,
+        afterState: exploded.state,
+        affectedEntityIds
+      }
+    });
+    this.#recordHistory(command, exploded, entity.state, exploded.state, `Explodido: ${entity.name}`);
+
+    return {
+      entity: exploded,
+      capabilityId: "explode",
+      changed: true,
+      message: `Explodido: ${entity.name} · ${affectedEntityIds.length} entidades do Engineering Graph separadas.`,
+      affectedEntityIds
+    };
+  }
+
   #executeCapability(command: StudioCommand<CapabilityPayload>): CapabilityExecutionResult {
     if (!command.targetId) throw new Error("Capability command requires targetId");
     const entity = this.graph.getEntity(command.targetId);
@@ -170,7 +223,7 @@ export class EngineeringSession {
       throw new Error(`${entity.id} does not expose capability ${capabilityId}`);
     }
     if (!this.canExecuteCapability(capabilityId)) {
-      throw new Error(`Capability ${capabilityId} is not executable in S1.3`);
+      throw new Error(`Capability ${capabilityId} is not executable in S1.4`);
     }
 
     if (capabilityId === "inspect") {
@@ -219,7 +272,7 @@ export class EngineeringSession {
     }
 
     if (capabilityId === "open") {
-      if (entity.state === "open") {
+      if (entity.state === "open" || entity.state === "exploded") {
         return { entity, capabilityId, changed: false, message: `${entity.name} já está aberto.` };
       }
       return this.#replaceAndRecord(
@@ -229,6 +282,10 @@ export class EngineeringSession {
         "EntityOpened",
         `Aberto: ${entity.name}`
       );
+    }
+
+    if (capabilityId === "explode") {
+      return this.#explode(command, entity);
     }
 
     if (entity.state === "removed") {

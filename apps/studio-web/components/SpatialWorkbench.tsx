@@ -1,6 +1,6 @@
 "use client";
 
-import { Canvas, type ThreeEvent } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { useMemo, useState } from "react";
 import type { EngineeringEntity } from "../../../packages/engineering-core/src/index";
 import type { TehkneStudioProject } from "../../../packages/project-format/src/index";
@@ -8,87 +8,8 @@ import {
   EngineeringSession,
   type CapabilityExecutionResult
 } from "../../../packages/engineering-session/src/index";
-import { createSpatialBinding, resolveSpatialSelection } from "../../../packages/spatial-runtime/src/index";
 import desktopPreset from "../../../presets/desktop-pc/project.json";
-
-interface DesktopAssemblyProps {
-  readonly session: EngineeringSession;
-  readonly selectedId: string | null;
-  readonly onSelect: (entity: EngineeringEntity) => void;
-}
-
-function SelectionOutline({
-  position,
-  size
-}: {
-  readonly position: [number, number, number];
-  readonly size: [number, number, number];
-}) {
-  return (
-    <mesh position={position}>
-      <boxGeometry args={size} />
-      <meshBasicMaterial color="#c3aa72" wireframe transparent opacity={0.92} />
-    </mesh>
-  );
-}
-
-function DesktopAssembly({ session, selectedId, onSelect }: DesktopAssemblyProps) {
-  const root = session.getEntity("pc.root");
-  const ram = session.getEntity("pc.ram.01");
-  const opened = root.state === "open";
-  const ramRemoved = ram.state === "removed";
-  const ramPosition: [number, number, number] = ramRemoved ? [-2.15, 0.22, 1.05] : [-0.15, 0.75, 0.86];
-
-  const select = (entity: EngineeringEntity, position: { x: number; y: number; z: number }) => {
-    const binding = createSpatialBinding(entity, { position });
-    onSelect(resolveSpatialSelection(entity, binding).entity);
-  };
-
-  const selectRoot = (event: ThreeEvent<MouseEvent>) => {
-    event.stopPropagation();
-    select(root, { x: 0, y: 0.55, z: 0 });
-  };
-
-  const selectRam = (event: ThreeEvent<MouseEvent>) => {
-    event.stopPropagation();
-    select(ram, { x: ramPosition[0], y: ramPosition[1], z: ramPosition[2] });
-  };
-
-  return (
-    <group position={[0, -0.15, 0]}>
-      <group onClick={selectRoot}>
-        <mesh position={[0, 0.55, 0]} castShadow>
-          <boxGeometry args={[2.7, 2.1, opened ? 1.25 : 1.6]} />
-          <meshStandardMaterial color="#30322f" roughness={0.72} metalness={0.18} />
-        </mesh>
-        <mesh
-          position={opened ? [-1.72, 0.62, 0.2] : [-1.37, 0.55, 0]}
-          rotation={opened ? [0, 0.06, -0.08] : [0, 0, 0]}
-        >
-          <boxGeometry args={[0.08, 1.92, 1.48]} />
-          <meshStandardMaterial color="#3a3c38" roughness={0.8} metalness={0.22} />
-        </mesh>
-      </group>
-
-      <mesh position={ramPosition} onClick={selectRam} castShadow>
-        <boxGeometry args={[1.22, 0.22, 0.08]} />
-        <meshStandardMaterial color="#a58a58" roughness={0.58} metalness={0.28} />
-      </mesh>
-
-      {selectedId === root.id ? (
-        <SelectionOutline position={[0, 0.55, 0]} size={[2.78, 2.18, opened ? 1.33 : 1.68]} />
-      ) : null}
-      {selectedId === ram.id ? (
-        <SelectionOutline position={ramPosition} size={[1.3, 0.3, 0.16]} />
-      ) : null}
-
-      <mesh position={[0, -0.6, 0]} receiveShadow>
-        <boxGeometry args={[6.4, 0.18, 4.2]} />
-        <meshStandardMaterial color="#232521" roughness={0.92} />
-      </mesh>
-    </group>
-  );
-}
+import { DesktopPcAssembly } from "./DesktopPcAssembly";
 
 interface FeedbackState {
   readonly message: string;
@@ -107,7 +28,17 @@ export function SpatialWorkbench() {
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
 
   const selected = selectedId ? session.getEntity(selectedId) : null;
+  const root = session.getEntity("pc.root");
   const recentHistory = session.history().slice(-4).reverse();
+  const physicalComponents = session.graph
+    .getDependencies(root.id, "contains")
+    .filter((entity) => entity.type !== "BootProcess");
+  const relationshipSnapshot = session.graph.snapshot().relationships;
+  const selectedRelations = selected
+    ? relationshipSnapshot
+        .filter((relationship) => relationship.source === selected.id || relationship.target === selected.id)
+        .slice(0, 6)
+    : [];
 
   const selectEntity = (entity: EngineeringEntity) => {
     setSelectedId(entity.id);
@@ -136,16 +67,16 @@ export function SpatialWorkbench() {
     <section className="workbench" aria-label="Bancada espacial do Tehkné Studio" data-revision={revision}>
       <Canvas
         className="workbench-canvas"
-        camera={{ position: [4.8, 3.25, 5.6], fov: 38 }}
+        camera={{ position: [5.4, 3.6, 6.4], fov: 38 }}
         onPointerMissed={() => { setSelectedId(null); setFeedback(null); }}
         shadows
       >
         <color attach="background" args={["#171815"]} />
-        <ambientLight intensity={0.85} />
+        <ambientLight intensity={0.82} />
         <directionalLight position={[5, 7, 4]} intensity={2.1} castShadow />
-        <gridHelper args={[12, 24, "#45483f", "#272923"]} position={[0, -0.51, 0]} />
+        <gridHelper args={[14, 28, "#45483f", "#272923"]} position={[0, -0.53, 0]} />
         {activeProduct === "desktop" ? (
-          <DesktopAssembly session={session} selectedId={selectedId} onSelect={selectEntity} />
+          <DesktopPcAssembly session={session} selectedId={selectedId} onSelect={selectEntity} />
         ) : null}
       </Canvas>
 
@@ -164,7 +95,9 @@ export function SpatialWorkbench() {
       {activeProduct ? (
         <div className="workbench-toolbar" aria-label="Controles da bancada">
           <button type="button" onClick={resetWorkbench}>Guardar projeto</button>
-          <span>DESKTOP-PC-001 · ENGINEERING SESSION</span>
+          <span>
+            DESKTOP-PC-001 · {physicalComponents.length} COMPONENTES · {root.state.toUpperCase()}
+          </span>
         </div>
       ) : null}
 
@@ -203,6 +136,23 @@ export function SpatialWorkbench() {
             })}
           </div>
 
+          {selectedRelations.length > 0 ? (
+            <section className="entity-relations" aria-label="Relações de engenharia">
+              <span>ENGINEERING GRAPH</span>
+              {selectedRelations.map((relationship) => {
+                const outgoing = relationship.source === selected.id;
+                const otherId = outgoing ? relationship.target : relationship.source;
+                const other = session.getEntity(otherId);
+                return (
+                  <div key={relationship.id}>
+                    <small>{outgoing ? "→" : "←"} {relationship.type}</small>
+                    <strong>{other.name}</strong>
+                  </div>
+                );
+              })}
+            </section>
+          ) : null}
+
           {feedback ? (
             <section className={feedback.error ? "capability-result capability-error" : "capability-result"}>
               <span>{feedback.error ? "COMMAND ERROR" : "COMMAND RESULT"}</span>
@@ -226,7 +176,9 @@ export function SpatialWorkbench() {
       ) : null}
 
       {activeProduct && !selected ? (
-        <div className="selection-hint">Selecione uma peça. Ações agora executam contra a Engineering Entity real.</div>
+        <div className="selection-hint">
+          Abra o gabinete e selecione CPU, RAM, GPU, placa-mãe, fonte, armazenamento ou refrigeração.
+        </div>
       ) : null}
     </section>
   );

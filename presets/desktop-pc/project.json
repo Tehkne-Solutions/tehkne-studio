@@ -10,7 +10,9 @@
       "type": "Computer",
       "name": "Desktop PC",
       "state": "closed",
-      "properties": {},
+      "properties": {
+        "formFactor": { "id": "formFactor", "value": "ATX Mid Tower", "source": "studio", "confidence": 1 }
+      },
       "ports": {},
       "capabilities": [
         { "id": "inspect", "label": "Inspecionar" },
@@ -21,7 +23,52 @@
       ],
       "metadata": {
         "preset": true,
-        "simpleExplanation": "Um computador de mesa é um sistema modular em que energia, processamento, memória e armazenamento trabalham juntos."
+        "simpleExplanation": "Um computador de mesa é um sistema modular em que energia, processamento, memória, armazenamento e refrigeração trabalham juntos."
+      }
+    },
+    {
+      "id": "pc.motherboard",
+      "type": "Motherboard",
+      "name": "Motherboard ATX",
+      "parentId": "pc.root",
+      "state": "mounted",
+      "properties": {
+        "formFactor": { "id": "formFactor", "value": "ATX", "source": "manufacturer", "confidence": 1 }
+      },
+      "ports": {
+        "atx-power": { "id": "atx-power", "kind": "electrical", "direction": "in", "compatibility": ["atx-24pin"], "state": "connected" },
+        "pcie-x16": { "id": "pcie-x16", "kind": "data", "direction": "bidirectional", "compatibility": ["pcie-x16-device"], "state": "connected" },
+        "memory-a1": { "id": "memory-a1", "kind": "data", "direction": "bidirectional", "compatibility": ["ddr-memory"], "state": "connected" }
+      },
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" }
+      ],
+      "metadata": {
+        "simpleExplanation": "A placa-mãe é a estrutura eletrônica central que conecta processador, memória, placa gráfica, armazenamento e energia.",
+        "spatial": { "position": [0.2, 0.58, 0.54], "exploded": [0.4, 0.72, 0.95], "size": [1.72, 1.38, 0.08] }
+      }
+    },
+    {
+      "id": "pc.cpu",
+      "type": "Processor",
+      "name": "CPU",
+      "parentId": "pc.root",
+      "state": "mounted",
+      "properties": {
+        "cores": { "id": "cores", "value": 8, "source": "manufacturer", "confidence": 1 },
+        "tdp": { "id": "tdp", "value": 65, "unit": "W", "source": "manufacturer", "confidence": 1 }
+      },
+      "ports": {
+        "cpu-socket": { "id": "cpu-socket", "kind": "data", "direction": "bidirectional", "compatibility": ["cpu-socket"], "state": "connected" }
+      },
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" }
+      ],
+      "metadata": {
+        "simpleExplanation": "O processador executa instruções e coordena grande parte do trabalho computacional do sistema.",
+        "spatial": { "position": [0.02, 0.9, 0.61], "exploded": [-1.25, 1.55, 1.25], "size": [0.42, 0.42, 0.12] }
       }
     },
     {
@@ -32,16 +79,10 @@
       "state": "connected",
       "properties": {
         "connected": { "id": "connected", "value": true, "source": "studio" },
-        "capacity": { "id": "capacity", "value": 16, "unit": "GB", "source": "studio", "confidence": 1 }
+        "capacity": { "id": "capacity", "value": 16, "unit": "GB", "source": "manufacturer", "confidence": 1 }
       },
       "ports": {
-        "memory-bus": {
-          "id": "memory-bus",
-          "kind": "data",
-          "direction": "bidirectional",
-          "compatibility": ["ddr-memory-slot"],
-          "state": "connected"
-        }
+        "memory-bus": { "id": "memory-bus", "kind": "data", "direction": "bidirectional", "compatibility": ["ddr-memory-slot"], "state": "connected" }
       },
       "capabilities": [
         { "id": "inspect", "label": "Inspecionar" },
@@ -50,7 +91,97 @@
       ],
       "metadata": {
         "learningDepth": ["simple", "technical", "engineering"],
-        "simpleExplanation": "A memória RAM mantém temporariamente os dados que o processador precisa acessar rapidamente enquanto o computador está trabalhando."
+        "simpleExplanation": "A memória RAM mantém temporariamente os dados que o processador precisa acessar rapidamente enquanto o computador está trabalhando.",
+        "spatial": { "position": [0.55, 0.9, 0.64], "exploded": [1.55, 1.5, 1.2], "size": [0.12, 0.85, 0.08] }
+      }
+    },
+    {
+      "id": "pc.gpu",
+      "type": "GraphicsCard",
+      "name": "GPU",
+      "parentId": "pc.root",
+      "state": "connected",
+      "properties": {
+        "vram": { "id": "vram", "value": 8, "unit": "GB", "source": "manufacturer", "confidence": 1 },
+        "boardPower": { "id": "boardPower", "value": 180, "unit": "W", "source": "manufacturer", "confidence": 1 }
+      },
+      "ports": {
+        "pcie": { "id": "pcie", "kind": "data", "direction": "bidirectional", "compatibility": ["pcie-x16"], "state": "connected" },
+        "gpu-power": { "id": "gpu-power", "kind": "electrical", "direction": "in", "compatibility": ["pcie-power"], "state": "connected" }
+      },
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" }
+      ],
+      "metadata": {
+        "simpleExplanation": "A placa gráfica executa cálculos visuais e paralelos e envia imagens para a tela.",
+        "spatial": { "position": [0.25, 0.32, 0.72], "exploded": [2.0, 0.35, 1.1], "size": [1.5, 0.28, 0.22] }
+      }
+    },
+    {
+      "id": "pc.psu",
+      "type": "PowerSupply",
+      "name": "Power Supply",
+      "parentId": "pc.root",
+      "state": "connected",
+      "properties": {
+        "ratedPower": { "id": "ratedPower", "value": 650, "unit": "W", "source": "manufacturer", "confidence": 1 }
+      },
+      "ports": {
+        "ac-input": { "id": "ac-input", "kind": "electrical", "direction": "in", "compatibility": ["mains-ac"], "state": "available" },
+        "dc-output": { "id": "dc-output", "kind": "electrical", "direction": "out", "compatibility": ["atx-power", "pcie-power", "sata-power"], "state": "connected" }
+      },
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" }
+      ],
+      "metadata": {
+        "simpleExplanation": "A fonte converte a energia da tomada em tensões adequadas para os componentes internos.",
+        "spatial": { "position": [0.68, -0.02, 0.22], "exploded": [1.85, -0.75, 0.25], "size": [0.9, 0.65, 0.72] }
+      }
+    },
+    {
+      "id": "pc.storage",
+      "type": "StorageDevice",
+      "name": "NVMe Storage",
+      "parentId": "pc.root",
+      "state": "connected",
+      "properties": {
+        "capacity": { "id": "capacity", "value": 1000, "unit": "GB", "source": "manufacturer", "confidence": 1 },
+        "interface": { "id": "interface", "value": "NVMe", "source": "manufacturer", "confidence": 1 }
+      },
+      "ports": {
+        "storage-bus": { "id": "storage-bus", "kind": "data", "direction": "bidirectional", "compatibility": ["nvme-m2"], "state": "connected" }
+      },
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" }
+      ],
+      "metadata": {
+        "simpleExplanation": "O armazenamento mantém sistema, programas e arquivos mesmo quando o computador está desligado.",
+        "spatial": { "position": [0.48, 0.6, 0.64], "exploded": [1.65, 0.85, 1.55], "size": [0.48, 0.12, 0.05] }
+      }
+    },
+    {
+      "id": "pc.cooling",
+      "type": "CoolingSystem",
+      "name": "CPU Cooling",
+      "parentId": "pc.root",
+      "state": "mounted",
+      "properties": {
+        "thermalCapacity": { "id": "thermalCapacity", "value": 120, "unit": "W", "source": "estimated", "confidence": 0.8 }
+      },
+      "ports": {
+        "fan-power": { "id": "fan-power", "kind": "electrical", "direction": "in", "compatibility": ["fan-header"], "state": "connected" },
+        "thermal-interface": { "id": "thermal-interface", "kind": "thermal", "direction": "bidirectional", "compatibility": ["cpu-heat-spreader"], "state": "connected" }
+      },
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" }
+      ],
+      "metadata": {
+        "simpleExplanation": "O sistema de refrigeração retira calor do processador e o transfere para o ar ao redor.",
+        "spatial": { "position": [0.02, 0.9, 0.74], "exploded": [-1.3, 0.75, 1.65], "size": [0.58, 0.58, 0.22] }
       }
     },
     {
@@ -65,27 +196,38 @@
         { "id": "simulate", "label": "Simular" },
         { "id": "why", "label": "Por quê?" }
       ],
-      "metadata": {}
+      "metadata": {
+        "simpleExplanation": "O processo de boot verifica recursos essenciais antes de carregar o sistema operacional."
+      }
     }
   ],
   "relationships": [
-    {
-      "id": "pc-contains-ram",
-      "source": "pc.root",
-      "target": "pc.ram.01",
-      "type": "contains",
-      "metadata": {}
-    },
-    {
-      "id": "boot-depends-ram",
-      "source": "pc.boot",
-      "target": "pc.ram.01",
-      "type": "dependsOn",
-      "metadata": { "reason": "memory initialization" }
-    }
+    { "id": "root-contains-motherboard", "source": "pc.root", "target": "pc.motherboard", "type": "contains", "metadata": {} },
+    { "id": "root-contains-cpu", "source": "pc.root", "target": "pc.cpu", "type": "contains", "metadata": {} },
+    { "id": "root-contains-ram", "source": "pc.root", "target": "pc.ram.01", "type": "contains", "metadata": {} },
+    { "id": "root-contains-gpu", "source": "pc.root", "target": "pc.gpu", "type": "contains", "metadata": {} },
+    { "id": "root-contains-psu", "source": "pc.root", "target": "pc.psu", "type": "contains", "metadata": {} },
+    { "id": "root-contains-storage", "source": "pc.root", "target": "pc.storage", "type": "contains", "metadata": {} },
+    { "id": "root-contains-cooling", "source": "pc.root", "target": "pc.cooling", "type": "contains", "metadata": {} },
+    { "id": "root-contains-boot", "source": "pc.root", "target": "pc.boot", "type": "contains", "metadata": {} },
+
+    { "id": "motherboard-powered-by-psu", "source": "pc.motherboard", "target": "pc.psu", "type": "poweredBy", "metadata": { "rail": "ATX" } },
+    { "id": "cpu-connected-motherboard", "source": "pc.cpu", "target": "pc.motherboard", "type": "connectedTo", "metadata": { "interface": "CPU socket" } },
+    { "id": "cpu-powered-by-psu", "source": "pc.cpu", "target": "pc.psu", "type": "poweredBy", "metadata": { "via": "motherboard VRM" } },
+    { "id": "ram-connected-motherboard", "source": "pc.ram.01", "target": "pc.motherboard", "type": "connectedTo", "metadata": { "interface": "DDR memory bus" } },
+    { "id": "gpu-connected-motherboard", "source": "pc.gpu", "target": "pc.motherboard", "type": "connectedTo", "metadata": { "interface": "PCIe x16" } },
+    { "id": "gpu-powered-by-psu", "source": "pc.gpu", "target": "pc.psu", "type": "poweredBy", "metadata": { "via": "PCIe power" } },
+    { "id": "storage-connected-motherboard", "source": "pc.storage", "target": "pc.motherboard", "type": "connectedTo", "metadata": { "interface": "M.2 NVMe" } },
+    { "id": "cooling-mounted-cpu", "source": "pc.cooling", "target": "pc.cpu", "type": "mountedTo", "metadata": { "interface": "thermal contact" } },
+    { "id": "cooling-powered-by-motherboard", "source": "pc.cooling", "target": "pc.motherboard", "type": "poweredBy", "metadata": { "via": "fan header" } },
+
+    { "id": "boot-depends-cpu", "source": "pc.boot", "target": "pc.cpu", "type": "dependsOn", "metadata": { "reason": "instruction execution" } },
+    { "id": "boot-depends-ram", "source": "pc.boot", "target": "pc.ram.01", "type": "dependsOn", "metadata": { "reason": "memory initialization" } },
+    { "id": "boot-depends-storage", "source": "pc.boot", "target": "pc.storage", "type": "dependsOn", "metadata": { "reason": "boot media" } },
+    { "id": "boot-depends-motherboard", "source": "pc.boot", "target": "pc.motherboard", "type": "dependsOn", "metadata": { "reason": "platform initialization" } }
   ],
   "metadata": {
-    "maturity": "foundation",
+    "maturity": "systemic-teardown",
     "signature": "Tehkné Solutions"
   }
 }

@@ -80,19 +80,19 @@ test("S1.3 capability command mutates real entity, port and semantic history", a
   assert.equal(session.history()[0].label, "Removido: RAM Module");
 });
 
-test("S1.3 rejects capabilities that are not exposed or not yet executable", async () => {
+test("capability runtime rejects actions that are not exposed or not yet executable", async () => {
   const session = new EngineeringSession({
     ...project,
     entities: project.entities.map((entity) =>
       entity.id === "pc.root"
-        ? { ...entity, capabilities: [...entity.capabilities, { id: "explode", label: "Explode" }] }
+        ? { ...entity, capabilities: [...entity.capabilities, { id: "powerOn", label: "Power On" }] }
         : entity
     )
   });
 
-  const future = await session.executeCapability("pc.root", "explode");
+  const future = await session.executeCapability("pc.root", "powerOn");
   assert.equal(future.ok, false);
-  assert.match(future.error, /not executable in S1.3/);
+  assert.match(future.error, /not executable in S1.4/);
 
   const missing = await session.executeCapability("pc.root", "remove");
   assert.equal(missing.ok, false);

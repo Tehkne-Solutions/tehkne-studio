@@ -16,7 +16,8 @@
     "verify:structure": "node scripts/verify-structure.mjs",
     "verify:s1.1": "npm run verify:structure && npm run typecheck:core && npm run test:domain",
     "verify:s1.2": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web",
-    "verify:s1.3": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web"
+    "verify:s1.3": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web",
+    "verify:s1.4": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web"
   },
   "devDependencies": {
     "typescript": "^5.8.0"
