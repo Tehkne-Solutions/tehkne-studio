@@ -19,6 +19,7 @@
     "packages/command-bus/src/**/*.ts",
     "packages/observability/src/**/*.ts",
     "packages/spatial-runtime/src/**/*.ts",
+    "packages/simulation-runtime/src/**/*.ts",
     "packages/engineering-session/src/**/*.ts"
   ]
 }
