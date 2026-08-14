@@ -27,7 +27,8 @@
     "verify:s1.11": "npm run verify:structure && node scripts/verify-s1.10.mjs && node scripts/verify-s1.11.mjs && npm run typecheck:core && npm run test:domain && npm run build:web",
     "verify:s1.12": "npm run verify:structure && node scripts/verify-s1.10.mjs && node scripts/verify-s1.11.mjs && node scripts/verify-s1.12.mjs && npm run typecheck:core && npm run test:domain && npm run build:web",
     "verify:s2.1": "node scripts/verify-s2.1.mjs",
-    "verify:s2.2": "node scripts/verify-s2.2.mjs"
+    "verify:s2.2": "node scripts/verify-s2.2.mjs",
+    "verify:s2.3": "node scripts/verify-s2.3.mjs"
   },
   "overrides": {
     "postcss": "8.5.25",
