@@ -31,6 +31,18 @@ export interface StudioRobotTaskExecutor {
   executePick(targetEntityId: EntityId): RobotTaskSummary;
 }
 
+export interface VariantTaskSummary {
+  readonly variantId: string;
+  readonly name: string;
+  readonly parentVariantId: string;
+  readonly validationStatus: "pass";
+  readonly message: string;
+}
+
+export interface StudioVariantTaskExecutor {
+  createHighTorqueVariant(): VariantTaskSummary;
+}
+
 export interface StudioIntelligenceExecution {
   readonly utterance: string;
   readonly resolution: StudioIntentResolution;
@@ -39,6 +51,7 @@ export interface StudioIntelligenceExecution {
   readonly result?: CapabilityExecutionResult;
   readonly behavior?: RegisteredBehaviorSummary;
   readonly robotTask?: RobotTaskSummary;
+  readonly variantTask?: VariantTaskSummary;
   readonly message: string;
 }
 
@@ -67,7 +80,8 @@ export class StudioIntelligence {
   constructor(
     readonly session: EngineeringSession,
     readonly behaviorRegistrar?: StudioBehaviorRegistrar,
-    readonly robotTaskExecutor?: StudioRobotTaskExecutor
+    readonly robotTaskExecutor?: StudioRobotTaskExecutor,
+    readonly variantTaskExecutor?: StudioVariantTaskExecutor
   ) {}
 
   entities(): readonly IntelligenceEntityDescriptor[] {
@@ -121,6 +135,46 @@ export class StudioIntelligence {
         action: resolution.action
       }
     });
+
+    if (resolution.action === "variantTask") {
+      if (!resolution.variantTaskDraft || resolution.variantTaskDraft.kind !== "highTorque") {
+        return {
+          utterance,
+          resolution,
+          executed: false,
+          targetEntityId: resolution.targetEntityId,
+          message: "A intenção de variante não contém um redesign materializável."
+        };
+      }
+      if (!this.variantTaskExecutor) {
+        return {
+          utterance,
+          resolution,
+          executed: false,
+          targetEntityId: resolution.targetEntityId,
+          message: "O Variant Runtime não está disponível nesta sessão."
+        };
+      }
+      try {
+        const variantTask = this.variantTaskExecutor.createHighTorqueVariant();
+        return {
+          utterance,
+          resolution,
+          executed: true,
+          targetEntityId: resolution.variantTaskDraft.robotEntityId,
+          variantTask,
+          message: variantTask.message
+        };
+      } catch (error) {
+        return {
+          utterance,
+          resolution,
+          executed: false,
+          targetEntityId: resolution.targetEntityId,
+          message: error instanceof Error ? error.message : "Não foi possível criar a variante."
+        };
+      }
+    }
 
     if (resolution.action === "robotTask") {
       if (!resolution.robotTaskDraft || resolution.robotTaskDraft.kind !== "pick") {
