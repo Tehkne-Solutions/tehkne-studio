@@ -19,7 +19,7 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
-      - run: npm install --ignore-scripts
+      - run: npm ci --ignore-scripts
       - name: Dependency security audit
         run: npm run security:audit
       - name: Alpha 01 regression gate
@@ -30,11 +30,11 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Alpha 01 browser smoke
         run: npm run smoke:browser
-      - name: Capture reproducible dependency lock
-        if: always()
+      - name: Preserve browser failure evidence
+        if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: s2-01-package-lock
-          path: package-lock.json
-          if-no-files-found: error
-          retention-days: 1
+          name: s2-01-browser-failure
+          path: test-results
+          if-no-files-found: ignore
+          retention-days: 7
