@@ -1,6 +1,6 @@
 "use client";
 
-import { Canvas } from "@react-three/fiber";
+import { Canvas, type ThreeEvent } from "@react-three/fiber";
 import { useMemo, useState } from "react";
 import type { EngineeringEntity } from "../../../packages/engineering-core/src/index";
 import { createEngineeringEntity } from "../../../packages/engineering-core/src/index";
@@ -42,14 +42,24 @@ function DesktopAssembly({ onSelect }: { onSelect: (entity: EngineeringEntity) =
     onSelect(resolveSpatialSelection(entity, binding).entity);
   };
 
+  const selectRoot = (event: ThreeEvent<MouseEvent>) => {
+    event.stopPropagation();
+    select(entities.root, { x: 0, y: 0.55, z: 0 });
+  };
+
+  const selectRam = (event: ThreeEvent<MouseEvent>) => {
+    event.stopPropagation();
+    select(entities.ram, { x: -0.15, y: 0.75, z: 0.86 });
+  };
+
   return (
     <group position={[0, -0.15, 0]}>
-      <mesh position={[0, 0.55, 0]} onClick={(event) => { event.stopPropagation(); select(entities.root, { x: 0, y: 0.55, z: 0 }); }}>
+      <mesh position={[0, 0.55, 0]} onClick={selectRoot}>
         <boxGeometry args={[2.8, 2.2, 1.65]} />
         <meshStandardMaterial color="#30322f" roughness={0.72} metalness={0.18} />
       </mesh>
 
-      <mesh position={[-0.15, 0.75, 0.86]} onClick={(event) => { event.stopPropagation(); select(entities.ram, { x: -0.15, y: 0.75, z: 0.86 }); }}>
+      <mesh position={[-0.15, 0.75, 0.86]} onClick={selectRam}>
         <boxGeometry args={[1.22, 0.22, 0.08]} />
         <meshStandardMaterial color="#a58a58" roughness={0.58} metalness={0.28} />
       </mesh>
