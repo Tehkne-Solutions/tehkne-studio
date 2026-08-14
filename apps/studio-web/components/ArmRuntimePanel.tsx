@@ -1,6 +1,7 @@
 "use client";
 
 import type { Arm01Controller } from "../../../packages/studio-robotics/src/index";
+import styles from "./ArmRuntimePanel.module.css";
 
 interface ArmRuntimePanelProps {
   readonly controller: Arm01Controller;
@@ -20,27 +21,27 @@ export function ArmRuntimePanel({ controller, revision, onPick }: ArmRuntimePane
   const recent = controller.records().slice(-4);
 
   return (
-    <aside className="arm-runtime-panel" aria-label="ARM-01 Robotics Runtime" data-revision={revision}>
-      <div className="arm-runtime-heading">
+    <aside className={styles.panel} aria-label="ARM-01 Robotics Runtime" data-revision={revision}>
+      <div className={styles.heading}>
         <span>ROBOTICS RUNTIME</span>
         <small>{String(robot.properties.taskState?.value ?? "idle").toUpperCase()}</small>
       </div>
 
-      <div className="arm-joint-grid">
+      <div className={styles.joints}>
         <div><small>BASE</small><strong>{angle(controller, "arm.joint.base")}</strong></div>
         <div><small>SHOULDER</small><strong>{angle(controller, "arm.joint.shoulder")}</strong></div>
         <div><small>ELBOW</small><strong>{angle(controller, "arm.joint.elbow")}</strong></div>
         <div><small>GRIPPER</small><strong>{String(gripper.properties.openingMm?.value)} mm</strong></div>
       </div>
 
-      <div className="arm-object-state">
+      <div className={styles.workpiece}>
         <span>WORKPIECE</span>
         <strong>{cube.name}</strong>
         <small>{cube.state} · {String(cube.properties.massKg?.value)} kg</small>
       </div>
 
       {recent.length > 0 ? (
-        <div className="arm-motion-timeline" aria-label="Motion plan timeline">
+        <div className={styles.timeline} aria-label="Motion plan timeline">
           <span>MOTION PLAN</span>
           {recent.map((record) => (
             <div key={`${record.waypointId}-${record.occurredAt}`}>
@@ -50,10 +51,10 @@ export function ArmRuntimePanel({ controller, revision, onPick }: ArmRuntimePane
           ))}
         </div>
       ) : (
-        <p className="arm-runtime-empty">Diga “Pegue o cubo vermelho” ou execute o benchmark abaixo.</p>
+        <p className={styles.empty}>Diga “Pegue o cubo vermelho” ou execute o benchmark abaixo.</p>
       )}
 
-      <button type="button" onClick={onPick} disabled={cube.state !== "free"}>
+      <button className={styles.button} type="button" onClick={onPick} disabled={cube.state !== "free"}>
         {cube.state === "free" ? "Executar Pick" : "Objeto na garra"}
       </button>
     </aside>
