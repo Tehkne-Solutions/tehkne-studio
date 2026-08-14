@@ -3,7 +3,9 @@
   z-index: 5;
   left: 18px;
   top: 76px;
-  width: min(315px, calc(100vw - 36px));
+  width: min(340px, calc(100vw - 36px));
+  max-height: calc(100% - 180px);
+  overflow: auto;
   padding: 14px;
   border: 1px solid #474942;
   background: rgba(24, 25, 22, .96);
@@ -50,16 +52,66 @@
 .timeline strong { color: #c7c6be; font-size: 10px; font-weight: 520; }
 
 .empty { margin: 12px 0; color: #92938c; font-size: 10px; line-height: 1.45; }
-.button {
-  width: 100%;
+.button,
+.failureCases button,
+.whyButton {
   color: #deddd7;
   background: #232420;
   border: 1px solid #55564f;
   padding: 9px 12px;
   cursor: pointer;
 }
-.button:hover:not(:disabled), .button:focus-visible { border-color: #b29b69; outline: none; }
-.button:disabled { opacity: .38; cursor: default; }
+.button { width: 100%; }
+.button:hover:not(:disabled),
+.button:focus-visible,
+.failureCases button:hover:not(:disabled),
+.whyButton:hover,
+.whyButton:focus-visible { border-color: #b29b69; outline: none; }
+.button:disabled, .failureCases button:disabled { opacity: .38; cursor: default; }
+
+.failureLab {
+  margin: 12px 0;
+  padding: 11px 0 12px;
+  border-top: 1px solid #44463f;
+  border-bottom: 1px solid #44463f;
+}
+.failureHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+.failureHeading span { color: #b29b69; font-size: 8px; letter-spacing: .14em; }
+.failureHeading small { color: #a7a99f; font-size: 8px; letter-spacing: .12em; }
+.failureCases { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.failureCases button { padding: 7px 5px; font-size: 9px; }
+.failureMetrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin-top: 9px;
+  border: 1px solid #343630;
+  background: #343630;
+}
+.failureMetrics div { padding: 8px; background: #1d1e1b; }
+.failureMetrics small { display: block; color: #777970; font-size: 7px; letter-spacing: .11em; }
+.failureMetrics strong { display: block; margin-top: 3px; color: #d5d3cb; font-size: 11px; font-weight: 520; }
+.failureMetrics[data-status="warning"] { border-color: #75684a; }
+.failureMetrics[data-status="fault"] { border-color: #755348; }
+.failureMessage { margin: 9px 0; color: #b8b7af; font-size: 9px; line-height: 1.45; }
+.whyButton { width: 100%; padding: 8px; font-size: 9px; }
+.failureTrace { margin-top: 10px; }
+.failureTrace > span { color: #b29b69; font-size: 8px; letter-spacing: .13em; }
+.failureTrace > div {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 7px;
+  padding: 7px 0;
+  border-top: 1px solid #32342f;
+}
+.failureTrace > div > small { color: #b29b69; padding-top: 1px; font-size: 8px; }
+.failureTrace section strong { color: #d1cfc7; font-size: 9px; font-weight: 540; }
+.failureTrace section p { margin: 3px 0 0; color: #878980; font-size: 8px; line-height: 1.4; }
 
 @media (max-width: 800px) {
   .panel { display: none; }
