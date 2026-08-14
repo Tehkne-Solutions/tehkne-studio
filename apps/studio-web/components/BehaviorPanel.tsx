@@ -1,6 +1,7 @@
 "use client";
 
 import type { StudioBehaviorController } from "../../../packages/studio-behavior/src/index";
+import styles from "./BehaviorPanel.module.css";
 
 interface BehaviorPanelProps {
   readonly controller: StudioBehaviorController;
@@ -17,12 +18,7 @@ function operatorLabel(operator: string): string {
   return "=";
 }
 
-export function BehaviorPanel({
-  controller,
-  revision,
-  onThermalSpike,
-  onThermalStep
-}: BehaviorPanelProps) {
+export function BehaviorPanel({ controller, revision, onThermalSpike, onThermalStep }: BehaviorPanelProps) {
   const behaviors = controller.behaviors();
   const latestExecution = controller.executions().at(-1) ?? null;
   const cpu = controller.session.getEntity("pc.cpu");
@@ -31,29 +27,23 @@ export function BehaviorPanel({
   const fan = cooling.properties.fanPercent?.value;
 
   return (
-    <aside className="behavior-panel" aria-label="Behavior Runtime" data-revision={revision}>
-      <div className="behavior-panel-heading">
+    <aside className={styles.panel} aria-label="Behavior Runtime" data-revision={revision}>
+      <div className={styles.heading}>
         <span>BEHAVIOR RUNTIME</span>
         <small>{behaviors.length} regra(s)</small>
       </div>
 
-      <div className="behavior-telemetry">
-        <div>
-          <small>CPU TEMP</small>
-          <strong>{String(temperature)} °C</strong>
-        </div>
-        <div>
-          <small>FAN</small>
-          <strong>{String(fan)}%</strong>
-        </div>
+      <div className={styles.telemetry}>
+        <div><small>CPU TEMP</small><strong>{String(temperature)} °C</strong></div>
+        <div><small>FAN</small><strong>{String(fan)}%</strong></div>
       </div>
 
       {behaviors.length === 0 ? (
-        <p className="behavior-empty">
+        <p className={styles.empty}>
           Crie uma regra pela Studio Intelligence. Ex.: “Quando a CPU passar de 70 graus, coloque a ventoinha no máximo”.
         </p>
       ) : (
-        <div className="behavior-list">
+        <div className={styles.list}>
           {behaviors.map((behavior) => (
             <article key={behavior.id}>
               <strong>{behavior.name}</strong>
@@ -69,13 +59,13 @@ export function BehaviorPanel({
       )}
 
       {latestExecution ? (
-        <div className="behavior-last-execution">
+        <div className={styles.lastExecution}>
           <span>LAST TRIGGER</span>
           <p>{latestExecution.message}</p>
         </div>
       ) : null}
 
-      <div className="behavior-bench-actions">
+      <div className={styles.actions}>
         <button type="button" onClick={onThermalSpike}>Injetar 76 °C</button>
         <button type="button" onClick={onThermalStep}>Avançar térmica</button>
       </div>
