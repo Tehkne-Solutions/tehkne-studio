@@ -1,0 +1,21 @@
+{
+  "name": "tehkne-studio",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "description": "Tehkne Studio — Virtual Engineering Atelier by Tehkne Solutions",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck:core": "tsc -p tsconfig.core.json --noEmit",
+    "build:core": "rm -rf dist && tsc -p tsconfig.core.json",
+    "test:domain": "npm run build:core && node --test tests/domain/*.test.mjs",
+    "verify:structure": "node scripts/verify-structure.mjs",
+    "verify:s1.1": "npm run verify:structure && npm run typecheck:core && npm run test:domain"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
