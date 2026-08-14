@@ -26,12 +26,20 @@ export interface EngineeringVariantRecord {
   readonly status: "validated";
 }
 
+export interface ArmVariantLabRestoreState {
+  readonly records?: readonly EngineeringVariantRecord[];
+}
+
 export interface StudioVariantSummary {
   readonly variantId: string;
   readonly name: string;
   readonly parentVariantId: string;
   readonly validationStatus: "pass";
   readonly message: string;
+}
+
+function cloneRecord(record: EngineeringVariantRecord): EngineeringVariantRecord {
+  return JSON.parse(JSON.stringify(record)) as EngineeringVariantRecord;
 }
 
 export class ArmVariantLab {
@@ -41,15 +49,34 @@ export class ArmVariantLab {
     readonly failureLab: ArmFailureLab,
     readonly baseProfile: BaseVariantProfile,
     readonly candidateProfile: ArmVariantProfile,
-    readonly sourceEntityId: EntityId = "arm.root"
-  ) {}
+    readonly sourceEntityId: EntityId = "arm.root",
+    restore: ArmVariantLabRestoreState = {}
+  ) {
+    const records = restore.records ?? [];
+    const ids = new Set<string>();
+    for (const record of records) {
+      if (!record.id || ids.has(record.id)) throw new Error(`Invalid restored variant id: ${record.id}`);
+      ids.add(record.id);
+      if (record.parentVariantId !== this.baseProfile.variantId) throw new Error(`Restored variant parent mismatch: ${record.id}`);
+      if (record.id !== this.candidateProfile.variantId) throw new Error(`Restored variant profile mismatch: ${record.id}`);
+      if (record.sourceEntityId !== this.sourceEntityId) throw new Error(`Restored variant source entity mismatch: ${record.sourceEntityId}`);
+      if (record.status !== "validated" || record.comparison.candidate.assessment.status !== "pass") {
+        throw new Error(`Restored variant is not validated: ${record.id}`);
+      }
+      if (record.comparison.base.assessment.status !== "fault") throw new Error(`Restored variant lost base failure evidence: ${record.id}`);
+      if (Number.isNaN(Date.parse(record.createdAt))) throw new Error(`Invalid restored variant timestamp: ${record.id}`);
+      this.failureLab.session.getEntity(record.sourceEntityId);
+      this.#records.push(cloneRecord(record));
+    }
+  }
 
   records(): readonly EngineeringVariantRecord[] {
-    return [...this.#records];
+    return this.#records.map(cloneRecord);
   }
 
   latest(): EngineeringVariantRecord | null {
-    return this.#records.at(-1) ?? null;
+    const record = this.#records.at(-1);
+    return record ? cloneRecord(record) : null;
   }
 
   createHighTorqueVariant(): StudioVariantSummary {
