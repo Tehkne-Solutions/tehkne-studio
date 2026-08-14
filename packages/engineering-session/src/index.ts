@@ -54,16 +54,13 @@ function cloneEntity(entity: EngineeringEntity): EngineeringEntity {
 }
 
 function propertySnapshot(entity: EngineeringEntity): InspectionProperty[] {
-  return Object.values(entity.properties).map((property) => {
-    const snapshot: InspectionProperty = {
-      id: property.id,
-      value: property.value,
-      source: property.source
-    };
-    if (property.unit !== undefined) snapshot.unit = property.unit;
-    if (property.confidence !== undefined) snapshot.confidence = property.confidence;
-    return snapshot;
-  });
+  return Object.values(entity.properties).map((property) => ({
+    id: property.id,
+    value: property.value,
+    source: property.source,
+    ...(property.unit !== undefined ? { unit: property.unit } : {}),
+    ...(property.confidence !== undefined ? { confidence: property.confidence } : {})
+  }));
 }
 
 export class EngineeringSession {
@@ -232,6 +229,10 @@ export class EngineeringSession {
         "EntityOpened",
         `Aberto: ${entity.name}`
       );
+    }
+
+    if (entity.state === "removed") {
+      return { entity, capabilityId, changed: false, message: `${entity.name} já está removido.` };
     }
 
     const connectedProperty = entity.properties.connected;
