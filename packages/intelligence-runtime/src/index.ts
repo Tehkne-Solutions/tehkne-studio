@@ -33,7 +33,12 @@ export interface RobotTaskDraft {
   readonly targetEntityId: EntityId;
 }
 
-export type IntelligenceAction = "capability" | "focus" | "behavior" | "robotTask";
+export interface VariantTaskDraft {
+  readonly kind: "highTorque";
+  readonly robotEntityId: EntityId;
+}
+
+export type IntelligenceAction = "capability" | "focus" | "behavior" | "robotTask" | "variantTask";
 
 export interface ResolvedStudioIntent {
   readonly status: "resolved";
@@ -44,6 +49,7 @@ export interface ResolvedStudioIntent {
   readonly capabilityId?: string;
   readonly behaviorDraft?: ThresholdBehaviorDraft;
   readonly robotTaskDraft?: RobotTaskDraft;
+  readonly variantTaskDraft?: VariantTaskDraft;
   readonly intent: string;
   readonly confidence: number;
   readonly rationale: string;
@@ -62,7 +68,7 @@ export type StudioIntentResolution = ResolvedStudioIntent | UnresolvedStudioInte
 interface IntentRule {
   readonly intent: string;
   readonly capabilityId?: string;
-  readonly action: Exclude<IntelligenceAction, "behavior" | "robotTask">;
+  readonly action: Exclude<IntelligenceAction, "behavior" | "robotTask" | "variantTask">;
   readonly patterns: readonly string[];
   readonly preferredTypes?: readonly string[];
 }
@@ -160,6 +166,40 @@ function numericValue(normalized: string): number | null {
   if (!match?.[1]) return null;
   const value = Number(match[1].replace(",", "."));
   return Number.isFinite(value) ? value : null;
+}
+
+function resolveVariantTask(
+  utterance: string,
+  normalized: string,
+  context: StudioIntelligenceContext
+): StudioIntentResolution | null {
+  const asksVariant = /\b(variante|versao|redesign|redesenhe|redesenhar|melhore|melhorar)\b/.test(normalized);
+  const asksCapacity = /\b(levantar|carregar|peso|carga|torque|capaz)\b/.test(normalized);
+  if (!asksVariant || !asksCapacity) return null;
+
+  const robots = context.entities.filter((entity) => entity.type === "RobotArm");
+  if (robots.length !== 1) {
+    return {
+      status: robots.length > 1 ? "ambiguous" : "unresolved",
+      utterance,
+      normalized,
+      message: "Preciso de um único braço robótico no contexto para criar uma variante orientada pela falha.",
+      ...(robots.length > 1 ? { candidates: robots.map((entity) => entity.id) } : {})
+    };
+  }
+
+  const robot = robots[0]!;
+  return {
+    status: "resolved",
+    utterance,
+    normalized,
+    action: "variantTask",
+    targetEntityId: robot.id,
+    variantTaskDraft: { kind: "highTorque", robotEntityId: robot.id },
+    intent: "createHighTorqueVariant",
+    confidence: 0.97,
+    rationale: `${robot.name} é o único RobotArm no contexto e a solicitação pede redesign de capacidade/torque.`
+  };
 }
 
 function resolveRobotTask(
@@ -284,6 +324,9 @@ function resolveThresholdBehavior(
 export function resolveStudioIntent(utterance: string, context: StudioIntelligenceContext): StudioIntentResolution {
   const normalized = normalize(utterance);
   if (!normalized) return { status: "unresolved", utterance, normalized, message: "Nenhum comando foi informado." };
+
+  const variantResolution = resolveVariantTask(utterance, normalized, context);
+  if (variantResolution) return variantResolution;
 
   const robotResolution = resolveRobotTask(utterance, normalized, context);
   if (robotResolution) return robotResolution;
