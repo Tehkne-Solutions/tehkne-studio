@@ -1,16 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { ArmActuatorEnvelope, FailureTraceStep } from "../../../packages/failure-simulation/src/index";
-import { ArmFailureLab } from "../../../packages/studio-failure/src/index";
+import { useState } from "react";
+import type { FailureTraceStep } from "../../../packages/failure-simulation/src/index";
+import type { ArmFailureLab } from "../../../packages/studio-failure/src/index";
+import type { ArmVariantLab } from "../../../packages/studio-variants/src/index";
 import type { Arm01Controller } from "../../../packages/studio-robotics/src/index";
-import failureProfile from "../../../presets/arm-01/failure-profile.json";
 import styles from "./ArmRuntimePanel.module.css";
 
 interface ArmRuntimePanelProps {
   readonly controller: Arm01Controller;
+  readonly failureLab: ArmFailureLab;
+  readonly variantLab: ArmVariantLab;
   readonly revision: number;
   readonly onPick: () => void;
+  readonly onEngineeringChange: (message: string) => void;
 }
 
 function angle(controller: Arm01Controller, entityId: string): string {
@@ -24,11 +27,14 @@ function assessmentLabel(status: string): string {
   return "PASS";
 }
 
-export function ArmRuntimePanel({ controller, revision, onPick }: ArmRuntimePanelProps) {
-  const failureLab = useMemo(
-    () => new ArmFailureLab(controller.session, failureProfile as ArmActuatorEnvelope),
-    [controller]
-  );
+export function ArmRuntimePanel({
+  controller,
+  failureLab,
+  variantLab,
+  revision,
+  onPick,
+  onEngineeringChange
+}: ArmRuntimePanelProps) {
   const [failureRevision, setFailureRevision] = useState(0);
   const [trace, setTrace] = useState<readonly FailureTraceStep[]>([]);
   const [failureMessage, setFailureMessage] = useState<string | null>(null);
@@ -38,17 +44,20 @@ export function ArmRuntimePanel({ controller, revision, onPick }: ArmRuntimePane
   const cube = controller.session.getEntity("object.cube.red");
   const recent = controller.records().slice(-4);
   const latest = failureLab.latest();
+  const variant = variantLab.latest();
 
   const runFailureCase = (massKg: number) => {
     try {
       const record = failureLab.run(massKg);
       setTrace([]);
-      setFailureMessage(
-        `${assessmentLabel(record.assessment.status)} · ${record.assessment.requiredTorqueNm} N·m · ${record.assessment.currentA} A · ${record.assessment.temperatureC} °C`
-      );
+      const message = `${assessmentLabel(record.assessment.status)} · ${record.assessment.requiredTorqueNm} N·m · ${record.assessment.currentA} A · ${record.assessment.temperatureC} °C`;
+      setFailureMessage(message);
       setFailureRevision((current) => current + 1);
+      onEngineeringChange(message);
     } catch (error) {
-      setFailureMessage(error instanceof Error ? error.message : "Failure Lab não conseguiu executar o cenário.");
+      const message = error instanceof Error ? error.message : "Failure Lab não conseguiu executar o cenário.";
+      setFailureMessage(message);
+      onEngineeringChange(message);
     }
   };
 
@@ -58,8 +67,24 @@ export function ArmRuntimePanel({ controller, revision, onPick }: ArmRuntimePane
       setTrace(explanation.trace);
       setFailureMessage(explanation.message);
       setFailureRevision((current) => current + 1);
+      onEngineeringChange(explanation.message);
     } catch (error) {
-      setFailureMessage(error instanceof Error ? error.message : "Não existe evidência suficiente para explicar.");
+      const message = error instanceof Error ? error.message : "Não existe evidência suficiente para explicar.";
+      setFailureMessage(message);
+      onEngineeringChange(message);
+    }
+  };
+
+  const createVariant = () => {
+    try {
+      const result = variantLab.createHighTorqueVariant();
+      setFailureMessage(result.message);
+      setFailureRevision((current) => current + 1);
+      onEngineeringChange(result.message);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível criar a variante.";
+      setFailureMessage(message);
+      onEngineeringChange(message);
     }
   };
 
@@ -129,6 +154,12 @@ export function ArmRuntimePanel({ controller, revision, onPick }: ArmRuntimePane
           </button>
         ) : null}
 
+        {latest?.assessment.status === "fault" && !variant ? (
+          <button className={styles.variantButton} type="button" onClick={createVariant}>
+            Criar variante High Torque
+          </button>
+        ) : null}
+
         {trace.length > 0 ? (
           <div className={styles.failureTrace} aria-label="Failure causal trace">
             <span>CAUSAL TRACE</span>
@@ -145,7 +176,48 @@ export function ArmRuntimePanel({ controller, revision, onPick }: ArmRuntimePane
         ) : null}
       </section>
 
-      <button className={styles.button} type="button" onClick={onPick} disabled={cube.state !== "free"}>
+      {variant ? (
+        <section className={styles.variantLab} aria-label="ARM-01 Variant Comparison">
+          <div className={styles.variantHeading}>
+            <span>VARIANT COMPARISON</span>
+            <small>VALIDATED</small>
+          </div>
+          <div className={styles.variantCompare}>
+            <div data-status={variant.comparison.base.assessment.status}>
+              <small>ARM-01 BASE</small>
+              <strong>{assessmentLabel(variant.comparison.base.assessment.status)}</strong>
+              <span>{variant.comparison.base.assessment.requiredTorqueNm} N·m</span>
+              <span>margin {variant.comparison.base.assessment.limitingMarginPercent}%</span>
+            </div>
+            <div data-status={variant.comparison.candidate.assessment.status}>
+              <small>HIGH TORQUE</small>
+              <strong>{assessmentLabel(variant.comparison.candidate.assessment.status)}</strong>
+              <span>{variant.comparison.candidate.assessment.requiredTorqueNm} N·m</span>
+              <span>margin {variant.comparison.candidate.assessment.limitingMarginPercent}%</span>
+            </div>
+          </div>
+          <div className={styles.variantChanges}>
+            <span>DECLARED CHANGES</span>
+            {variant.comparison.changes.map((change) => (
+              <div key={change.id}>
+                <small>{change.label}</small>
+                <strong>{String(change.before)} → {String(change.after)}{change.unit ? ` ${change.unit}` : ""}</strong>
+              </div>
+            ))}
+          </div>
+          <div className={styles.variantImpacts}>
+            <span>TRADE-OFFS</span>
+            {variant.comparison.impacts.map((impact) => (
+              <div key={impact.id}>
+                <small>{impact.label} · {impact.provenance}</small>
+                <strong>{String(impact.before)} → {String(impact.after)}{impact.unit ? ` ${impact.unit}` : ""}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <button className={styles.button} type="button" onClick={onPick} disabled={cube.state !== "free" || robot.state === "fault"}>
         {cube.state === "free" ? "Executar Pick" : "Objeto na garra"}
       </button>
     </aside>
