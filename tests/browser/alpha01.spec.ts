@@ -12,8 +12,8 @@ test("Alpha 01 opens both golden workbenches without browser runtime errors", as
   await page.goto("/", { waitUntil: "networkidle" });
 
   await expect(page.getByRole("heading", { name: "TEHKNÉ STUDIO" })).toBeVisible();
-  await expect(page.getByText("ALPHA 01")).toBeVisible();
-  await expect(page.getByText("THE FIRST WORKBENCH")).toBeVisible();
+  await expect(page.getByText("ALPHA 01 · THE FIRST WORKSHOP", { exact: true })).toBeVisible();
+  await expect(page.getByText("THE FIRST WORKBENCH", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Chamar Desktop PC" }).click();
   await expect(page.getByText(/DESKTOP-PC-001/)).toBeVisible();
@@ -24,7 +24,7 @@ test("Alpha 01 opens both golden workbenches without browser runtime errors", as
   await expect(page.getByText(/HISTORY · [1-9]/)).toBeVisible();
 
   await page.getByRole("button", { name: "Guardar projeto" }).click();
-  await expect(page.getByText("THE FIRST WORKBENCH")).toBeVisible();
+  await expect(page.getByText("THE FIRST WORKBENCH", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Chamar ARM-01" }).click();
   await expect(page.getByText(/ARM-01 · 3 JOINTS/)).toBeVisible();
