@@ -1,11 +1,29 @@
-import type { EngineeringEntity, EntityId, PropertySource } from "../../engineering-core/src/index.js";
+import type {
+  EngineeringEntity,
+  EngineeringPropertyValue,
+  EntityId,
+  PropertySource
+} from "../../engineering-core/src/index.js";
 import { hasCapability } from "../../engineering-core/src/index.js";
 import { EngineeringGraph } from "../../engineering-graph/src/index.js";
 import type { TehkneStudioProject } from "../../project-format/src/index.js";
 import { CommandBus, type StudioCommand } from "../../command-bus/src/index.js";
 import { InMemoryEventSink, type StudioDomainEvent } from "../../observability/src/index.js";
+import {
+  runFunctionalBoot,
+  type BootDependencyInput,
+  type BootRunResult
+} from "../../simulation-runtime/src/index.js";
 
-export type SupportedCapability = "inspect" | "explain" | "open" | "explode" | "remove";
+export type SupportedCapability =
+  | "inspect"
+  | "explain"
+  | "open"
+  | "explode"
+  | "remove"
+  | "insert"
+  | "powerOn"
+  | "why";
 
 export interface InspectionProperty {
   readonly id: string;
@@ -13,6 +31,12 @@ export interface InspectionProperty {
   readonly unit?: string;
   readonly source: PropertySource;
   readonly confidence?: number;
+}
+
+export interface CausalTraceStep {
+  readonly entityId: EntityId;
+  readonly label: string;
+  readonly detail: string;
 }
 
 export interface CapabilityExecutionResult {
@@ -23,6 +47,9 @@ export interface CapabilityExecutionResult {
   readonly inspection?: readonly InspectionProperty[];
   readonly explanation?: string;
   readonly affectedEntityIds?: readonly EntityId[];
+  readonly bootRun?: BootRunResult;
+  readonly causalTrace?: readonly CausalTraceStep[];
+  readonly focusEntityId?: EntityId;
 }
 
 export interface SemanticHistoryEntry {
@@ -45,7 +72,10 @@ const SUPPORTED_CAPABILITIES = new Set<SupportedCapability>([
   "explain",
   "open",
   "explode",
-  "remove"
+  "remove",
+  "insert",
+  "powerOn",
+  "why"
 ]);
 
 function cloneEntity(entity: EngineeringEntity): EngineeringEntity {
@@ -68,6 +98,38 @@ function propertySnapshot(entity: EngineeringEntity): InspectionProperty[] {
     ...(property.unit !== undefined ? { unit: property.unit } : {}),
     ...(property.confidence !== undefined ? { confidence: property.confidence } : {})
   }));
+}
+
+function withProperty(
+  entity: EngineeringEntity,
+  propertyId: string,
+  value: EngineeringPropertyValue
+): EngineeringEntity {
+  const property = entity.properties[propertyId];
+  if (!property) throw new Error(`${entity.id} missing required property ${propertyId}`);
+  return {
+    ...entity,
+    properties: {
+      ...entity.properties,
+      [propertyId]: { ...property, value }
+    }
+  };
+}
+
+function withProperties(
+  entity: EngineeringEntity,
+  values: Readonly<Record<string, EngineeringPropertyValue>>
+): EngineeringEntity {
+  return Object.entries(values).reduce(
+    (current, [propertyId, value]) => withProperty(current, propertyId, value),
+    entity
+  );
+}
+
+function entityAvailable(entity: EngineeringEntity): boolean {
+  if (["removed", "disconnected", "fault"].includes(entity.state)) return false;
+  if (entity.properties.connected?.value === false) return false;
+  return true;
 }
 
 export class EngineeringSession {
@@ -214,6 +276,217 @@ export class EngineeringSession {
     };
   }
 
+  #bootProcessFor(root: EngineeringEntity): EngineeringEntity {
+    const boot = this.graph
+      .getDependencies(root.id, "contains")
+      .find((candidate) => candidate.type === "BootProcess");
+    if (!boot) throw new Error(`${root.id} has no BootProcess`);
+    return boot;
+  }
+
+  #bootDependencies(boot: EngineeringEntity): BootDependencyInput[] {
+    const relationships = this.graph
+      .snapshot()
+      .relationships.filter(
+        (relationship) => relationship.source === boot.id && relationship.type === "dependsOn"
+      );
+
+    return relationships.map((relationship) => {
+      const dependency = this.graph.getEntity(relationship.target);
+      const authoredReason = relationship.metadata.reason;
+      return {
+        id: dependency.id,
+        type: dependency.type,
+        name: dependency.name,
+        available: entityAvailable(dependency),
+        reason: typeof authoredReason === "string" ? authoredReason : "required boot dependency"
+      };
+    });
+  }
+
+  #powerOn(command: StudioCommand<CapabilityPayload>, root: EngineeringEntity): CapabilityExecutionResult {
+    const boot = this.#bootProcessFor(root);
+    const run = runFunctionalBoot(this.#bootDependencies(boot));
+    const beforePower = String(root.properties.powerState?.value ?? "unknown");
+    const afterPower = run.status === "success" ? "on" : "fault";
+    const updatedRoot = withProperty(root, "powerState", afterPower);
+    const fault = run.fault;
+    const updatedBoot = {
+      ...withProperties(boot, {
+        status: run.status,
+        stage: fault?.stage ?? run.finalStage,
+        faultCode: fault?.code ?? null,
+        faultEntityId: fault?.entityId ?? null,
+        faultReason: fault?.reason ?? null
+      }),
+      state: run.status === "success" ? "running" : "fault"
+    };
+
+    this.graph.replaceEntity(updatedRoot);
+    this.graph.replaceEntity(updatedBoot);
+    this.#recordEvent({
+      id: `event-${this.events.list().length + 1}`,
+      type: run.status === "success" ? "BootSucceeded" : "BootFailed",
+      occurredAt: command.issuedAt,
+      source: command.source,
+      payload: {
+        commandId: command.id,
+        entityId: root.id,
+        bootEntityId: boot.id,
+        status: run.status,
+        finalStage: run.finalStage,
+        timeline: run.timeline,
+        fault: run.fault
+      }
+    });
+
+    const label = run.status === "success"
+      ? "Power On: POST concluído e sistema em RUNNING"
+      : `Power On: falha em ${fault?.stage ?? "FAULT"} · ${fault?.entityName ?? "dependência"}`;
+    this.#recordHistory(
+      command,
+      updatedRoot,
+      `${root.state}/${beforePower}`,
+      `${updatedRoot.state}/${afterPower}`,
+      label
+    );
+
+    return {
+      entity: updatedRoot,
+      capabilityId: "powerOn",
+      changed: true,
+      message: run.status === "success"
+        ? "POST concluído. CPU, memória, armazenamento e plataforma estão disponíveis; o sistema chegou a RUNNING."
+        : `POST interrompido em ${fault?.stage ?? "FAULT"}: ${fault?.entityName ?? "uma dependência"} está indisponível.`,
+      bootRun: run,
+      focusEntityId: boot.id
+    };
+  }
+
+  #why(command: StudioCommand<CapabilityPayload>, boot: EngineeringEntity): CapabilityExecutionResult {
+    const faultEntityId = boot.properties.faultEntityId?.value;
+    const stage = String(boot.properties.stage?.value ?? "UNKNOWN");
+
+    if (boot.state !== "fault" || typeof faultEntityId !== "string") {
+      const message = "Não existe uma falha de boot ativa para explicar.";
+      return { entity: boot, capabilityId: "why", changed: false, message, explanation: message };
+    }
+
+    const dependency = this.graph.getEntity(faultEntityId);
+    const relationship = this.graph
+      .snapshot()
+      .relationships.find(
+        (candidate) =>
+          candidate.source === boot.id &&
+          candidate.target === dependency.id &&
+          candidate.type === "dependsOn"
+      );
+    const reason = typeof relationship?.metadata.reason === "string"
+      ? relationship.metadata.reason
+      : "dependência necessária ao boot";
+    const connected = dependency.properties.connected?.value;
+    const availabilityDetail = connected === false
+      ? `${dependency.name} está ${dependency.state} e connected=false.`
+      : `${dependency.name} está no estado ${dependency.state}.`;
+    const causalTrace: CausalTraceStep[] = [
+      {
+        entityId: boot.id,
+        label: `${boot.name} · ${stage}`,
+        detail: `O processo parou na etapa ${stage}.`
+      },
+      {
+        entityId: dependency.id,
+        label: `dependsOn → ${dependency.name}`,
+        detail: `Esta dependência existe por: ${reason}.`
+      },
+      {
+        entityId: dependency.id,
+        label: `${dependency.name} indisponível`,
+        detail: availabilityDetail
+      }
+    ];
+    const explanation = `${boot.name} falhou em ${stage} porque depende de ${dependency.name} para ${reason}, mas essa entidade está indisponível.`;
+
+    this.#recordEvent({
+      id: `event-${this.events.list().length + 1}`,
+      type: "CausalityExplained",
+      occurredAt: command.issuedAt,
+      source: command.source,
+      payload: {
+        commandId: command.id,
+        entityId: boot.id,
+        faultEntityId: dependency.id,
+        stage,
+        relationshipId: relationship?.id ?? null,
+        reason
+      }
+    });
+    this.#recordHistory(command, boot, boot.state, boot.state, `Causa explicada: ${dependency.name}`);
+
+    return {
+      entity: boot,
+      capabilityId: "why",
+      changed: false,
+      message: explanation,
+      explanation,
+      causalTrace
+    };
+  }
+
+  #insert(command: StudioCommand<CapabilityPayload>, entity: EngineeringEntity): CapabilityExecutionResult {
+    if (entity.state !== "removed" && entity.properties.connected?.value !== false) {
+      return { entity, capabilityId: "insert", changed: false, message: `${entity.name} já está instalado.` };
+    }
+
+    const connectedProperty = entity.properties.connected;
+    const nextProperties = connectedProperty
+      ? {
+          ...entity.properties,
+          connected: { ...connectedProperty, value: true }
+        }
+      : entity.properties;
+    const nextPorts = Object.fromEntries(
+      Object.entries(entity.ports).map(([id, port]) => [
+        id,
+        port.state === "available" ? { ...port, state: "connected" as const } : port
+      ])
+    );
+    const inserted: EngineeringEntity = {
+      ...entity,
+      state: "connected",
+      properties: nextProperties,
+      ports: nextPorts
+    };
+    return this.#replaceAndRecord(command, entity, inserted, "EntityInserted", `Reinstalado: ${entity.name}`);
+  }
+
+  #remove(command: StudioCommand<CapabilityPayload>, entity: EngineeringEntity): CapabilityExecutionResult {
+    if (entity.state === "removed") {
+      return { entity, capabilityId: "remove", changed: false, message: `${entity.name} já está removido.` };
+    }
+
+    const connectedProperty = entity.properties.connected;
+    const nextProperties = connectedProperty
+      ? {
+          ...entity.properties,
+          connected: { ...connectedProperty, value: false }
+        }
+      : entity.properties;
+    const nextPorts = Object.fromEntries(
+      Object.entries(entity.ports).map(([id, port]) => [
+        id,
+        port.state === "connected" ? { ...port, state: "available" as const } : port
+      ])
+    );
+    const removed: EngineeringEntity = {
+      ...entity,
+      state: "removed",
+      properties: nextProperties,
+      ports: nextPorts
+    };
+    return this.#replaceAndRecord(command, entity, removed, "EntityRemoved", `Removido: ${entity.name}`);
+  }
+
   #executeCapability(command: StudioCommand<CapabilityPayload>): CapabilityExecutionResult {
     if (!command.targetId) throw new Error("Capability command requires targetId");
     const entity = this.graph.getEntity(command.targetId);
@@ -223,7 +496,7 @@ export class EngineeringSession {
       throw new Error(`${entity.id} does not expose capability ${capabilityId}`);
     }
     if (!this.canExecuteCapability(capabilityId)) {
-      throw new Error(`Capability ${capabilityId} is not executable in S1.4`);
+      throw new Error(`Capability ${capabilityId} is not executable in S1.5`);
     }
 
     if (capabilityId === "inspect") {
@@ -284,33 +557,10 @@ export class EngineeringSession {
       );
     }
 
-    if (capabilityId === "explode") {
-      return this.#explode(command, entity);
-    }
-
-    if (entity.state === "removed") {
-      return { entity, capabilityId, changed: false, message: `${entity.name} já está removido.` };
-    }
-
-    const connectedProperty = entity.properties.connected;
-    const nextProperties = connectedProperty
-      ? {
-          ...entity.properties,
-          connected: { ...connectedProperty, value: false }
-        }
-      : entity.properties;
-    const nextPorts = Object.fromEntries(
-      Object.entries(entity.ports).map(([id, port]) => [
-        id,
-        port.state === "connected" ? { ...port, state: "available" as const } : port
-      ])
-    );
-    const removed: EngineeringEntity = {
-      ...entity,
-      state: "removed",
-      properties: nextProperties,
-      ports: nextPorts
-    };
-    return this.#replaceAndRecord(command, entity, removed, "EntityRemoved", `Removido: ${entity.name}`);
+    if (capabilityId === "explode") return this.#explode(command, entity);
+    if (capabilityId === "powerOn") return this.#powerOn(command, entity);
+    if (capabilityId === "why") return this.#why(command, entity);
+    if (capabilityId === "insert") return this.#insert(command, entity);
+    return this.#remove(command, entity);
   }
 }
