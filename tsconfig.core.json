@@ -17,6 +17,7 @@
     "packages/engineering-graph/src/**/*.ts",
     "packages/project-format/src/**/*.ts",
     "packages/command-bus/src/**/*.ts",
-    "packages/observability/src/**/*.ts"
+    "packages/observability/src/**/*.ts",
+    "packages/spatial-runtime/src/**/*.ts"
   ]
 }
