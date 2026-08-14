@@ -1,23 +1,41 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import type { EngineeringEntity } from "../../../packages/engineering-core/src/index";
+import type { PrototypeManufacturingProfile, PrototypePackageManifest } from "../../../packages/factory-runtime/src/index";
 import type { TehkneStudioProject } from "../../../packages/project-format/src/index";
+import {
+  createSessionSnapshot,
+  restoreSessionSnapshot,
+  type StudioSessionSnapshot
+} from "../../../packages/persistence-runtime/src/index";
 import type { ArmVariantProfile } from "../../../packages/variant-runtime/src/index";
 import {
   EngineeringSession,
   type CapabilityExecutionResult
 } from "../../../packages/engineering-session/src/index";
 import { StudioBehaviorController } from "../../../packages/studio-behavior/src/index";
-import { ArmFailureLab } from "../../../packages/studio-failure/src/index";
-import { Arm01Controller } from "../../../packages/studio-robotics/src/index";
-import { ArmVariantLab, type BaseVariantProfile } from "../../../packages/studio-variants/src/index";
+import { ArmPrototypeFactory } from "../../../packages/studio-factory/src/index";
+import { ArmFailureLab, type FailureExperimentRecord } from "../../../packages/studio-failure/src/index";
+import { Arm01Controller, type ArmMotionRecord } from "../../../packages/studio-robotics/src/index";
+import {
+  ArmVariantLab,
+  type BaseVariantProfile,
+  type EngineeringVariantRecord
+} from "../../../packages/studio-variants/src/index";
 import { StudioIntelligence } from "../../../packages/studio-intelligence/src/index";
 import desktopPreset from "../../../presets/desktop-pc/project.json";
 import armPreset from "../../../presets/arm-01/project.json";
 import failureProfile from "../../../presets/arm-01/failure-profile.json";
+import manufacturingProfile from "../../../presets/arm-01/manufacturing-profile.json";
 import highTorqueProfile from "../../../presets/arm-01/variants/high-torque-profile.json";
+import {
+  browserProjectExists,
+  loadBrowserProject,
+  saveBrowserProject,
+  type PersistedStudioProduct
+} from "../lib/projectPersistence";
 import { browserSpeechSupported, listenOnce, speakStudioResponse } from "../lib/browserSpeech";
 import { Arm01Assembly } from "./Arm01Assembly";
 import { ArmRuntimePanel } from "./ArmRuntimePanel";
@@ -32,38 +50,106 @@ interface FeedbackState {
 
 type ActiveProduct = "desktop" | "arm" | null;
 
-export function SpatialWorkbench() {
-  const desktopSession = useMemo(
-    () => new EngineeringSession(desktopPreset as unknown as TehkneStudioProject),
-    []
-  );
-  const desktopBehavior = useMemo(() => new StudioBehaviorController(desktopSession), [desktopSession]);
-  const desktopIntelligence = useMemo(
-    () => new StudioIntelligence(desktopSession, desktopBehavior),
-    [desktopSession, desktopBehavior]
-  );
+interface WorkspacePersistenceState {
+  readonly activeProduct: Exclude<ActiveProduct, null>;
+  readonly selectedEntityId: string | null;
+}
 
-  const armSession = useMemo(
-    () => new EngineeringSession(armPreset as unknown as TehkneStudioProject),
-    []
+interface ArmRuntimePersistenceState {
+  readonly motionRecords: readonly ArmMotionRecord[];
+  readonly failureRecords: readonly FailureExperimentRecord[];
+  readonly variantRecords: readonly EngineeringVariantRecord[];
+  readonly prototypePackage: PrototypePackageManifest | null;
+}
+
+interface DesktopRuntimeBundle {
+  readonly session: EngineeringSession;
+  readonly behavior: StudioBehaviorController;
+  readonly intelligence: StudioIntelligence;
+}
+
+interface ArmRuntimeBundle {
+  readonly session: EngineeringSession;
+  readonly controller: Arm01Controller;
+  readonly failureLab: ArmFailureLab;
+  readonly variantLab: ArmVariantLab;
+  readonly factory: ArmPrototypeFactory;
+  readonly intelligence: StudioIntelligence;
+}
+
+function objectExtension(snapshot: StudioSessionSnapshot | undefined, key: string): Record<string, unknown> {
+  const value = snapshot?.extensions[key];
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function createDesktopRuntime(snapshot?: StudioSessionSnapshot): DesktopRuntimeBundle {
+  if (snapshot && snapshot.project.projectId !== (desktopPreset as { projectId: string }).projectId) {
+    throw new Error(`Snapshot ${snapshot.project.projectId} não pertence ao Desktop PC.`);
+  }
+  const session = snapshot
+    ? restoreSessionSnapshot(snapshot)
+    : new EngineeringSession(desktopPreset as unknown as TehkneStudioProject);
+  const behavior = new StudioBehaviorController(session);
+  const intelligence = new StudioIntelligence(session, behavior);
+  return { session, behavior, intelligence };
+}
+
+function createArmRuntime(snapshot?: StudioSessionSnapshot): ArmRuntimeBundle {
+  if (snapshot && snapshot.project.projectId !== (armPreset as { projectId: string }).projectId) {
+    throw new Error(`Snapshot ${snapshot.project.projectId} não pertence ao ARM-01.`);
+  }
+  const session = snapshot
+    ? restoreSessionSnapshot(snapshot)
+    : new EngineeringSession(armPreset as unknown as TehkneStudioProject);
+  const raw = objectExtension(snapshot, "armRuntime") as Partial<ArmRuntimePersistenceState>;
+  const controller = new Arm01Controller(session, { records: raw.motionRecords ?? [] });
+  const failureLab = new ArmFailureLab(
+    session,
+    failureProfile as BaseVariantProfile,
+    "object.cube.red",
+    { records: raw.failureRecords ?? [] }
   );
-  const armController = useMemo(() => new Arm01Controller(armSession), [armSession]);
-  const armFailureLab = useMemo(
-    () => new ArmFailureLab(armSession, failureProfile as BaseVariantProfile),
-    [armSession]
+  const variantLab = new ArmVariantLab(
+    failureLab,
+    failureProfile as BaseVariantProfile,
+    highTorqueProfile as ArmVariantProfile,
+    "arm.root",
+    { records: raw.variantRecords ?? [] }
   );
-  const armVariantLab = useMemo(
-    () => new ArmVariantLab(
-      armFailureLab,
-      failureProfile as BaseVariantProfile,
-      highTorqueProfile as ArmVariantProfile
-    ),
-    [armFailureLab]
+  const factory = new ArmPrototypeFactory(
+    session,
+    variantLab,
+    manufacturingProfile as PrototypeManufacturingProfile,
+    { latest: raw.prototypePackage ?? null }
   );
-  const armIntelligence = useMemo(
-    () => new StudioIntelligence(armSession, undefined, armController, armVariantLab),
-    [armSession, armController, armVariantLab]
-  );
+  const intelligence = new StudioIntelligence(session, undefined, controller, variantLab);
+  return { session, controller, failureLab, variantLab, factory, intelligence };
+}
+
+function savedSelection(snapshot: StudioSessionSnapshot, session: EngineeringSession): string | null {
+  const workspace = objectExtension(snapshot, "workspace") as Partial<WorkspacePersistenceState>;
+  const selected = workspace.selectedEntityId;
+  if (typeof selected !== "string") return null;
+  try {
+    session.getEntity(selected);
+    return selected;
+  } catch {
+    return null;
+  }
+}
+
+export function SpatialWorkbench() {
+  const [desktopRuntime, setDesktopRuntime] = useState<DesktopRuntimeBundle>(() => createDesktopRuntime());
+  const [armRuntime, setArmRuntime] = useState<ArmRuntimeBundle>(() => createArmRuntime());
+  const { session: desktopSession, behavior: desktopBehavior, intelligence: desktopIntelligence } = desktopRuntime;
+  const {
+    session: armSession,
+    controller: armController,
+    failureLab: armFailureLab,
+    variantLab: armVariantLab,
+    factory: armFactory,
+    intelligence: armIntelligence
+  } = armRuntime;
 
   const [activeProduct, setActiveProduct] = useState<ActiveProduct>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -75,8 +161,15 @@ export function SpatialWorkbench() {
   );
   const [speechSupported, setSpeechSupported] = useState(false);
   const [listening, setListening] = useState(false);
+  const [savedProjects, setSavedProjects] = useState<Record<PersistedStudioProduct, boolean>>({ desktop: false, arm: false });
 
-  useEffect(() => setSpeechSupported(browserSpeechSupported()), []);
+  useEffect(() => {
+    setSpeechSupported(browserSpeechSupported());
+    setSavedProjects({
+      desktop: browserProjectExists("desktop"),
+      arm: browserProjectExists("arm")
+    });
+  }, []);
 
   const activeSession = activeProduct === "arm" ? armSession : desktopSession;
   const activeIntelligence = activeProduct === "arm" ? armIntelligence : desktopIntelligence;
@@ -101,6 +194,14 @@ export function SpatialWorkbench() {
   const cube = armSession.getEntity("object.cube.red");
   const armTaskState = String(armRoot.properties.taskState?.value ?? "idle");
 
+  const returnToWorkbench = (message?: string) => {
+    setActiveProduct(null);
+    setSelectedId(null);
+    setFeedback(null);
+    setCommandText("");
+    setIntelligenceMessage(message ?? "Diga o que quer fazer. Eu resolvo a intenção; o Engineering Core valida a ação.");
+  };
+
   const switchProduct = (product: Exclude<ActiveProduct, null>) => {
     setActiveProduct(product);
     setSelectedId(null);
@@ -111,6 +212,66 @@ export function SpatialWorkbench() {
         ? "ARM-01 pronto. Teste a carga, investigue uma falha ou peça uma variante."
         : "Desktop PC pronto para inspeção, boot causal e automações."
     );
+  };
+
+  const saveCurrentProject = () => {
+    if (!activeProduct) return;
+    try {
+      const workspace: WorkspacePersistenceState = { activeProduct, selectedEntityId: selectedId };
+      if (activeProduct === "desktop") {
+        const snapshot = createSessionSnapshot(desktopSession, {
+          behaviors: desktopBehavior.behaviors(),
+          extensions: { workspace }
+        });
+        saveBrowserProject("desktop", snapshot);
+      } else {
+        const armRuntimeState: ArmRuntimePersistenceState = {
+          motionRecords: armController.records(),
+          failureRecords: armFailureLab.records(),
+          variantRecords: armVariantLab.records(),
+          prototypePackage: armFactory.latest()
+        };
+        const snapshot = createSessionSnapshot(armSession, {
+          extensions: { workspace, armRuntime: armRuntimeState }
+        });
+        saveBrowserProject("arm", snapshot);
+      }
+      setSavedProjects((current) => ({ ...current, [activeProduct]: true }));
+      const label = activeProduct === "desktop" ? "Desktop PC" : "ARM-01";
+      returnToWorkbench(`${label} salvo com Engineering Graph, histórico e evidências da sessão.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível salvar o projeto.";
+      setFeedback({ message, error: true });
+      setIntelligenceMessage(message);
+    }
+  };
+
+  const restoreProject = (product: PersistedStudioProduct) => {
+    try {
+      const snapshot = loadBrowserProject(product);
+      if (!snapshot) throw new Error(`Não existe snapshot salvo para ${product}.`);
+      if (product === "desktop") {
+        const restored = createDesktopRuntime(snapshot);
+        setDesktopRuntime(restored);
+        setSelectedId(savedSelection(snapshot, restored.session));
+        setDesktopRuntime(restored);
+      } else {
+        const restored = createArmRuntime(snapshot);
+        setArmRuntime(restored);
+        setSelectedId(savedSelection(snapshot, restored.session));
+      }
+      setActiveProduct(product);
+      setFeedback(null);
+      setCommandText("");
+      setIntelligenceMessage(
+        `${product === "desktop" ? "Desktop PC" : "ARM-01"} restaurado de ${new Date(snapshot.savedAt).toLocaleString("pt-BR")} · ${snapshot.history.length} entradas de histórico · ${snapshot.events.length} eventos.`
+      );
+      setRevision((current) => current + 1);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Snapshot salvo não pôde ser restaurado.";
+      setFeedback({ message, error: true });
+      setIntelligenceMessage(`RESTORE BLOCKED · ${message}`);
+    }
   };
 
   const selectEntity = (entity: EngineeringEntity) => {
@@ -235,14 +396,6 @@ export function SpatialWorkbench() {
     setRevision((current) => current + 1);
   };
 
-  const resetWorkbench = () => {
-    setActiveProduct(null);
-    setSelectedId(null);
-    setFeedback(null);
-    setCommandText("");
-    setIntelligenceMessage("Diga o que quer fazer. Eu resolvo a intenção; o Engineering Core valida a ação.");
-  };
-
   return (
     <section className="workbench" aria-label="Bancada espacial do Tehkné Studio" data-revision={revision}>
       <Canvas
@@ -270,6 +423,8 @@ export function SpatialWorkbench() {
           <div className="actions">
             <button type="button" onClick={() => switchProduct("desktop")}>Chamar Desktop PC</button>
             <button type="button" onClick={() => switchProduct("arm")}>Chamar ARM-01</button>
+            {savedProjects.desktop ? <button type="button" onClick={() => restoreProject("desktop")}>Restaurar Desktop salvo</button> : null}
+            {savedProjects.arm ? <button type="button" onClick={() => restoreProject("arm")}>Restaurar ARM-01 salvo</button> : null}
             <button type="button" disabled aria-disabled="true">Projeto vazio · em breve</button>
           </div>
         </div>
@@ -277,7 +432,8 @@ export function SpatialWorkbench() {
 
       {activeProduct ? (
         <div className="workbench-toolbar" aria-label="Controles da bancada">
-          <button type="button" onClick={resetWorkbench}>Guardar projeto</button>
+          <button type="button" onClick={saveCurrentProject}>Guardar projeto</button>
+          <button type="button" onClick={() => returnToWorkbench()}>Voltar sem salvar</button>
           {activeProduct === "desktop" ? (
             <>
               <span>DESKTOP-PC-001 · {desktopComponents.length} COMPONENTES · {desktopRoot.state.toUpperCase()}</span>
@@ -308,6 +464,7 @@ export function SpatialWorkbench() {
           controller={armController}
           failureLab={armFailureLab}
           variantLab={armVariantLab}
+          factory={armFactory}
           revision={revision}
           onPick={executeArmPick}
           onEngineeringChange={handleArmEngineeringChange}
