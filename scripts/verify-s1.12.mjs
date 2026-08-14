@@ -13,6 +13,10 @@ if (manifest.releaseId !== "tehkne-studio-alpha-01") throw new Error("Alpha 01 r
 if (manifest.version !== "0.1.0-alpha.1") throw new Error("Alpha 01 version mismatch");
 if (manifest.channel !== "alpha") throw new Error("Alpha 01 channel must remain alpha");
 if (manifest.signature !== "Tehkné Solutions") throw new Error("Alpha 01 official signature missing");
+const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
+const webPackage = JSON.parse(await readFile("apps/studio-web/package.json", "utf8"));
+if (rootPackage.version !== manifest.version) throw new Error(`Root package ${rootPackage.version} does not match Alpha manifest ${manifest.version}`);
+if (webPackage.version !== manifest.version) throw new Error(`Studio web ${webPackage.version} does not match Alpha manifest ${manifest.version}`);
 const requiredEvidence = [
   "desktop.causal-repair",
   "desktop.automation",
@@ -53,4 +57,4 @@ if (!golden.includes('assert.equal(failed.status, "blocked")')) throw new Error(
 const page = await readFile("apps/studio-web/app/page.tsx", "utf8");
 if (!page.includes("ALPHA 01")) throw new Error("Alpha 01 Studio release marker missing");
 
-console.log(`S1.12 Alpha 01 structure PASS · ${required.length} release surfaces · 6 golden evidence gates · Tehkné Solutions`);
+console.log(`S1.12 Alpha 01 structure PASS · ${required.length} release surfaces · 6 golden evidence gates · version ${manifest.version} coherent · Tehkné Solutions`);
