@@ -1,14 +1,16 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { EngineeringEntity } from "../../../packages/engineering-core/src/index";
 import type { TehkneStudioProject } from "../../../packages/project-format/src/index";
 import {
   EngineeringSession,
   type CapabilityExecutionResult
 } from "../../../packages/engineering-session/src/index";
+import { StudioIntelligence } from "../../../packages/studio-intelligence/src/index";
 import desktopPreset from "../../../presets/desktop-pc/project.json";
+import { browserSpeechSupported, listenOnce, speakStudioResponse } from "../lib/browserSpeech";
 import { DesktopPcAssembly } from "./DesktopPcAssembly";
 
 interface FeedbackState {
@@ -22,10 +24,19 @@ export function SpatialWorkbench() {
     () => new EngineeringSession(desktopPreset as unknown as TehkneStudioProject),
     []
   );
+  const intelligence = useMemo(() => new StudioIntelligence(session), [session]);
   const [activeProduct, setActiveProduct] = useState<"desktop" | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
+  const [commandText, setCommandText] = useState("");
+  const [intelligenceMessage, setIntelligenceMessage] = useState(
+    "Diga o que quer fazer. Eu resolvo a intenção; o Engineering Core valida a ação."
+  );
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [listening, setListening] = useState(false);
+
+  useEffect(() => setSpeechSupported(browserSpeechSupported()), []);
 
   const selected = selectedId ? session.getEntity(selectedId) : null;
   const root = session.getEntity("pc.root");
@@ -60,10 +71,61 @@ export function SpatialWorkbench() {
     setRevision((current) => current + 1);
   };
 
+  const runUtterance = async (utterance: string, source: "ui" | "voice") => {
+    const trimmed = utterance.trim();
+    if (!trimmed) return;
+    setCommandText(trimmed);
+
+    const execution = await intelligence.executeUtterance(trimmed, {
+      selectedEntityId: selectedId,
+      lastEntityId: selectedId,
+      source
+    });
+    setIntelligenceMessage(execution.message);
+
+    if (execution.targetEntityId?.startsWith("pc.")) setActiveProduct("desktop");
+    if (execution.targetEntityId) setSelectedId(execution.targetEntityId);
+
+    if (execution.result) {
+      setFeedback({ message: execution.result.message, result: execution.result });
+      setRevision((current) => current + 1);
+    } else if (execution.resolution.status !== "resolved") {
+      setFeedback({ message: execution.message, error: true });
+    } else {
+      setFeedback(null);
+    }
+
+    if (source === "voice") speakStudioResponse(execution.message);
+  };
+
+  const submitUtterance = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void runUtterance(commandText, "ui");
+  };
+
+  const startListening = () => {
+    if (!speechSupported || listening) return;
+    setListening(true);
+    setIntelligenceMessage("Ouvindo…");
+    listenOnce(
+      (result) => {
+        setCommandText(result.transcript);
+        void runUtterance(result.transcript, "voice");
+      },
+      () => setListening(false),
+      (message) => {
+        setIntelligenceMessage(message);
+        setFeedback({ message, error: true });
+      }
+    );
+  };
+
   const resetWorkbench = () => {
     setActiveProduct(null);
     setSelectedId(null);
     setFeedback(null);
+    setCommandText("");
+    setIntelligenceMessage("Diga o que quer fazer. Eu resolvo a intenção; o Engineering Core valida a ação.");
   };
 
   return (
@@ -209,11 +271,30 @@ export function SpatialWorkbench() {
         </aside>
       ) : null}
 
-      {activeProduct && !selected ? (
-        <div className="selection-hint">
-          Abra o gabinete, remova a RAM e ligue o computador para observar o POST causal.
+      <form className="studio-command" onSubmit={submitUtterance} aria-label="Studio Intelligence">
+        <div className="studio-command-state">
+          <span>STUDIO INTELLIGENCE</span>
+          <p>{intelligenceMessage}</p>
         </div>
-      ) : null}
+        <div className="studio-command-input">
+          <input
+            value={commandText}
+            onChange={(event) => setCommandText(event.target.value)}
+            placeholder="Ex.: abra o computador · tire a RAM · ligue · por que não iniciou?"
+            aria-label="Comando para o Tehkné Studio"
+          />
+          <button type="submit">Executar</button>
+          <button
+            type="button"
+            onClick={startListening}
+            disabled={!speechSupported || listening}
+            aria-pressed={listening}
+            title={speechSupported ? "Comando por voz" : "Voz indisponível neste navegador"}
+          >
+            {listening ? "Ouvindo…" : "Voz"}
+          </button>
+        </div>
+      </form>
     </section>
   );
 }
