@@ -1,0 +1,18 @@
+{
+  "profileId": "arm-01-actuator-envelope-v1",
+  "gravityMps2": 9.81,
+  "torqueLimitNm": 15.5,
+  "currentLimitA": 22,
+  "maxTemperatureC": 80,
+  "torqueConstantNmPerA": 0.7,
+  "windingResistanceOhm": 0.25,
+  "thermalGainCPerW": 0.45,
+  "ambientTemperatureC": 25,
+  "warningMarginPercent": 20,
+  "provenance": {
+    "kind": "studio-simulation-profile",
+    "maturity": "functional-model",
+    "note": "Envelope funcional authored para o benchmark S1.9; não representa um motor comercial específico."
+  },
+  "signature": "Tehkné Solutions"
+}
