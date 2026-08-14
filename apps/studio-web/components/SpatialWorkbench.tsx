@@ -29,6 +29,9 @@ export function SpatialWorkbench() {
 
   const selected = selectedId ? session.getEntity(selectedId) : null;
   const root = session.getEntity("pc.root");
+  const boot = session.getEntity("pc.boot");
+  const powerState = String(root.properties.powerState?.value ?? "off");
+  const bootStage = String(boot.properties.stage?.value ?? "IDLE");
   const recentHistory = session.history().slice(-4).reverse();
   const physicalComponents = session.graph
     .getDependencies(root.id, "contains")
@@ -37,7 +40,7 @@ export function SpatialWorkbench() {
   const selectedRelations = selected
     ? relationshipSnapshot
         .filter((relationship) => relationship.source === selected.id || relationship.target === selected.id)
-        .slice(0, 6)
+        .slice(0, 7)
     : [];
 
   const selectEntity = (entity: EngineeringEntity) => {
@@ -53,7 +56,7 @@ export function SpatialWorkbench() {
       return;
     }
     setFeedback({ message: commandResult.result.message, result: commandResult.result });
-    setSelectedId(commandResult.result.entity.id);
+    setSelectedId(commandResult.result.focusEntityId ?? commandResult.result.entity.id);
     setRevision((current) => current + 1);
   };
 
@@ -97,6 +100,9 @@ export function SpatialWorkbench() {
           <button type="button" onClick={resetWorkbench}>Guardar projeto</button>
           <span>
             DESKTOP-PC-001 · {physicalComponents.length} COMPONENTES · {root.state.toUpperCase()}
+          </span>
+          <span className={`runtime-state runtime-${powerState}`}>
+            POWER {powerState.toUpperCase()} · BOOT {bootStage}
           </span>
         </div>
       ) : null}
@@ -157,6 +163,34 @@ export function SpatialWorkbench() {
             <section className={feedback.error ? "capability-result capability-error" : "capability-result"}>
               <span>{feedback.error ? "COMMAND ERROR" : "COMMAND RESULT"}</span>
               <p>{feedback.message}</p>
+
+              {feedback.result?.bootRun ? (
+                <div className="boot-timeline" aria-label="Timeline do boot">
+                  <span>FUNCTIONAL BOOT MODEL</span>
+                  {feedback.result.bootRun.timeline.map((step, index) => (
+                    <div key={`${step.stage}-${index}`} data-outcome={step.outcome}>
+                      <small>{step.outcome === "pass" ? "✓" : "×"}</small>
+                      <strong>{step.stage}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {feedback.result?.causalTrace?.length ? (
+                <div className="causal-trace" aria-label="Rastreamento causal">
+                  <span>CAUSAL TRACE</span>
+                  {feedback.result.causalTrace.map((step, index) => (
+                    <div key={`${step.entityId}-${index}`}>
+                      <small>{index + 1}</small>
+                      <section>
+                        <strong>{step.label}</strong>
+                        <p>{step.detail}</p>
+                      </section>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
               {feedback.result?.inspection?.length ? (
                 <dl className="property-list">
                   {feedback.result.inspection.map((property) => (
@@ -177,7 +211,7 @@ export function SpatialWorkbench() {
 
       {activeProduct && !selected ? (
         <div className="selection-hint">
-          Abra o gabinete e selecione CPU, RAM, GPU, placa-mãe, fonte, armazenamento ou refrigeração.
+          Abra o gabinete, remova a RAM e ligue o computador para observar o POST causal.
         </div>
       ) : null}
     </section>
