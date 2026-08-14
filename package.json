@@ -4,10 +4,7 @@
   "private": true,
   "description": "Tehkne Studio — Virtual Engineering Atelier by Tehkne Solutions",
   "type": "module",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "typecheck:core": "tsc -p tsconfig.core.json --noEmit",
     "build:core": "rm -rf dist && tsc -p tsconfig.core.json",
@@ -23,12 +20,9 @@
     "verify:s1.7": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web",
     "verify:s1.8": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web",
     "verify:s1.9": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web",
-    "verify:s1.10": "npm run verify:structure && node scripts/verify-s1.10.mjs && npm run typecheck:core && npm run test:domain && npm run build:web"
+    "verify:s1.10": "npm run verify:structure && node scripts/verify-s1.10.mjs && npm run typecheck:core && npm run test:domain && npm run build:web",
+    "verify:s1.11": "npm run verify:structure && node scripts/verify-s1.10.mjs && node scripts/verify-s1.11.mjs && npm run typecheck:core && npm run test:domain && npm run build:web"
   },
-  "devDependencies": {
-    "typescript": "^5.8.0"
-  },
-  "engines": {
-    "node": ">=22"
-  }
+  "devDependencies": { "typescript": "^5.8.0" },
+  "engines": { "node": ">=22" }
 }
