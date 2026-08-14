@@ -12,6 +12,7 @@
     "build:web": "npm run build --workspace @tehkne/studio-web",
     "test:domain": "npm run build:core && node --test tests/domain/*.test.mjs",
     "security:audit": "npm audit --audit-level=high",
+    "smoke:browser": "playwright test --config=playwright.config.ts",
     "verify:structure": "node scripts/verify-structure.mjs",
     "verify:s1.1": "npm run verify:structure && npm run typecheck:core && npm run test:domain",
     "verify:s1.2": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web",
@@ -30,6 +31,9 @@
     "postcss": "8.5.25",
     "sharp": "0.35.3"
   },
-  "devDependencies": { "typescript": "^5.8.0" },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "typescript": "^5.8.0"
+  },
   "engines": { "node": ">=22" }
 }
