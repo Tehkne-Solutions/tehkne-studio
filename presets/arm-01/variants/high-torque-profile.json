@@ -1,0 +1,27 @@
+{
+  "variantId": "arm-01/high-torque",
+  "name": "ARM-01 High Torque",
+  "parentVariantId": "arm-01/base",
+  "projectId": "arm-01",
+  "actuatorEnvelope": {
+    "profileId": "arm-01-high-torque-envelope-v1",
+    "gravityMps2": 9.81,
+    "torqueLimitNm": 24,
+    "currentLimitA": 26,
+    "maxTemperatureC": 85,
+    "torqueConstantNmPerA": 1,
+    "windingResistanceOhm": 0.18,
+    "thermalGainCPerW": 0.35,
+    "ambientTemperatureC": 25,
+    "warningMarginPercent": 20
+  },
+  "actuatorMassKg": 0.95,
+  "estimatedActuatorCostBrl": 460,
+  "supplyCurrentCapacityA": 26,
+  "provenance": {
+    "kind": "studio-variant-profile",
+    "maturity": "functional-model",
+    "note": "Variante authored para demonstrar redesign orientado por evidência na S1.10; valores são funcionais de benchmark e não representam um atuador comercial específico."
+  },
+  "signature": "Tehkné Solutions"
+}
