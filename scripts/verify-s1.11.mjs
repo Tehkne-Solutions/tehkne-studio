@@ -37,8 +37,13 @@ for (const token of ["ArmPrototypeFactory", "validated engineering variant", "Pr
 }
 
 const panel = await readFile("apps/studio-web/components/ArmRuntimePanel.tsx", "utf8");
-for (const token of ["ArmPrototypeFactory", "manufacturingProfile", "VIRTUAL FACTORY", "Preparar Prototype Package", "ASSEMBLY PLAN", "NOT FABRICATION READY", "strategyCounts"]) {
+for (const token of ["ArmPrototypeFactory", "factory: ArmPrototypeFactory", "VIRTUAL FACTORY", "Preparar Prototype Package", "ASSEMBLY PLAN", "NOT FABRICATION READY", "strategyCounts"]) {
   if (!panel.includes(token)) throw new Error(`Virtual Factory UX missing: ${token}`);
+}
+
+const workbench = await readFile("apps/studio-web/components/SpatialWorkbench.tsx", "utf8");
+for (const token of ["ArmPrototypeFactory", "manufacturingProfile", "factory={armFactory}"]) {
+  if (!workbench.includes(token)) throw new Error(`Virtual Factory ownership/injection missing: ${token}`);
 }
 
 console.log(`S1.11 factory structure PASS · ${required.length} new surfaces · validated variant → prototype plan package · Tehkné Solutions`);

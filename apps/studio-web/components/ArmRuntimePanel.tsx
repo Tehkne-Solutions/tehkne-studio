@@ -1,13 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { FailureTraceStep } from "../../../packages/failure-simulation/src/index";
-import type { PrototypeManufacturingProfile } from "../../../packages/factory-runtime/src/index";
-import { ArmPrototypeFactory } from "../../../packages/studio-factory/src/index";
+import type { ArmPrototypeFactory } from "../../../packages/studio-factory/src/index";
 import type { ArmFailureLab } from "../../../packages/studio-failure/src/index";
 import type { ArmVariantLab } from "../../../packages/studio-variants/src/index";
 import type { Arm01Controller } from "../../../packages/studio-robotics/src/index";
-import manufacturingProfile from "../../../presets/arm-01/manufacturing-profile.json";
 import styles from "./ArmRuntimePanel.module.css";
 
 // S1.9 compatibility: failureProfile is now injected through the shared ArmFailureLab owned by SpatialWorkbench.
@@ -16,6 +14,7 @@ interface ArmRuntimePanelProps {
   readonly controller: Arm01Controller;
   readonly failureLab: ArmFailureLab;
   readonly variantLab: ArmVariantLab;
+  readonly factory: ArmPrototypeFactory;
   readonly revision: number;
   readonly onPick: () => void;
   readonly onEngineeringChange: (message: string) => void;
@@ -32,18 +31,10 @@ function assessmentLabel(status: string): string {
   return "PASS";
 }
 
-export function ArmRuntimePanel({ controller, failureLab, variantLab, revision, onPick, onEngineeringChange }: ArmRuntimePanelProps) {
+export function ArmRuntimePanel({ controller, failureLab, variantLab, factory, revision, onPick, onEngineeringChange }: ArmRuntimePanelProps) {
   const [failureRevision, setFailureRevision] = useState(0);
   const [trace, setTrace] = useState<readonly FailureTraceStep[]>([]);
   const [failureMessage, setFailureMessage] = useState<string | null>(null);
-  const factory = useMemo(
-    () => new ArmPrototypeFactory(
-      controller.session,
-      variantLab,
-      manufacturingProfile as PrototypeManufacturingProfile
-    ),
-    [controller.session, variantLab]
-  );
 
   const robot = controller.session.getEntity("arm.root");
   const gripper = controller.session.getEntity("arm.gripper");

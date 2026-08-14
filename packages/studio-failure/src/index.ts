@@ -15,6 +15,10 @@ export interface FailureExperimentRecord {
   readonly occurredAt: string;
 }
 
+export interface ArmFailureLabRestoreState {
+  readonly records?: readonly FailureExperimentRecord[];
+}
+
 export interface FailureExplanation {
   readonly assessment: ArmLoadAssessment;
   readonly trace: readonly FailureTraceStep[];
@@ -25,6 +29,17 @@ function numeric(entity: EngineeringEntity, propertyId: string): number {
   const value = entity.properties[propertyId]?.value;
   if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`${entity.id}.${propertyId} must be numeric`);
   return value;
+}
+
+function cloneRecord(record: FailureExperimentRecord): FailureExperimentRecord {
+  return JSON.parse(JSON.stringify(record)) as FailureExperimentRecord;
+}
+
+function sequenceFrom(records: readonly FailureExperimentRecord[]): number {
+  return records.reduce((max, record) => {
+    const match = record.id.match(/failure-experiment-(\d+)$/);
+    return Math.max(max, match ? Number(match[1]) : 0);
+  }, 0);
 }
 
 function withSimulatedProperty(
@@ -79,15 +94,29 @@ export class ArmFailureLab {
   constructor(
     readonly session: EngineeringSession,
     readonly envelope: ArmActuatorEnvelope,
-    readonly targetEntityId: EntityId = "object.cube.red"
-  ) {}
+    readonly targetEntityId: EntityId = "object.cube.red",
+    restore: ArmFailureLabRestoreState = {}
+  ) {
+    const records = restore.records ?? [];
+    const ids = new Set<string>();
+    for (const record of records) {
+      if (!record.id || ids.has(record.id)) throw new Error(`Invalid restored Failure Lab record id: ${record.id}`);
+      ids.add(record.id);
+      this.session.getEntity(record.targetEntityId);
+      if (record.targetEntityId !== this.targetEntityId) throw new Error(`Restored Failure Lab target mismatch: ${record.targetEntityId}`);
+      if (Number.isNaN(Date.parse(record.occurredAt))) throw new Error(`Invalid restored Failure Lab timestamp: ${record.id}`);
+      this.#records.push(cloneRecord(record));
+    }
+    this.#sequence = Math.max(records.length, sequenceFrom(records));
+  }
 
   records(): readonly FailureExperimentRecord[] {
-    return [...this.#records];
+    return this.#records.map(cloneRecord);
   }
 
   latest(): FailureExperimentRecord | null {
-    return this.#records.at(-1) ?? null;
+    const record = this.#records.at(-1);
+    return record ? cloneRecord(record) : null;
   }
 
   setPayloadMass(payloadKg: number): EngineeringEntity {
@@ -132,11 +161,7 @@ export class ArmFailureLab {
     this.session.graph.replaceEntity(robot);
 
     let controller = this.session.getEntity("arm.controller");
-    controller = withSimulatedProperty(
-      controller,
-      "loadAssessmentStatus",
-      assessment.status
-    );
+    controller = withSimulatedProperty(controller, "loadAssessmentStatus", assessment.status);
     const motionState = assessment.status === "fault" ? "blocked" : assessment.status === "warning" ? "limited" : "idle";
     controller = replaceControllerMotionState(controller, motionState);
     this.session.graph.replaceEntity(controller);
@@ -165,7 +190,7 @@ export class ArmFailureLab {
         envelopeProfileId: this.envelope.profileId
       }
     });
-    return record;
+    return cloneRecord(record);
   }
 
   explainLatest(): FailureExplanation {

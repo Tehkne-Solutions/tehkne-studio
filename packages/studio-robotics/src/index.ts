@@ -25,6 +25,10 @@ export interface ArmMotionRecord {
   readonly occurredAt: string;
 }
 
+export interface Arm01ControllerRestoreState {
+  readonly records?: readonly ArmMotionRecord[];
+}
+
 export interface ArmPickExecutionSummary {
   readonly taskId: string;
   readonly robotEntityId: EntityId;
@@ -34,6 +38,10 @@ export interface ArmPickExecutionSummary {
   readonly finalPosition: Vector3;
   readonly attachedTo: EntityId;
   readonly message: string;
+}
+
+function cloneMotionRecord(record: ArmMotionRecord): ArmMotionRecord {
+  return JSON.parse(JSON.stringify(record)) as ArmMotionRecord;
 }
 
 function numericProperty(entity: EngineeringEntity, propertyId: string): number {
@@ -89,10 +97,18 @@ export class Arm01Controller {
   readonly #records: ArmMotionRecord[] = [];
   #sequence = 0;
 
-  constructor(readonly session: EngineeringSession) {}
+  constructor(readonly session: EngineeringSession, restore: Arm01ControllerRestoreState = {}) {
+    for (const record of restore.records ?? []) {
+      if (!record.waypointId || !record.label || Number.isNaN(Date.parse(record.occurredAt))) {
+        throw new Error("Invalid restored ARM motion record");
+      }
+      this.#records.push(cloneMotionRecord(record));
+    }
+    this.#sequence = this.session.events.list("PickTaskCompleted").length;
+  }
 
   records(): readonly ArmMotionRecord[] {
-    return [...this.#records];
+    return this.#records.map(cloneMotionRecord);
   }
 
   geometry(): ArmGeometry {
