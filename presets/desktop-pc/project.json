@@ -11,7 +11,8 @@
       "name": "Desktop PC",
       "state": "closed",
       "properties": {
-        "formFactor": { "id": "formFactor", "value": "ATX Mid Tower", "source": "studio", "confidence": 1 }
+        "formFactor": { "id": "formFactor", "value": "ATX Mid Tower", "source": "studio", "confidence": 1 },
+        "powerState": { "id": "powerState", "value": "off", "source": "simulated", "confidence": 1 }
       },
       "ports": {},
       "capabilities": [
@@ -87,7 +88,8 @@
       "capabilities": [
         { "id": "inspect", "label": "Inspecionar" },
         { "id": "explain", "label": "Explicar" },
-        { "id": "remove", "label": "Remover" }
+        { "id": "remove", "label": "Remover" },
+        { "id": "insert", "label": "Reinstalar" }
       ],
       "metadata": {
         "learningDepth": ["simple", "technical", "engineering"],
@@ -190,7 +192,13 @@
       "name": "Boot Process",
       "parentId": "pc.root",
       "state": "idle",
-      "properties": {},
+      "properties": {
+        "status": { "id": "status", "value": "idle", "source": "simulated", "confidence": 1 },
+        "stage": { "id": "stage", "value": "IDLE", "source": "simulated", "confidence": 1 },
+        "faultCode": { "id": "faultCode", "value": null, "source": "simulated", "confidence": 1 },
+        "faultEntityId": { "id": "faultEntityId", "value": null, "source": "simulated", "confidence": 1 },
+        "faultReason": { "id": "faultReason", "value": null, "source": "simulated", "confidence": 1 }
+      },
       "ports": {},
       "capabilities": [
         { "id": "simulate", "label": "Simular" },
@@ -227,7 +235,7 @@
     { "id": "boot-depends-motherboard", "source": "pc.boot", "target": "pc.motherboard", "type": "dependsOn", "metadata": { "reason": "platform initialization" } }
   ],
   "metadata": {
-    "maturity": "systemic-teardown",
+    "maturity": "causal-boot",
     "signature": "Tehkné Solutions"
   }
 }
