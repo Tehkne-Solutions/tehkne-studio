@@ -74,3 +74,12 @@ export function listenOnce(
 
   return () => recognition.stop();
 }
+
+export function speakStudioResponse(message: string): void {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(message);
+  utterance.lang = "pt-BR";
+  utterance.rate = 1;
+  window.speechSynthesis.speak(utterance);
+}
