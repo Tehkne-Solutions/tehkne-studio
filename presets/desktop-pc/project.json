@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "0.1",
+  "projectId": "desktop-pc-001",
+  "name": "Desktop PC 001",
+  "projectType": "teardown",
+  "rootEntityId": "pc.root",
+  "entities": [
+    {
+      "id": "pc.root",
+      "type": "Computer",
+      "name": "Desktop PC",
+      "state": "off",
+      "properties": {},
+      "ports": {},
+      "capabilities": [
+        { "id": "open", "label": "Open" },
+        { "id": "explode", "label": "Explode" },
+        { "id": "powerOn", "label": "Power On" }
+      ],
+      "metadata": { "preset": true }
+    },
+    {
+      "id": "pc.ram.01",
+      "type": "MemoryModule",
+      "name": "RAM Module A",
+      "parentId": "pc.root",
+      "state": "connected",
+      "properties": {
+        "connected": { "id": "connected", "value": true, "source": "studio" }
+      },
+      "ports": {
+        "memory-bus": {
+          "id": "memory-bus",
+          "kind": "data",
+          "direction": "bidirectional",
+          "compatibility": ["ddr-memory-slot"],
+          "state": "connected"
+        }
+      },
+      "capabilities": [
+        { "id": "inspect", "label": "Inspect" },
+        { "id": "explain", "label": "Explain" },
+        { "id": "remove", "label": "Remove" }
+      ],
+      "metadata": { "learningDepth": ["simple", "technical", "engineering"] }
+    },
+    {
+      "id": "pc.boot",
+      "type": "BootProcess",
+      "name": "Boot Process",
+      "parentId": "pc.root",
+      "state": "idle",
+      "properties": {},
+      "ports": {},
+      "capabilities": [
+        { "id": "simulate", "label": "Simulate" },
+        { "id": "why", "label": "Why?" }
+      ],
+      "metadata": {}
+    }
+  ],
+  "relationships": [
+    {
+      "id": "pc-contains-ram",
+      "source": "pc.root",
+      "target": "pc.ram.01",
+      "type": "contains",
+      "metadata": {}
+    },
+    {
+      "id": "boot-depends-ram",
+      "source": "pc.boot",
+      "target": "pc.ram.01",
+      "type": "dependsOn",
+      "metadata": { "reason": "memory initialization" }
+    }
+  ],
+  "metadata": {
+    "maturity": "foundation",
+    "signature": "Tehkné Solutions"
+  }
+}
