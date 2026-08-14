@@ -1,4 +1,4 @@
-name: S1 Desktop PC System Gate
+name: S1 Causal Boot Gate
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  desktop-pc-system:
+  causal-boot:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,4 +14,4 @@ jobs:
         with:
           node-version: 22
       - run: npm install --ignore-scripts
-      - run: npm run verify:s1.4
+      - run: npm run verify:s1.5

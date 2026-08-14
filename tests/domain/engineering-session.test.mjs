@@ -85,14 +85,14 @@ test("capability runtime rejects actions that are not exposed or not yet executa
     ...project,
     entities: project.entities.map((entity) =>
       entity.id === "pc.root"
-        ? { ...entity, capabilities: [...entity.capabilities, { id: "powerOn", label: "Power On" }] }
+        ? { ...entity, capabilities: [...entity.capabilities, { id: "futureCapability", label: "Future" }] }
         : entity
     )
   });
 
-  const future = await session.executeCapability("pc.root", "powerOn");
+  const future = await session.executeCapability("pc.root", "futureCapability");
   assert.equal(future.ok, false);
-  assert.match(future.error, /not executable in S1.4/);
+  assert.match(future.error, /not executable in S1.5/);
 
   const missing = await session.executeCapability("pc.root", "remove");
   assert.equal(missing.ok, false);
