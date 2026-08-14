@@ -1,3 +1,4 @@
+import { ComponentLibraryPanel } from "../components/ComponentLibraryPanel";
 import { SpatialWorkbench } from "../components/SpatialWorkbench";
 
 export default function StudioPage() {
@@ -12,9 +13,10 @@ export default function StudioPage() {
       </header>
 
       <SpatialWorkbench />
+      <ComponentLibraryPanel />
 
       <footer className="studio-footer">
-        <span>Engineering Graph · Intelligence · Automation · Robotics · Failure · Variants · Virtual Factory</span>
+        <span>Engineering Graph · Component Library · Intelligence · Automation · Robotics · Failure · Variants · Virtual Factory</span>
         <span>Tehkné Solutions · Alpha 01</span>
       </footer>
     </main>
