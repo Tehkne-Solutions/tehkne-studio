@@ -9,9 +9,13 @@ import {
   type CapabilityExecutionResult
 } from "../../../packages/engineering-session/src/index";
 import { StudioBehaviorController } from "../../../packages/studio-behavior/src/index";
+import { Arm01Controller } from "../../../packages/studio-robotics/src/index";
 import { StudioIntelligence } from "../../../packages/studio-intelligence/src/index";
 import desktopPreset from "../../../presets/desktop-pc/project.json";
+import armPreset from "../../../presets/arm-01/project.json";
 import { browserSpeechSupported, listenOnce, speakStudioResponse } from "../lib/browserSpeech";
+import { Arm01Assembly } from "./Arm01Assembly";
+import { ArmRuntimePanel } from "./ArmRuntimePanel";
 import { BehaviorPanel } from "./BehaviorPanel";
 import { DesktopPcAssembly } from "./DesktopPcAssembly";
 
@@ -21,17 +25,30 @@ interface FeedbackState {
   readonly error?: boolean;
 }
 
+type ActiveProduct = "desktop" | "arm" | null;
+
 export function SpatialWorkbench() {
-  const session = useMemo(
+  const desktopSession = useMemo(
     () => new EngineeringSession(desktopPreset as unknown as TehkneStudioProject),
     []
   );
-  const behaviorController = useMemo(() => new StudioBehaviorController(session), [session]);
-  const intelligence = useMemo(
-    () => new StudioIntelligence(session, behaviorController),
-    [session, behaviorController]
+  const desktopBehavior = useMemo(() => new StudioBehaviorController(desktopSession), [desktopSession]);
+  const desktopIntelligence = useMemo(
+    () => new StudioIntelligence(desktopSession, desktopBehavior),
+    [desktopSession, desktopBehavior]
   );
-  const [activeProduct, setActiveProduct] = useState<"desktop" | null>(null);
+
+  const armSession = useMemo(
+    () => new EngineeringSession(armPreset as unknown as TehkneStudioProject),
+    []
+  );
+  const armController = useMemo(() => new Arm01Controller(armSession), [armSession]);
+  const armIntelligence = useMemo(
+    () => new StudioIntelligence(armSession, undefined, armController),
+    [armSession, armController]
+  );
+
+  const [activeProduct, setActiveProduct] = useState<ActiveProduct>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
@@ -44,21 +61,40 @@ export function SpatialWorkbench() {
 
   useEffect(() => setSpeechSupported(browserSpeechSupported()), []);
 
-  const selected = selectedId ? session.getEntity(selectedId) : null;
-  const root = session.getEntity("pc.root");
-  const boot = session.getEntity("pc.boot");
-  const powerState = String(root.properties.powerState?.value ?? "off");
-  const bootStage = String(boot.properties.stage?.value ?? "IDLE");
-  const recentHistory = session.history().slice(-4).reverse();
-  const physicalComponents = session.graph
-    .getDependencies(root.id, "contains")
-    .filter((entity) => entity.type !== "BootProcess");
-  const relationshipSnapshot = session.graph.snapshot().relationships;
+  const activeSession = activeProduct === "arm" ? armSession : desktopSession;
+  const activeIntelligence = activeProduct === "arm" ? armIntelligence : desktopIntelligence;
+  const selected = selectedId ? activeSession.getEntity(selectedId) : null;
+  const relationshipSnapshot = activeSession.graph.snapshot().relationships;
   const selectedRelations = selected
     ? relationshipSnapshot
         .filter((relationship) => relationship.source === selected.id || relationship.target === selected.id)
         .slice(0, 7)
     : [];
+  const recentHistory = activeSession.history().slice(-4).reverse();
+
+  const desktopRoot = desktopSession.getEntity("pc.root");
+  const desktopBoot = desktopSession.getEntity("pc.boot");
+  const powerState = String(desktopRoot.properties.powerState?.value ?? "off");
+  const bootStage = String(desktopBoot.properties.stage?.value ?? "IDLE");
+  const desktopComponents = desktopSession.graph
+    .getDependencies(desktopRoot.id, "contains")
+    .filter((entity) => entity.type !== "BootProcess");
+
+  const armRoot = armSession.getEntity("arm.root");
+  const cube = armSession.getEntity("object.cube.red");
+  const armTaskState = String(armRoot.properties.taskState?.value ?? "idle");
+
+  const switchProduct = (product: Exclude<ActiveProduct, null>) => {
+    setActiveProduct(product);
+    setSelectedId(null);
+    setFeedback(null);
+    setCommandText("");
+    setIntelligenceMessage(
+      product === "arm"
+        ? "ARM-01 pronto. Diga: “Pegue o cubo vermelho”."
+        : "Desktop PC pronto para inspeção, boot causal e automações."
+    );
+  };
 
   const selectEntity = (entity: EngineeringEntity) => {
     setSelectedId(entity.id);
@@ -67,7 +103,7 @@ export function SpatialWorkbench() {
 
   const execute = async (capabilityId: string) => {
     if (!selected) return;
-    const commandResult = await session.executeCapability(selected.id, capabilityId, "ui");
+    const commandResult = await activeSession.executeCapability(selected.id, capabilityId, "ui");
     if (!commandResult.ok || !commandResult.result) {
       setFeedback({ message: commandResult.error ?? "Falha ao executar capability.", error: true });
       return;
@@ -82,23 +118,28 @@ export function SpatialWorkbench() {
     if (!trimmed) return;
     setCommandText(trimmed);
 
+    const looksRobotic = /\b(pegue|pegar|apanhe|segure|cubo|arm-01|braco|braço|robo|robô|pick|grab)\b/i.test(trimmed);
+    const intelligence = activeProduct === null && looksRobotic ? armIntelligence : activeIntelligence;
+    if (activeProduct === null && looksRobotic) setActiveProduct("arm");
+
     const execution = await intelligence.executeUtterance(trimmed, {
-      selectedEntityId: selectedId,
-      lastEntityId: selectedId,
+      selectedEntityId: activeProduct === null && looksRobotic ? null : selectedId,
+      lastEntityId: activeProduct === null && looksRobotic ? null : selectedId,
       source
     });
     setIntelligenceMessage(execution.message);
 
     if (execution.targetEntityId?.startsWith("pc.")) setActiveProduct("desktop");
+    if (execution.targetEntityId?.startsWith("arm.") || execution.robotTask) setActiveProduct("arm");
     if (execution.targetEntityId) setSelectedId(execution.targetEntityId);
 
     if (execution.result) {
       setFeedback({ message: execution.result.message, result: execution.result });
       setRevision((current) => current + 1);
-    } else if (execution.behavior) {
+    } else if (execution.behavior || execution.robotTask) {
       setFeedback(null);
       setRevision((current) => current + 1);
-    } else if (execution.resolution.status !== "resolved") {
+    } else if (execution.resolution.status !== "resolved" || !execution.executed) {
       setFeedback({ message: execution.message, error: true });
     } else {
       setFeedback(null);
@@ -131,7 +172,7 @@ export function SpatialWorkbench() {
 
   const injectThermalSpike = async () => {
     setActiveProduct("desktop");
-    const result = await behaviorController.ingestTelemetry("pc.cpu", "temperatureC", 76, "simulation");
+    const result = await desktopBehavior.ingestTelemetry("pc.cpu", "temperatureC", 76, "simulation");
     const triggered = result.executions.at(-1);
     setSelectedId("pc.cpu");
     setFeedback(null);
@@ -145,13 +186,28 @@ export function SpatialWorkbench() {
 
   const advanceThermalModel = async () => {
     setActiveProduct("desktop");
-    const thermal = await behaviorController.simulateCpuThermalStep();
+    const thermal = await desktopBehavior.simulateCpuThermalStep();
     setSelectedId("pc.cpu");
     setFeedback(null);
     setIntelligenceMessage(
       `Thermal step: ${thermal.previousTemperatureC} °C → ${thermal.nextTemperatureC} °C · fan ${thermal.fanPercent}%.`
     );
     setRevision((current) => current + 1);
+  };
+
+  const executeArmPick = () => {
+    try {
+      setActiveProduct("arm");
+      const result = armController.executePick("object.cube.red");
+      setSelectedId("arm.root");
+      setFeedback(null);
+      setIntelligenceMessage(result.message);
+      setRevision((current) => current + 1);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Falha ao executar a tarefa robótica.";
+      setFeedback({ message, error: true });
+      setIntelligenceMessage(message);
+    }
   };
 
   const resetWorkbench = () => {
@@ -175,7 +231,10 @@ export function SpatialWorkbench() {
         <directionalLight position={[5, 7, 4]} intensity={2.1} castShadow />
         <gridHelper args={[14, 28, "#45483f", "#272923"]} position={[0, -0.53, 0]} />
         {activeProduct === "desktop" ? (
-          <DesktopPcAssembly session={session} selectedId={selectedId} onSelect={selectEntity} />
+          <DesktopPcAssembly session={desktopSession} selectedId={selectedId} onSelect={selectEntity} />
+        ) : null}
+        {activeProduct === "arm" ? (
+          <Arm01Assembly session={armSession} selectedId={selectedId} onSelect={selectEntity} />
         ) : null}
       </Canvas>
 
@@ -184,8 +243,8 @@ export function SpatialWorkbench() {
           <p>THE FIRST WORKBENCH</p>
           <strong>O que você quer construir ou compreender?</strong>
           <div className="actions">
-            <button type="button" onClick={() => setActiveProduct("desktop")}>Chamar Desktop PC</button>
-            <button type="button" disabled aria-disabled="true">ARM-01 · próxima etapa</button>
+            <button type="button" onClick={() => switchProduct("desktop")}>Chamar Desktop PC</button>
+            <button type="button" onClick={() => switchProduct("arm")}>Chamar ARM-01</button>
             <button type="button" disabled aria-disabled="true">Projeto vazio · em breve</button>
           </div>
         </div>
@@ -194,27 +253,38 @@ export function SpatialWorkbench() {
       {activeProduct ? (
         <div className="workbench-toolbar" aria-label="Controles da bancada">
           <button type="button" onClick={resetWorkbench}>Guardar projeto</button>
-          <span>
-            DESKTOP-PC-001 · {physicalComponents.length} COMPONENTES · {root.state.toUpperCase()}
-          </span>
-          <span className={`runtime-state runtime-${powerState}`}>
-            POWER {powerState.toUpperCase()} · BOOT {bootStage}
-          </span>
+          {activeProduct === "desktop" ? (
+            <>
+              <span>DESKTOP-PC-001 · {desktopComponents.length} COMPONENTES · {desktopRoot.state.toUpperCase()}</span>
+              <span className={`runtime-state runtime-${powerState}`}>
+                POWER {powerState.toUpperCase()} · BOOT {bootStage}
+              </span>
+            </>
+          ) : (
+            <>
+              <span>ARM-01 · 3 JOINTS · {armTaskState.toUpperCase()}</span>
+              <span className="runtime-state">WORKPIECE {cube.state.toUpperCase()}</span>
+            </>
+          )}
         </div>
       ) : null}
 
-      {activeProduct ? (
+      {activeProduct === "desktop" ? (
         <BehaviorPanel
-          controller={behaviorController}
+          controller={desktopBehavior}
           revision={revision}
           onThermalSpike={() => void injectThermalSpike()}
           onThermalStep={() => void advanceThermalModel()}
         />
       ) : null}
 
+      {activeProduct === "arm" ? (
+        <ArmRuntimePanel controller={armController} revision={revision} onPick={executeArmPick} />
+      ) : null}
+
       {activeProduct && recentHistory.length > 0 ? (
         <aside className="semantic-history" aria-label="Histórico semântico recente">
-          <span>HISTORY · {session.history().length}</span>
+          <span>HISTORY · {activeSession.history().length}</span>
           {recentHistory.map((entry) => (
             <div key={entry.id}>
               <strong>{entry.label}</strong>
@@ -232,7 +302,7 @@ export function SpatialWorkbench() {
 
           <div className="entity-actions">
             {selected.capabilities.map((capability) => {
-              const supported = session.canExecuteCapability(capability.id);
+              const supported = activeSession.canExecuteCapability(capability.id);
               return (
                 <button
                   type="button"
@@ -253,7 +323,7 @@ export function SpatialWorkbench() {
               {selectedRelations.map((relationship) => {
                 const outgoing = relationship.source === selected.id;
                 const otherId = outgoing ? relationship.target : relationship.source;
-                const other = session.getEntity(otherId);
+                const other = activeSession.getEntity(otherId);
                 return (
                   <div key={relationship.id}>
                     <small>{outgoing ? "→" : "←"} {relationship.type}</small>
@@ -323,7 +393,9 @@ export function SpatialWorkbench() {
           <input
             value={commandText}
             onChange={(event) => setCommandText(event.target.value)}
-            placeholder="Ex.: quando a CPU passar de 70 graus, coloque a ventoinha no máximo"
+            placeholder={activeProduct === "arm"
+              ? "Ex.: pegue o cubo vermelho"
+              : "Ex.: abra o computador · tire a RAM · crie uma automação térmica"}
             aria-label="Comando para o Tehkné Studio"
           />
           <button type="submit">Executar</button>

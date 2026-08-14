@@ -8,7 +8,8 @@ export type RelationshipType =
   | "controlledBy"
   | "dependsOn"
   | "moves"
-  | "reads";
+  | "reads"
+  | "attachedTo";
 
 export interface EngineeringRelationship {
   readonly id: string;

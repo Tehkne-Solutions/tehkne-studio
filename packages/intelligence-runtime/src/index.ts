@@ -27,7 +27,13 @@ export interface ThresholdBehaviorDraft {
   readonly args: Readonly<Record<string, string | number | boolean | null>>;
 }
 
-export type IntelligenceAction = "capability" | "focus" | "behavior";
+export interface RobotTaskDraft {
+  readonly kind: "pick";
+  readonly robotEntityId: EntityId;
+  readonly targetEntityId: EntityId;
+}
+
+export type IntelligenceAction = "capability" | "focus" | "behavior" | "robotTask";
 
 export interface ResolvedStudioIntent {
   readonly status: "resolved";
@@ -37,6 +43,7 @@ export interface ResolvedStudioIntent {
   readonly targetEntityId: EntityId;
   readonly capabilityId?: string;
   readonly behaviorDraft?: ThresholdBehaviorDraft;
+  readonly robotTaskDraft?: RobotTaskDraft;
   readonly intent: string;
   readonly confidence: number;
   readonly rationale: string;
@@ -55,7 +62,7 @@ export type StudioIntentResolution = ResolvedStudioIntent | UnresolvedStudioInte
 interface IntentRule {
   readonly intent: string;
   readonly capabilityId?: string;
-  readonly action: Exclude<IntelligenceAction, "behavior">;
+  readonly action: Exclude<IntelligenceAction, "behavior" | "robotTask">;
   readonly patterns: readonly string[];
   readonly preferredTypes?: readonly string[];
 }
@@ -81,7 +88,9 @@ const TYPE_ALIASES: Readonly<Record<string, readonly string[]>> = {
   PowerSupply: ["fonte", "fonte de alimentacao", "psu", "power supply"],
   StorageDevice: ["ssd", "nvme", "armazenamento", "storage"],
   CoolingSystem: ["cooler", "refrigeracao", "ventoinha", "fan", "cooling"],
-  BootProcess: ["boot", "inicializacao", "post", "processo de boot"]
+  BootProcess: ["boot", "inicializacao", "post", "processo de boot"],
+  RobotArm: ["braco", "braco robotico", "robo", "arm-01", "robot arm"],
+  Workpiece: ["peca", "objeto", "cubo", "workpiece"]
 };
 
 function normalize(value: string): string {
@@ -151,6 +160,50 @@ function numericValue(normalized: string): number | null {
   if (!match?.[1]) return null;
   const value = Number(match[1].replace(",", "."));
   return Number.isFinite(value) ? value : null;
+}
+
+function resolveRobotTask(
+  utterance: string,
+  normalized: string,
+  context: StudioIntelligenceContext
+): StudioIntentResolution | null {
+  if (!/\b(pegue|pegar|apanhe|apanhar|segure|pick|grab)\b/.test(normalized)) return null;
+
+  const robots = context.entities.filter(
+    (entity) => entity.type === "RobotArm" && entity.capabilityIds.includes("pick")
+  );
+  const workpieces = context.entities.filter((entity) => entity.type === "Workpiece");
+  const namedTargets = explicitCandidates(normalized, workpieces);
+  const targetCandidates = namedTargets.length > 0 ? namedTargets : workpieces;
+
+  if (robots.length !== 1 || targetCandidates.length !== 1) {
+    const candidates = [...robots, ...targetCandidates].map((entity) => entity.id);
+    return {
+      status: robots.length > 1 || targetCandidates.length > 1 ? "ambiguous" : "unresolved",
+      utterance,
+      normalized,
+      message: "Preciso de um único braço compatível e um único objeto manipulável para executar a tarefa.",
+      ...(candidates.length > 1 ? { candidates } : {})
+    };
+  }
+
+  const robot = robots[0]!;
+  const target = targetCandidates[0]!;
+  return {
+    status: "resolved",
+    utterance,
+    normalized,
+    action: "robotTask",
+    targetEntityId: robot.id,
+    robotTaskDraft: {
+      kind: "pick",
+      robotEntityId: robot.id,
+      targetEntityId: target.id
+    },
+    intent: "robotPick",
+    confidence: namedTargets.length === 1 ? 0.99 : 0.9,
+    rationale: `${robot.name} expõe pick e ${target.name} é o único Workpiece compatível com o comando.`
+  };
 }
 
 function resolveThresholdBehavior(
@@ -231,6 +284,9 @@ function resolveThresholdBehavior(
 export function resolveStudioIntent(utterance: string, context: StudioIntelligenceContext): StudioIntentResolution {
   const normalized = normalize(utterance);
   if (!normalized) return { status: "unresolved", utterance, normalized, message: "Nenhum comando foi informado." };
+
+  const robotResolution = resolveRobotTask(utterance, normalized, context);
+  if (robotResolution) return robotResolution;
 
   const behaviorResolution = resolveThresholdBehavior(utterance, normalized, context);
   if (behaviorResolution) return behaviorResolution;

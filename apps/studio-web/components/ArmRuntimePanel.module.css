@@ -1,0 +1,66 @@
+.panel {
+  position: absolute;
+  z-index: 5;
+  left: 18px;
+  top: 76px;
+  width: min(315px, calc(100vw - 36px));
+  padding: 14px;
+  border: 1px solid #474942;
+  background: rgba(24, 25, 22, .96);
+  box-shadow: 0 20px 58px rgba(0, 0, 0, .28);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #383a34;
+}
+.heading span { color: #b29b69; font-size: 9px; letter-spacing: .15em; }
+.heading small { color: #8f9189; font-size: 9px; letter-spacing: .11em; }
+
+.joints {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin-top: 10px;
+  border: 1px solid #353731;
+  background: #353731;
+}
+.joints div { padding: 9px 10px; background: #1e1f1c; }
+.joints small { display: block; color: #777a72; font-size: 8px; letter-spacing: .12em; }
+.joints strong { display: block; margin-top: 4px; color: #dddcd5; font-size: 14px; font-weight: 520; }
+
+.workpiece { padding: 12px 0; border-bottom: 1px solid #383a34; }
+.workpiece span { display: block; color: #777a72; font-size: 8px; letter-spacing: .12em; }
+.workpiece strong { display: block; margin-top: 4px; color: #d7d5cd; font-size: 12px; }
+.workpiece small { display: block; margin-top: 3px; color: #8f9189; font-size: 9px; }
+
+.timeline { padding: 11px 0 4px; }
+.timeline > span { color: #b29b69; font-size: 8px; letter-spacing: .13em; }
+.timeline > div {
+  display: grid;
+  grid-template-columns: 62px 1fr;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid #32342f;
+}
+.timeline small { color: #7e8178; font-size: 8px; }
+.timeline strong { color: #c7c6be; font-size: 10px; font-weight: 520; }
+
+.empty { margin: 12px 0; color: #92938c; font-size: 10px; line-height: 1.45; }
+.button {
+  width: 100%;
+  color: #deddd7;
+  background: #232420;
+  border: 1px solid #55564f;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+.button:hover:not(:disabled), .button:focus-visible { border-color: #b29b69; outline: none; }
+.button:disabled { opacity: .38; cursor: default; }
+
+@media (max-width: 800px) {
+  .panel { display: none; }
+}
