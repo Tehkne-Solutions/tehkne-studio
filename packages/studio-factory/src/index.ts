@@ -27,6 +27,11 @@ export class ArmPrototypeFactory {
     validateManufacturingProfile(profile);
     const restored = restore.latest ?? null;
     if (restored) {
+      const variant = this.variantLab.latest();
+      if (!variant || variant.status !== "validated" || variant.comparison.candidate.assessment.status !== "pass") {
+        throw new Error("Restored Prototype Package requires its validated engineering variant");
+      }
+      if (variant.id !== restored.variantId) throw new Error("Restored Prototype Package lost variant provenance");
       if (restored.projectId !== profile.projectId) throw new Error("Restored Prototype Package project mismatch");
       if (restored.variantId !== profile.variantId) throw new Error("Restored Prototype Package variant mismatch");
       if (restored.fabricationReady !== false) throw new Error("Restored Prototype Package must not overclaim fabrication readiness");
