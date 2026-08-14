@@ -103,3 +103,47 @@ export function runFunctionalBoot(dependencies: readonly BootDependencyInput[]):
     fault: null
   };
 }
+
+export interface ThermalStepInput {
+  readonly temperatureC: number;
+  readonly ambientC?: number;
+  readonly loadPercent: number;
+  readonly fanPercent: number;
+}
+
+export interface ThermalStepResult {
+  readonly previousTemperatureC: number;
+  readonly nextTemperatureC: number;
+  readonly deltaC: number;
+  readonly heatGainC: number;
+  readonly coolingC: number;
+  readonly passiveLossC: number;
+  readonly loadPercent: number;
+  readonly fanPercent: number;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function runThermalStep(input: ThermalStepInput): ThermalStepResult {
+  const ambientC = input.ambientC ?? 24;
+  const loadPercent = clamp(input.loadPercent, 0, 100);
+  const fanPercent = clamp(input.fanPercent, 0, 100);
+  const heatGainC = (loadPercent / 100) * 4;
+  const coolingC = (fanPercent / 100) * 7;
+  const passiveLossC = Math.max(0, input.temperatureC - ambientC) * 0.04;
+  const deltaC = heatGainC - coolingC - passiveLossC;
+  const nextTemperatureC = clamp(input.temperatureC + deltaC, ambientC, 110);
+
+  return {
+    previousTemperatureC: Number(input.temperatureC.toFixed(2)),
+    nextTemperatureC: Number(nextTemperatureC.toFixed(2)),
+    deltaC: Number(deltaC.toFixed(2)),
+    heatGainC: Number(heatGainC.toFixed(2)),
+    coolingC: Number(coolingC.toFixed(2)),
+    passiveLossC: Number(passiveLossC.toFixed(2)),
+    loadPercent,
+    fanPercent
+  };
+}

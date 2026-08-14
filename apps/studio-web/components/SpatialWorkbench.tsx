@@ -8,9 +8,11 @@ import {
   EngineeringSession,
   type CapabilityExecutionResult
 } from "../../../packages/engineering-session/src/index";
+import { StudioBehaviorController } from "../../../packages/studio-behavior/src/index";
 import { StudioIntelligence } from "../../../packages/studio-intelligence/src/index";
 import desktopPreset from "../../../presets/desktop-pc/project.json";
 import { browserSpeechSupported, listenOnce, speakStudioResponse } from "../lib/browserSpeech";
+import { BehaviorPanel } from "./BehaviorPanel";
 import { DesktopPcAssembly } from "./DesktopPcAssembly";
 
 interface FeedbackState {
@@ -24,7 +26,11 @@ export function SpatialWorkbench() {
     () => new EngineeringSession(desktopPreset as unknown as TehkneStudioProject),
     []
   );
-  const intelligence = useMemo(() => new StudioIntelligence(session), [session]);
+  const behaviorController = useMemo(() => new StudioBehaviorController(session), [session]);
+  const intelligence = useMemo(
+    () => new StudioIntelligence(session, behaviorController),
+    [session, behaviorController]
+  );
   const [activeProduct, setActiveProduct] = useState<"desktop" | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
@@ -89,6 +95,9 @@ export function SpatialWorkbench() {
     if (execution.result) {
       setFeedback({ message: execution.result.message, result: execution.result });
       setRevision((current) => current + 1);
+    } else if (execution.behavior) {
+      setFeedback(null);
+      setRevision((current) => current + 1);
     } else if (execution.resolution.status !== "resolved") {
       setFeedback({ message: execution.message, error: true });
     } else {
@@ -118,6 +127,31 @@ export function SpatialWorkbench() {
         setFeedback({ message, error: true });
       }
     );
+  };
+
+  const injectThermalSpike = async () => {
+    setActiveProduct("desktop");
+    const result = await behaviorController.ingestTelemetry("pc.cpu", "temperatureC", 76, "simulation");
+    const triggered = result.executions.at(-1);
+    setSelectedId("pc.cpu");
+    setFeedback(null);
+    setIntelligenceMessage(
+      triggered
+        ? `Telemetry 76 °C cruzou o limiar. ${triggered.message}`
+        : "Telemetry 76 °C registrada; nenhuma regra foi acionada."
+    );
+    setRevision((current) => current + 1);
+  };
+
+  const advanceThermalModel = async () => {
+    setActiveProduct("desktop");
+    const thermal = await behaviorController.simulateCpuThermalStep();
+    setSelectedId("pc.cpu");
+    setFeedback(null);
+    setIntelligenceMessage(
+      `Thermal step: ${thermal.previousTemperatureC} °C → ${thermal.nextTemperatureC} °C · fan ${thermal.fanPercent}%.`
+    );
+    setRevision((current) => current + 1);
   };
 
   const resetWorkbench = () => {
@@ -169,6 +203,15 @@ export function SpatialWorkbench() {
         </div>
       ) : null}
 
+      {activeProduct ? (
+        <BehaviorPanel
+          controller={behaviorController}
+          revision={revision}
+          onThermalSpike={() => void injectThermalSpike()}
+          onThermalStep={() => void advanceThermalModel()}
+        />
+      ) : null}
+
       {activeProduct && recentHistory.length > 0 ? (
         <aside className="semantic-history" aria-label="Histórico semântico recente">
           <span>HISTORY · {session.history().length}</span>
@@ -196,7 +239,7 @@ export function SpatialWorkbench() {
                   key={capability.id}
                   onClick={() => void execute(capability.id)}
                   disabled={!supported}
-                  title={supported ? capability.label : `${capability.label} entra em uma próxima etapa`}
+                  title={supported ? capability.label : `${capability.label} é controlada por outro runtime nesta etapa`}
                 >
                   {capability.label}
                 </button>
@@ -280,7 +323,7 @@ export function SpatialWorkbench() {
           <input
             value={commandText}
             onChange={(event) => setCommandText(event.target.value)}
-            placeholder="Ex.: abra o computador · tire a RAM · ligue · por que não iniciou?"
+            placeholder="Ex.: quando a CPU passar de 70 graus, coloque a ventoinha no máximo"
             aria-label="Comando para o Tehkné Studio"
           />
           <button type="submit">Executar</button>

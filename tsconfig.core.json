@@ -15,12 +15,14 @@
   "include": [
     "packages/engineering-core/src/**/*.ts",
     "packages/engineering-graph/src/**/*.ts",
+    "packages/behavior-runtime/src/**/*.ts",
     "packages/project-format/src/**/*.ts",
     "packages/command-bus/src/**/*.ts",
     "packages/observability/src/**/*.ts",
     "packages/spatial-runtime/src/**/*.ts",
     "packages/simulation-runtime/src/**/*.ts",
     "packages/engineering-session/src/**/*.ts",
+    "packages/studio-behavior/src/**/*.ts",
     "packages/intelligence-runtime/src/**/*.ts",
     "packages/studio-intelligence/src/**/*.ts"
   ]
