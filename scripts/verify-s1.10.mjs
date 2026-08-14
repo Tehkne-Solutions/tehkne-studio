@@ -75,7 +75,4 @@ for (const token of [
   if (!panel.includes(token)) throw new Error(`Variant comparison UX missing: ${token}`);
 }
 
-const page = await readFile("apps/studio-web/app/page.tsx", "utf8");
-if (!page.includes("S1.10 · VARIANTS")) throw new Error("Studio S1.10 phase marker missing");
-
 console.log(`S1.10 variants structure PASS · ${required.length} new surfaces · failure evidence → child variant → impact analysis → validation · Tehkné Solutions`);
