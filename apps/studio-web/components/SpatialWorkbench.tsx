@@ -4,15 +4,20 @@ import { Canvas } from "@react-three/fiber";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import type { EngineeringEntity } from "../../../packages/engineering-core/src/index";
 import type { TehkneStudioProject } from "../../../packages/project-format/src/index";
+import type { ArmVariantProfile } from "../../../packages/variant-runtime/src/index";
 import {
   EngineeringSession,
   type CapabilityExecutionResult
 } from "../../../packages/engineering-session/src/index";
 import { StudioBehaviorController } from "../../../packages/studio-behavior/src/index";
+import { ArmFailureLab } from "../../../packages/studio-failure/src/index";
 import { Arm01Controller } from "../../../packages/studio-robotics/src/index";
+import { ArmVariantLab, type BaseVariantProfile } from "../../../packages/studio-variants/src/index";
 import { StudioIntelligence } from "../../../packages/studio-intelligence/src/index";
 import desktopPreset from "../../../presets/desktop-pc/project.json";
 import armPreset from "../../../presets/arm-01/project.json";
+import failureProfile from "../../../presets/arm-01/failure-profile.json";
+import highTorqueProfile from "../../../presets/arm-01/variants/high-torque-profile.json";
 import { browserSpeechSupported, listenOnce, speakStudioResponse } from "../lib/browserSpeech";
 import { Arm01Assembly } from "./Arm01Assembly";
 import { ArmRuntimePanel } from "./ArmRuntimePanel";
@@ -43,9 +48,21 @@ export function SpatialWorkbench() {
     []
   );
   const armController = useMemo(() => new Arm01Controller(armSession), [armSession]);
+  const armFailureLab = useMemo(
+    () => new ArmFailureLab(armSession, failureProfile as BaseVariantProfile),
+    [armSession]
+  );
+  const armVariantLab = useMemo(
+    () => new ArmVariantLab(
+      armFailureLab,
+      failureProfile as BaseVariantProfile,
+      highTorqueProfile as ArmVariantProfile
+    ),
+    [armFailureLab]
+  );
   const armIntelligence = useMemo(
-    () => new StudioIntelligence(armSession, undefined, armController),
-    [armSession, armController]
+    () => new StudioIntelligence(armSession, undefined, armController, armVariantLab),
+    [armSession, armController, armVariantLab]
   );
 
   const [activeProduct, setActiveProduct] = useState<ActiveProduct>(null);
@@ -91,7 +108,7 @@ export function SpatialWorkbench() {
     setCommandText("");
     setIntelligenceMessage(
       product === "arm"
-        ? "ARM-01 pronto. Diga: “Pegue o cubo vermelho”."
+        ? "ARM-01 pronto. Teste a carga, investigue uma falha ou peça uma variante."
         : "Desktop PC pronto para inspeção, boot causal e automações."
     );
   };
@@ -118,7 +135,7 @@ export function SpatialWorkbench() {
     if (!trimmed) return;
     setCommandText(trimmed);
 
-    const looksRobotic = /\b(pegue|pegar|apanhe|segure|cubo|arm-01|braco|braço|robo|robô|pick|grab)\b/i.test(trimmed);
+    const looksRobotic = /\b(pegue|pegar|apanhe|segure|cubo|arm-01|braco|braço|robo|robô|pick|grab|versao|versão|variante|redesign|levantar|peso|torque)\b/i.test(trimmed);
     const intelligence = activeProduct === null && looksRobotic ? armIntelligence : activeIntelligence;
     if (activeProduct === null && looksRobotic) setActiveProduct("arm");
 
@@ -130,13 +147,13 @@ export function SpatialWorkbench() {
     setIntelligenceMessage(execution.message);
 
     if (execution.targetEntityId?.startsWith("pc.")) setActiveProduct("desktop");
-    if (execution.targetEntityId?.startsWith("arm.") || execution.robotTask) setActiveProduct("arm");
+    if (execution.targetEntityId?.startsWith("arm.") || execution.robotTask || execution.variantTask) setActiveProduct("arm");
     if (execution.targetEntityId) setSelectedId(execution.targetEntityId);
 
     if (execution.result) {
       setFeedback({ message: execution.result.message, result: execution.result });
       setRevision((current) => current + 1);
-    } else if (execution.behavior || execution.robotTask) {
+    } else if (execution.behavior || execution.robotTask || execution.variantTask) {
       setFeedback(null);
       setRevision((current) => current + 1);
     } else if (execution.resolution.status !== "resolved" || !execution.executed) {
@@ -210,6 +227,14 @@ export function SpatialWorkbench() {
     }
   };
 
+  const handleArmEngineeringChange = (message: string) => {
+    setActiveProduct("arm");
+    setSelectedId("arm.root");
+    setFeedback(null);
+    setIntelligenceMessage(message);
+    setRevision((current) => current + 1);
+  };
+
   const resetWorkbench = () => {
     setActiveProduct(null);
     setSelectedId(null);
@@ -279,7 +304,14 @@ export function SpatialWorkbench() {
       ) : null}
 
       {activeProduct === "arm" ? (
-        <ArmRuntimePanel controller={armController} revision={revision} onPick={executeArmPick} />
+        <ArmRuntimePanel
+          controller={armController}
+          failureLab={armFailureLab}
+          variantLab={armVariantLab}
+          revision={revision}
+          onPick={executeArmPick}
+          onEngineeringChange={handleArmEngineeringChange}
+        />
       ) : null}
 
       {activeProduct && recentHistory.length > 0 ? (
@@ -394,7 +426,7 @@ export function SpatialWorkbench() {
             value={commandText}
             onChange={(event) => setCommandText(event.target.value)}
             placeholder={activeProduct === "arm"
-              ? "Ex.: pegue o cubo vermelho"
+              ? "Ex.: pegue o cubo · teste 1,60 kg · crie uma versão capaz de levantar esse peso"
               : "Ex.: abra o computador · tire a RAM · crie uma automação térmica"}
             aria-label="Comando para o Tehkné Studio"
           />
