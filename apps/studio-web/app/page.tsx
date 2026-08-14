@@ -8,13 +8,13 @@ export default function StudioPage() {
           <span className="eyebrow">TEHKNÉ SOLUTIONS</span>
           <h1>TEHKNÉ STUDIO</h1>
         </div>
-        <span className="phase">S1.10 · VARIANTS</span>
+        <span className="phase">S1.11 · VIRTUAL FACTORY</span>
       </header>
 
       <SpatialWorkbench />
 
       <footer className="studio-footer">
-        <span>Workbench · Engineering Graph · Failure Evidence · Variants · Impact Analysis · Simulation</span>
+        <span>Workbench · Failure Evidence · Variants · BOM · Assembly Plan · Prototype Package</span>
         <span>Tehkné Solutions</span>
       </footer>
     </main>

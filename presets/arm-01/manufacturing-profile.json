@@ -1,0 +1,108 @@
+{
+  "profileId": "arm-01-prototype-plan-v1",
+  "projectId": "arm-01",
+  "variantId": "arm-01/high-torque",
+  "revision": "P0-A",
+  "readiness": "prototype-plan",
+  "items": [
+    {
+      "id": "make-upper-link",
+      "entityId": "arm.link.upper",
+      "name": "Upper Arm Link",
+      "strategy": "make",
+      "quantity": 1,
+      "material": "PETG candidate",
+      "process": "FDM 3D printing candidate",
+      "estimatedUnitCostBrl": 45,
+      "provenance": "authored-estimate",
+      "readiness": "conceptual"
+    },
+    {
+      "id": "make-forearm-link",
+      "entityId": "arm.link.forearm",
+      "name": "Forearm Link",
+      "strategy": "make",
+      "quantity": 1,
+      "material": "PETG candidate",
+      "process": "FDM 3D printing candidate",
+      "estimatedUnitCostBrl": 38,
+      "provenance": "authored-estimate",
+      "readiness": "conceptual"
+    },
+    {
+      "id": "buy-high-torque-actuator",
+      "name": "High Torque Actuator Candidate",
+      "strategy": "buy",
+      "quantity": 1,
+      "estimatedUnitCostBrl": 460,
+      "provenance": "variant-profile",
+      "readiness": "specified-functional-envelope"
+    },
+    {
+      "id": "wire-controller-joints",
+      "entityId": "arm.controller",
+      "name": "Controller-to-Joints Wiring",
+      "strategy": "wire",
+      "quantity": 1,
+      "estimatedUnitCostBrl": 35,
+      "provenance": "authored-estimate",
+      "readiness": "conceptual"
+    },
+    {
+      "id": "assemble-arm",
+      "entityId": "arm.root",
+      "name": "ARM-01 Mechanical Assembly",
+      "strategy": "assemble",
+      "quantity": 1,
+      "estimatedUnitCostBrl": 0,
+      "provenance": "studio",
+      "readiness": "planned"
+    },
+    {
+      "id": "program-controller",
+      "entityId": "arm.controller",
+      "name": "ARM-01 Controller Configuration",
+      "strategy": "program",
+      "quantity": 1,
+      "estimatedUnitCostBrl": 0,
+      "provenance": "studio",
+      "readiness": "planned"
+    },
+    {
+      "id": "test-payload",
+      "entityId": "arm.root",
+      "name": "1.60 kg Payload Acceptance Test",
+      "strategy": "test",
+      "quantity": 1,
+      "estimatedUnitCostBrl": 0,
+      "provenance": "simulation-derived",
+      "readiness": "planned"
+    }
+  ],
+  "assemblySteps": [
+    { "id": "A01", "order": 1, "label": "Fabricate prototype links", "requires": ["make-upper-link", "make-forearm-link"], "validation": "Parts visually inspected; dimensional acceptance remains pending manufacturing-grade geometry." },
+    { "id": "A02", "order": 2, "label": "Install high-torque actuator candidate", "requires": ["buy-high-torque-actuator"], "validation": "Actuator identity matches the functional variant envelope." },
+    { "id": "A03", "order": 3, "label": "Assemble links, joints and gripper", "requires": ["assemble-arm"], "validation": "Joint travel remains inside authored limits." },
+    { "id": "A04", "order": 4, "label": "Wire controller to joint actuation", "requires": ["wire-controller-joints"], "validation": "Continuity and polarity require physical verification." },
+    { "id": "A05", "order": 5, "label": "Program controller configuration", "requires": ["program-controller"], "validation": "Joint limits and home pose loaded." },
+    { "id": "A06", "order": 6, "label": "Run payload acceptance test", "requires": ["test-payload"], "validation": "Physical result must be recorded separately from simulation." }
+  ],
+  "calibration": [
+    "Set base, shoulder and elbow zero references",
+    "Verify gripper open/closed limits",
+    "Verify controller joint-limit configuration"
+  ],
+  "acceptanceTests": [
+    { "id": "T01", "label": "Controller boot and joint communication", "evidence": "physical-pending" },
+    { "id": "T02", "label": "Joint limit traversal", "evidence": "physical-pending" },
+    { "id": "T03", "label": "1.60 kg payload lift", "evidence": "simulation-pass / physical-pending" },
+    { "id": "T04", "label": "Emergency stop / safe disable", "evidence": "physical-pending" }
+  ],
+  "knownLimitations": [
+    "No manufacturing-grade CAD, STEP or STL geometry is included in S1.11.",
+    "No production electrical schematic or wiring-harness drawing is included in S1.11.",
+    "All supplier prices are estimates; no live supplier availability is asserted.",
+    "Simulation evidence does not count as physical acceptance evidence."
+  ],
+  "signature": "Tehkné Solutions"
+}
