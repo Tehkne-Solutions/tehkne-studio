@@ -15,6 +15,7 @@
   "include": [
     "packages/engineering-core/src/**/*.ts",
     "packages/engineering-graph/src/**/*.ts",
+    "packages/component-library/src/**/*.ts",
     "packages/behavior-runtime/src/**/*.ts",
     "packages/project-format/src/**/*.ts",
     "packages/persistence-runtime/src/**/*.ts",
