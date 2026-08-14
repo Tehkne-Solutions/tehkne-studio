@@ -1,0 +1,27 @@
+{
+  "releaseId": "tehkne-studio-alpha-01",
+  "version": "0.1.0-alpha.1",
+  "channel": "alpha",
+  "name": "The First Workshop",
+  "requiredEvidenceIds": [
+    "desktop.causal-repair",
+    "desktop.automation",
+    "arm.pick",
+    "arm.failure-causality",
+    "arm.variant",
+    "arm.prototype-package"
+  ],
+  "releasePolicy": {
+    "productionReady": false,
+    "physicalPrototypeReady": false,
+    "mockEvidenceAccepted": false,
+    "simulationCountsAsPhysicalEvidence": false
+  },
+  "knownLimitations": [
+    "Alpha 01 uses functional simulation models rather than general-purpose multiphysics solvers.",
+    "ARM-01 manufacturing output is a Prototype Plan and is not fabrication-ready CAD or production wiring documentation.",
+    "Voice availability depends on browser speech capabilities.",
+    "Physical acceptance tests remain pending until a physical prototype is built and measured."
+  ],
+  "signature": "Tehkné Solutions"
+}
