@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "declaration": true,
+    "sourceMap": true,
+    "rootDir": ".",
+    "outDir": "dist",
+    "skipLibCheck": true
+  },
+  "include": [
+    "packages/engineering-core/src/**/*.ts",
+    "packages/engineering-graph/src/**/*.ts",
+    "packages/project-format/src/**/*.ts",
+    "packages/command-bus/src/**/*.ts",
+    "packages/observability/src/**/*.ts"
+  ]
+}
