@@ -8,13 +8,13 @@ export default function StudioPage() {
           <span className="eyebrow">TEHKNÉ SOLUTIONS</span>
           <h1>TEHKNÉ STUDIO</h1>
         </div>
-        <span className="phase">S1.5 · CAUSAL BOOT</span>
+        <span className="phase">S1.6 · STUDIO INTELLIGENCE</span>
       </header>
 
       <SpatialWorkbench />
 
       <footer className="studio-footer">
-        <span>Workbench · Functional Boot Model · Causal Trace</span>
+        <span>Workbench · Contextual Intent · Voice · Engineering Core</span>
         <span>Tehkné Solutions</span>
       </footer>
     </main>
