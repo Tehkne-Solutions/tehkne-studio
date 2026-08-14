@@ -20,6 +20,17 @@ export interface StudioBehaviorRegistrar {
   registerDraft(draft: ThresholdBehaviorDraft): RegisteredBehaviorSummary;
 }
 
+export interface RobotTaskSummary {
+  readonly taskId: string;
+  readonly robotEntityId: EntityId;
+  readonly targetEntityId: EntityId;
+  readonly message: string;
+}
+
+export interface StudioRobotTaskExecutor {
+  executePick(targetEntityId: EntityId): RobotTaskSummary;
+}
+
 export interface StudioIntelligenceExecution {
   readonly utterance: string;
   readonly resolution: StudioIntentResolution;
@@ -27,6 +38,7 @@ export interface StudioIntelligenceExecution {
   readonly targetEntityId?: EntityId;
   readonly result?: CapabilityExecutionResult;
   readonly behavior?: RegisteredBehaviorSummary;
+  readonly robotTask?: RobotTaskSummary;
   readonly message: string;
 }
 
@@ -54,7 +66,8 @@ function descriptor(entity: ReturnType<EngineeringSession["getEntity"]>): Intell
 export class StudioIntelligence {
   constructor(
     readonly session: EngineeringSession,
-    readonly behaviorRegistrar?: StudioBehaviorRegistrar
+    readonly behaviorRegistrar?: StudioBehaviorRegistrar,
+    readonly robotTaskExecutor?: StudioRobotTaskExecutor
   ) {}
 
   entities(): readonly IntelligenceEntityDescriptor[] {
@@ -108,6 +121,46 @@ export class StudioIntelligence {
         action: resolution.action
       }
     });
+
+    if (resolution.action === "robotTask") {
+      if (!resolution.robotTaskDraft || resolution.robotTaskDraft.kind !== "pick") {
+        return {
+          utterance,
+          resolution,
+          executed: false,
+          targetEntityId: resolution.targetEntityId,
+          message: "A intenção robótica não contém uma tarefa materializável."
+        };
+      }
+      if (!this.robotTaskExecutor) {
+        return {
+          utterance,
+          resolution,
+          executed: false,
+          targetEntityId: resolution.targetEntityId,
+          message: "O Robotics Runtime não está disponível nesta sessão."
+        };
+      }
+      try {
+        const robotTask = this.robotTaskExecutor.executePick(resolution.robotTaskDraft.targetEntityId);
+        return {
+          utterance,
+          resolution,
+          executed: true,
+          targetEntityId: robotTask.robotEntityId,
+          robotTask,
+          message: robotTask.message
+        };
+      } catch (error) {
+        return {
+          utterance,
+          resolution,
+          executed: false,
+          targetEntityId: resolution.targetEntityId,
+          message: error instanceof Error ? error.message : "Não foi possível executar a tarefa robótica."
+        };
+      }
+    }
 
     if (resolution.action === "behavior") {
       if (!resolution.behaviorDraft) {
