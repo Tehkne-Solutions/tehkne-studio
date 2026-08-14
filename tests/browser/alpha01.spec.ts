@@ -1,12 +1,25 @@
 import { expect, test } from "@playwright/test";
 
-test("Alpha 01 opens both golden workbenches without browser runtime errors", async ({ page }) => {
+test("Alpha 01 opens both golden workbenches without browser runtime errors", async ({ page, request }) => {
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
 
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
+  });
+
+  const health = await request.get("/api/health");
+  expect(health.ok()).toBe(true);
+  expect(health.headers()["cache-control"]).toContain("no-store");
+  expect(await health.json()).toEqual({
+    status: "ok",
+    service: "tehkne-studio-web",
+    releaseChannel: "alpha",
+    releaseGate: "alpha-01",
+    productionReady: false,
+    physicalPrototypeReady: false,
+    signature: "Tehkné Solutions"
   });
 
   await page.goto("/", { waitUntil: "networkidle" });
