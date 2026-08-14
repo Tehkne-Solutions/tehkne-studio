@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 const required = [
   "apps/studio-web/app/page.tsx",
   "apps/studio-web/components/SpatialWorkbench.tsx",
+  "apps/studio-web/next.config.mjs",
   "packages/engineering-core/src/index.ts",
   "packages/engineering-graph/src/index.ts",
   "packages/project-format/src/index.ts",
@@ -35,5 +36,8 @@ if (!workbench.includes("desktopPreset")) throw new Error("Workbench is not load
 if (workbench.includes("createEngineeringEntity")) throw new Error("Workbench must not duplicate EngineeringEntity definitions locally");
 if (!workbench.includes("semantic-history")) throw new Error("Semantic history UX missing");
 if (!workbench.includes("DESKTOP-PC-001")) throw new Error("Desktop PC benchmark missing");
+
+const nextConfig = await readFile("apps/studio-web/next.config.mjs", "utf8");
+if (!nextConfig.includes("extensionAlias")) throw new Error("Next shared-source extension alias missing");
 
 console.log(`S1.3 structure PASS · ${required.length} required surfaces · Tehkné Solutions`);
