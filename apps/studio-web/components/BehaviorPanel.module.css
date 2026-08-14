@@ -1,0 +1,129 @@
+.panel {
+  position: absolute;
+  z-index: 7;
+  top: 70px;
+  left: 18px;
+  width: min(330px, calc(100vw - 36px));
+  padding: 13px;
+  border: 1px solid #484a43;
+  background: rgba(24, 25, 22, .96);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .26);
+}
+
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.heading span,
+.lastExecution span {
+  color: #b29b69;
+  font-size: 9px;
+  letter-spacing: .14em;
+}
+
+.heading small { color: #7f8078; font-size: 9px; }
+
+.telemetry {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.telemetry div {
+  padding: 9px 10px;
+  border: 1px solid #373932;
+  background: #1b1c19;
+}
+
+.telemetry small {
+  display: block;
+  color: #7f8078;
+  font-size: 8px;
+  letter-spacing: .11em;
+}
+
+.telemetry strong {
+  display: block;
+  margin-top: 4px;
+  color: #e0ded6;
+  font-size: 15px;
+  font-weight: 540;
+}
+
+.empty {
+  margin: 11px 0 0;
+  color: #9f9f97;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.list { margin-top: 10px; }
+
+.list article {
+  padding: 9px 0;
+  border-top: 1px solid #343630;
+}
+
+.list strong {
+  display: block;
+  color: #dddcd4;
+  font-size: 11px;
+  font-weight: 540;
+}
+
+.list small {
+  display: block;
+  margin-top: 3px;
+  color: #898a82;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.lastExecution {
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid #3b3d36;
+}
+
+.lastExecution p {
+  margin: 5px 0 0;
+  color: #c9c8c0;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 11px;
+}
+
+.actions button {
+  border: 1px solid #4b4d46;
+  background: #22231f;
+  color: #d7d5ce;
+  padding: 8px 9px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.actions button:hover,
+.actions button:focus-visible {
+  border-color: #b29b69;
+  outline: none;
+}
+
+@media (max-width: 800px) {
+  .panel {
+    top: 102px;
+    left: 12px;
+    width: min(310px, calc(100vw - 24px));
+    max-height: 32vh;
+    overflow: auto;
+  }
+}
