@@ -18,6 +18,7 @@
     "packages/project-format/src/**/*.ts",
     "packages/command-bus/src/**/*.ts",
     "packages/observability/src/**/*.ts",
-    "packages/spatial-runtime/src/**/*.ts"
+    "packages/spatial-runtime/src/**/*.ts",
+    "packages/engineering-session/src/**/*.ts"
   ]
 }
