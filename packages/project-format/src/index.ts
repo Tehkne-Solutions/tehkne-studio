@@ -1,5 +1,6 @@
 import type { EngineeringEntity } from "../../engineering-core/src/index.js";
 import type { EngineeringRelationship } from "../../engineering-graph/src/index.js";
+import type { BehaviorDefinition } from "../../behavior-runtime/src/index.js";
 
 export const TEHKNE_STUDIO_SCHEMA_VERSION = "0.1" as const;
 
@@ -11,6 +12,7 @@ export interface TehkneStudioProject {
   readonly rootEntityId: string;
   readonly entities: readonly EngineeringEntity[];
   readonly relationships: readonly EngineeringRelationship[];
+  readonly behaviors?: readonly BehaviorDefinition[];
   readonly metadata: Readonly<Record<string, unknown>>;
 }
 
@@ -29,6 +31,11 @@ export function validateProject(project: TehkneStudioProject): string[] {
   for (const relationship of project.relationships) {
     if (!ids.has(relationship.source)) errors.push(`Missing relationship source: ${relationship.source}`);
     if (!ids.has(relationship.target)) errors.push(`Missing relationship target: ${relationship.target}`);
+  }
+
+  for (const behavior of project.behaviors ?? []) {
+    if (!ids.has(behavior.trigger.signal.entityId)) errors.push(`Missing behavior signal entity: ${behavior.trigger.signal.entityId}`);
+    if (!ids.has(behavior.action.targetEntityId)) errors.push(`Missing behavior action entity: ${behavior.action.targetEntityId}`);
   }
   return errors;
 }
