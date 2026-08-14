@@ -18,7 +18,8 @@
     "verify:s1.2": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web",
     "verify:s1.3": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web",
     "verify:s1.4": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web",
-    "verify:s1.5": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web"
+    "verify:s1.5": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web",
+    "verify:s1.6": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web"
   },
   "devDependencies": {
     "typescript": "^5.8.0"
