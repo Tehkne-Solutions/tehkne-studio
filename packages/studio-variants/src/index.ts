@@ -54,6 +54,7 @@ export class ArmVariantLab {
   ) {
     const records = restore.records ?? [];
     const ids = new Set<string>();
+    const failureRecords = this.failureLab.records();
     for (const record of records) {
       if (!record.id || ids.has(record.id)) throw new Error(`Invalid restored variant id: ${record.id}`);
       ids.add(record.id);
@@ -64,6 +65,13 @@ export class ArmVariantLab {
         throw new Error(`Restored variant is not validated: ${record.id}`);
       }
       if (record.comparison.base.assessment.status !== "fault") throw new Error(`Restored variant lost base failure evidence: ${record.id}`);
+      const sourceFailure = failureRecords.find((failure) => failure.id === record.sourceFailureExperimentId);
+      if (!sourceFailure || sourceFailure.assessment.status !== "fault") {
+        throw new Error(`Restored variant source failure evidence is missing: ${record.sourceFailureExperimentId}`);
+      }
+      if (sourceFailure.assessment.payloadKg !== record.comparison.payloadKg) {
+        throw new Error(`Restored variant source payload mismatch: ${record.id}`);
+      }
       if (Number.isNaN(Date.parse(record.createdAt))) throw new Error(`Invalid restored variant timestamp: ${record.id}`);
       this.failureLab.session.getEntity(record.sourceEntityId);
       this.#records.push(cloneRecord(record));
