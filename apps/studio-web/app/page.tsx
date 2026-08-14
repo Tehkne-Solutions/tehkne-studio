@@ -8,13 +8,13 @@ export default function StudioPage() {
           <span className="eyebrow">TEHKNÉ SOLUTIONS</span>
           <h1>TEHKNÉ STUDIO</h1>
         </div>
-        <span className="phase">S1.4 · DESKTOP PC SYSTEM</span>
+        <span className="phase">S1.5 · CAUSAL BOOT</span>
       </header>
 
       <SpatialWorkbench />
 
       <footer className="studio-footer">
-        <span>Workbench · Systemic Teardown · Engineering Graph</span>
+        <span>Workbench · Functional Boot Model · Causal Trace</span>
         <span>Tehkné Solutions</span>
       </footer>
     </main>
