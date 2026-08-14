@@ -1,0 +1,247 @@
+{
+  "schemaVersion": "0.1",
+  "projectId": "arm-01",
+  "name": "ARM-01 Robotic Workcell",
+  "projectType": "invention",
+  "rootEntityId": "arm.workcell",
+  "entities": [
+    {
+      "id": "arm.workcell",
+      "type": "RoboticWorkcell",
+      "name": "ARM-01 Workcell",
+      "state": "ready",
+      "properties": {
+        "safetyState": { "id": "safetyState", "value": "ready", "source": "studio", "confidence": 1 }
+      },
+      "ports": {},
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" }
+      ],
+      "metadata": {
+        "preset": true,
+        "simpleExplanation": "Uma célula robótica reúne o braço, controlador, sensores e objetos de trabalho em um único sistema coordenado."
+      }
+    },
+    {
+      "id": "arm.root",
+      "type": "RobotArm",
+      "name": "ARM-01",
+      "parentId": "arm.workcell",
+      "state": "idle",
+      "properties": {
+        "payloadKg": { "id": "payloadKg", "value": 1.5, "unit": "kg", "source": "estimated", "confidence": 0.85 },
+        "taskState": { "id": "taskState", "value": "idle", "source": "simulated", "confidence": 1 }
+      },
+      "ports": {},
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" },
+        { "id": "pick", "label": "Pegar objeto", "parameters": { "targetEntityId": "string" } }
+      ],
+      "metadata": {
+        "voiceAliases": ["braco", "braço", "robo", "robô", "arm-01", "robot arm"],
+        "simpleExplanation": "O ARM-01 usa juntas rotativas coordenadas para posicionar a garra no espaço e manipular objetos.",
+        "geometry": { "baseHeight": 0.35, "upperArmLength": 1.15, "forearmLength": 0.95 }
+      }
+    },
+    {
+      "id": "arm.joint.base",
+      "type": "RevoluteJoint",
+      "name": "Base Yaw Joint",
+      "parentId": "arm.root",
+      "state": "ready",
+      "properties": {
+        "angleDeg": { "id": "angleDeg", "value": 0, "unit": "deg", "source": "simulated", "confidence": 1, "min": -170, "max": 170 },
+        "targetDeg": { "id": "targetDeg", "value": 0, "unit": "deg", "source": "simulated", "confidence": 1, "min": -170, "max": 170 },
+        "minDeg": { "id": "minDeg", "value": -170, "unit": "deg", "source": "studio", "confidence": 1 },
+        "maxDeg": { "id": "maxDeg", "value": 170, "unit": "deg", "source": "studio", "confidence": 1 }
+      },
+      "ports": {},
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" },
+        { "id": "setJointTarget", "label": "Mover junta", "parameters": { "angleDeg": "number" } }
+      ],
+      "metadata": { "simpleExplanation": "A junta da base gira o braço em torno do eixo vertical." }
+    },
+    {
+      "id": "arm.joint.shoulder",
+      "type": "RevoluteJoint",
+      "name": "Shoulder Joint",
+      "parentId": "arm.root",
+      "state": "ready",
+      "properties": {
+        "angleDeg": { "id": "angleDeg", "value": 10, "unit": "deg", "source": "simulated", "confidence": 1, "min": -60, "max": 110 },
+        "targetDeg": { "id": "targetDeg", "value": 10, "unit": "deg", "source": "simulated", "confidence": 1, "min": -60, "max": 110 },
+        "minDeg": { "id": "minDeg", "value": -60, "unit": "deg", "source": "studio", "confidence": 1 },
+        "maxDeg": { "id": "maxDeg", "value": 110, "unit": "deg", "source": "studio", "confidence": 1 }
+      },
+      "ports": {},
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" },
+        { "id": "setJointTarget", "label": "Mover junta", "parameters": { "angleDeg": "number" } }
+      ],
+      "metadata": { "simpleExplanation": "A junta do ombro eleva e abaixa o primeiro elo do braço." }
+    },
+    {
+      "id": "arm.link.upper",
+      "type": "MechanicalLink",
+      "name": "Upper Arm Link",
+      "parentId": "arm.root",
+      "state": "mounted",
+      "properties": {
+        "lengthM": { "id": "lengthM", "value": 1.15, "unit": "m", "source": "studio", "confidence": 1 },
+        "massKg": { "id": "massKg", "value": 0.9, "unit": "kg", "source": "estimated", "confidence": 0.8 }
+      },
+      "ports": {},
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" }
+      ],
+      "metadata": { "simpleExplanation": "O elo superior transmite movimento do ombro até o cotovelo." }
+    },
+    {
+      "id": "arm.joint.elbow",
+      "type": "RevoluteJoint",
+      "name": "Elbow Joint",
+      "parentId": "arm.root",
+      "state": "ready",
+      "properties": {
+        "angleDeg": { "id": "angleDeg", "value": 80, "unit": "deg", "source": "simulated", "confidence": 1, "min": 0, "max": 145 },
+        "targetDeg": { "id": "targetDeg", "value": 80, "unit": "deg", "source": "simulated", "confidence": 1, "min": 0, "max": 145 },
+        "minDeg": { "id": "minDeg", "value": 0, "unit": "deg", "source": "studio", "confidence": 1 },
+        "maxDeg": { "id": "maxDeg", "value": 145, "unit": "deg", "source": "studio", "confidence": 1 }
+      },
+      "ports": {},
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" },
+        { "id": "setJointTarget", "label": "Mover junta", "parameters": { "angleDeg": "number" } }
+      ],
+      "metadata": { "simpleExplanation": "A junta do cotovelo dobra o braço e define grande parte do alcance da garra." }
+    },
+    {
+      "id": "arm.link.forearm",
+      "type": "MechanicalLink",
+      "name": "Forearm Link",
+      "parentId": "arm.root",
+      "state": "mounted",
+      "properties": {
+        "lengthM": { "id": "lengthM", "value": 0.95, "unit": "m", "source": "studio", "confidence": 1 },
+        "massKg": { "id": "massKg", "value": 0.65, "unit": "kg", "source": "estimated", "confidence": 0.8 }
+      },
+      "ports": {},
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" }
+      ],
+      "metadata": { "simpleExplanation": "O antebraço conecta o cotovelo à garra." }
+    },
+    {
+      "id": "arm.gripper",
+      "type": "ParallelGripper",
+      "name": "Parallel Gripper",
+      "parentId": "arm.root",
+      "state": "open",
+      "properties": {
+        "openingMm": { "id": "openingMm", "value": 60, "unit": "mm", "source": "simulated", "confidence": 1, "min": 20, "max": 70 },
+        "holdingEntityId": { "id": "holdingEntityId", "value": null, "source": "simulated", "confidence": 1 }
+      },
+      "ports": {},
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" },
+        { "id": "setGripperOpening", "label": "Ajustar garra", "parameters": { "openingMm": "number" } }
+      ],
+      "metadata": { "simpleExplanation": "A garra aproxima dois dedos paralelos para segurar um objeto." }
+    },
+    {
+      "id": "arm.controller",
+      "type": "RobotController",
+      "name": "ARM-01 Controller",
+      "parentId": "arm.workcell",
+      "state": "idle",
+      "properties": {
+        "motionState": { "id": "motionState", "value": "idle", "source": "simulated", "confidence": 1 },
+        "activeTargetId": { "id": "activeTargetId", "value": null, "source": "simulated", "confidence": 1 }
+      },
+      "ports": {},
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" },
+        { "id": "runPick", "label": "Executar Pick", "parameters": { "targetEntityId": "string" } }
+      ],
+      "metadata": { "simpleExplanation": "O controlador transforma uma tarefa em alvos coordenados para as juntas e a garra." }
+    },
+    {
+      "id": "arm.sensor.object",
+      "type": "ObjectSensor",
+      "name": "Object Presence Sensor",
+      "parentId": "arm.workcell",
+      "state": "ready",
+      "properties": {
+        "detected": { "id": "detected", "value": true, "source": "simulated", "confidence": 1 },
+        "targetEntityId": { "id": "targetEntityId", "value": "object.cube.red", "source": "simulated", "confidence": 1 }
+      },
+      "ports": {},
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" }
+      ],
+      "metadata": { "simpleExplanation": "O sensor informa ao controlador que existe um objeto manipulável na área de trabalho." }
+    },
+    {
+      "id": "object.cube.red",
+      "type": "Workpiece",
+      "name": "Red Cube",
+      "parentId": "arm.workcell",
+      "state": "free",
+      "properties": {
+        "xM": { "id": "xM", "value": 0.9, "unit": "m", "source": "simulated", "confidence": 1 },
+        "yM": { "id": "yM", "value": 0.42, "unit": "m", "source": "simulated", "confidence": 1 },
+        "zM": { "id": "zM", "value": 0.65, "unit": "m", "source": "simulated", "confidence": 1 },
+        "sizeM": { "id": "sizeM", "value": 0.18, "unit": "m", "source": "studio", "confidence": 1 },
+        "massKg": { "id": "massKg", "value": 0.35, "unit": "kg", "source": "studio", "confidence": 1 },
+        "attachedTo": { "id": "attachedTo", "value": null, "source": "simulated", "confidence": 1 }
+      },
+      "ports": {},
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" }
+      ],
+      "metadata": {
+        "voiceAliases": ["cubo", "cubo vermelho", "red cube", "objeto vermelho"],
+        "simpleExplanation": "Este cubo é a primeira peça de trabalho manipulável do ARM-01."
+      }
+    }
+  ],
+  "relationships": [
+    { "id": "workcell-contains-arm", "source": "arm.workcell", "target": "arm.root", "type": "contains", "metadata": {} },
+    { "id": "workcell-contains-controller", "source": "arm.workcell", "target": "arm.controller", "type": "contains", "metadata": {} },
+    { "id": "workcell-contains-sensor", "source": "arm.workcell", "target": "arm.sensor.object", "type": "contains", "metadata": {} },
+    { "id": "workcell-contains-cube", "source": "arm.workcell", "target": "object.cube.red", "type": "contains", "metadata": {} },
+    { "id": "arm-contains-base", "source": "arm.root", "target": "arm.joint.base", "type": "contains", "metadata": {} },
+    { "id": "arm-contains-shoulder", "source": "arm.root", "target": "arm.joint.shoulder", "type": "contains", "metadata": {} },
+    { "id": "arm-contains-upper", "source": "arm.root", "target": "arm.link.upper", "type": "contains", "metadata": {} },
+    { "id": "arm-contains-elbow", "source": "arm.root", "target": "arm.joint.elbow", "type": "contains", "metadata": {} },
+    { "id": "arm-contains-forearm", "source": "arm.root", "target": "arm.link.forearm", "type": "contains", "metadata": {} },
+    { "id": "arm-contains-gripper", "source": "arm.root", "target": "arm.gripper", "type": "contains", "metadata": {} },
+    { "id": "upper-mounted-shoulder", "source": "arm.link.upper", "target": "arm.joint.shoulder", "type": "mountedTo", "metadata": {} },
+    { "id": "elbow-mounted-upper", "source": "arm.joint.elbow", "target": "arm.link.upper", "type": "mountedTo", "metadata": {} },
+    { "id": "forearm-mounted-elbow", "source": "arm.link.forearm", "target": "arm.joint.elbow", "type": "mountedTo", "metadata": {} },
+    { "id": "gripper-mounted-forearm", "source": "arm.gripper", "target": "arm.link.forearm", "type": "mountedTo", "metadata": {} },
+    { "id": "base-controlled-controller", "source": "arm.joint.base", "target": "arm.controller", "type": "controlledBy", "metadata": {} },
+    { "id": "shoulder-controlled-controller", "source": "arm.joint.shoulder", "target": "arm.controller", "type": "controlledBy", "metadata": {} },
+    { "id": "elbow-controlled-controller", "source": "arm.joint.elbow", "target": "arm.controller", "type": "controlledBy", "metadata": {} },
+    { "id": "gripper-controlled-controller", "source": "arm.gripper", "target": "arm.controller", "type": "controlledBy", "metadata": {} },
+    { "id": "controller-moves-arm", "source": "arm.controller", "target": "arm.root", "type": "moves", "metadata": {} },
+    { "id": "sensor-reads-cube", "source": "arm.sensor.object", "target": "object.cube.red", "type": "reads", "metadata": {} }
+  ],
+  "behaviors": [],
+  "metadata": {
+    "maturity": "robotic-pick-runtime",
+    "signature": "Tehkné Solutions"
+  }
+}
