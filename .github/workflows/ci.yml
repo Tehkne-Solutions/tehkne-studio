@@ -1,4 +1,4 @@
-name: S1 ARM-01 Runtime Gate
+name: S1 Failure Simulation Gate
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  arm01-runtime:
+  failure-simulation:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,4 +14,4 @@ jobs:
         with:
           node-version: 22
       - run: npm install --ignore-scripts
-      - run: npm run verify:s1.8
+      - run: npm run verify:s1.9
