@@ -25,6 +25,7 @@
     "packages/failure-simulation/src/**/*.ts",
     "packages/variant-runtime/src/**/*.ts",
     "packages/factory-runtime/src/**/*.ts",
+    "packages/release-runtime/src/**/*.ts",
     "packages/engineering-session/src/**/*.ts",
     "packages/studio-behavior/src/**/*.ts",
     "packages/studio-robotics/src/**/*.ts",
