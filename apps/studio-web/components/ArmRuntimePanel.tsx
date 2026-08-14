@@ -7,6 +7,8 @@ import type { ArmVariantLab } from "../../../packages/studio-variants/src/index"
 import type { Arm01Controller } from "../../../packages/studio-robotics/src/index";
 import styles from "./ArmRuntimePanel.module.css";
 
+// S1.9 compatibility: failureProfile is now injected through the shared ArmFailureLab owned by SpatialWorkbench.
+
 interface ArmRuntimePanelProps {
   readonly controller: Arm01Controller;
   readonly failureLab: ArmFailureLab;
