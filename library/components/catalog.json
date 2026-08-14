@@ -1,0 +1,311 @@
+{
+  "catalogId": "tehkne-universal-components-v1",
+  "catalogVersion": "1",
+  "signature": "Tehkné Solutions",
+  "components": [
+    {
+      "definitionId": "compute.cpu.general-v1",
+      "version": "1",
+      "name": "General CPU",
+      "type": "Processor",
+      "domain": "compute",
+      "productFamilies": ["desktop", "notebook", "generic"],
+      "tags": ["cpu", "compute", "processor"],
+      "defaultState": "ready",
+      "properties": {
+        "cores": { "id": "cores", "value": 8, "source": "studio", "confidence": 0.8, "min": 1, "max": 128 },
+        "nominalPowerW": { "id": "nominalPowerW", "value": 65, "unit": "W", "source": "studio", "confidence": 0.8, "min": 1, "max": 500 }
+      },
+      "ports": {
+        "compute-socket": { "id": "compute-socket", "kind": "data", "direction": "bidirectional", "compatibility": ["compute.cpu-socket"], "state": "available" },
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.cpu-vrm"], "state": "available" },
+        "thermal": { "id": "thermal", "kind": "thermal", "direction": "bidirectional", "compatibility": ["thermal.compute-spreader"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "Um processador geral executa instruções e coordena tarefas computacionais.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "compute.soc.mobile-v1",
+      "version": "1",
+      "name": "Mobile System-on-Chip",
+      "type": "SystemOnChip",
+      "domain": "compute",
+      "productFamilies": ["smartphone", "tablet", "notebook", "embedded"],
+      "tags": ["soc", "mobile", "compute"],
+      "defaultState": "ready",
+      "properties": {
+        "cpuCores": { "id": "cpuCores", "value": 8, "source": "studio", "confidence": 0.8, "min": 1, "max": 32 },
+        "nominalPowerW": { "id": "nominalPowerW", "value": 8, "unit": "W", "source": "studio", "confidence": 0.75, "min": 0.5, "max": 50 }
+      },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "memory": { "id": "memory", "kind": "data", "direction": "bidirectional", "compatibility": ["memory.lpddr"], "state": "available" },
+        "storage": { "id": "storage", "kind": "data", "direction": "bidirectional", "compatibility": ["storage.solid-state"], "state": "available" },
+        "display-out": { "id": "display-out", "kind": "data", "direction": "out", "compatibility": ["display.mipi-dsi"], "state": "available" },
+        "sensor-bus": { "id": "sensor-bus", "kind": "data", "direction": "bidirectional", "compatibility": ["bus.i2c-spi"], "state": "available" },
+        "camera-in": { "id": "camera-in", "kind": "data", "direction": "in", "compatibility": ["camera.mipi-csi"], "state": "available" },
+        "wireless-bus": { "id": "wireless-bus", "kind": "data", "direction": "bidirectional", "compatibility": ["bus.sdio-pcie"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "Um SoC reúne processamento, controladores e interfaces em um único circuito integrado.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "memory.ddr.module-v1",
+      "version": "1",
+      "name": "DDR Memory Module",
+      "type": "MemoryModule",
+      "domain": "memory",
+      "productFamilies": ["desktop", "notebook"],
+      "tags": ["ram", "ddr", "memory"],
+      "defaultState": "ready",
+      "properties": { "capacityGB": { "id": "capacityGB", "value": 16, "unit": "GB", "source": "studio", "confidence": 0.8, "min": 1, "max": 256 } },
+      "ports": { "memory-bus": { "id": "memory-bus", "kind": "data", "direction": "bidirectional", "compatibility": ["memory.ddr"], "state": "available" } },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }, { "id": "remove", "label": "Remover" }, { "id": "insert", "label": "Inserir" }],
+      "metadata": { "simpleExplanation": "Memória DDR armazena temporariamente dados de trabalho para acesso rápido.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "memory.lpddr.package-v1",
+      "version": "1",
+      "name": "LPDDR Memory Package",
+      "type": "MemoryModule",
+      "domain": "memory",
+      "productFamilies": ["smartphone", "tablet", "notebook", "embedded"],
+      "tags": ["ram", "lpddr", "memory", "mobile"],
+      "defaultState": "ready",
+      "properties": { "capacityGB": { "id": "capacityGB", "value": 8, "unit": "GB", "source": "studio", "confidence": 0.8, "min": 1, "max": 64 } },
+      "ports": { "memory-bus": { "id": "memory-bus", "kind": "data", "direction": "bidirectional", "compatibility": ["memory.lpddr"], "state": "available" } },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "LPDDR oferece memória de baixo consumo para dispositivos móveis e compactos.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "storage.solid-state.general-v1",
+      "version": "1",
+      "name": "Solid-State Storage",
+      "type": "StorageDevice",
+      "domain": "storage",
+      "productFamilies": ["desktop", "notebook", "smartphone", "tablet", "embedded", "generic"],
+      "tags": ["storage", "ssd", "flash"],
+      "defaultState": "ready",
+      "properties": { "capacityGB": { "id": "capacityGB", "value": 256, "unit": "GB", "source": "studio", "confidence": 0.8, "min": 8, "max": 8192 } },
+      "ports": { "storage-bus": { "id": "storage-bus", "kind": "data", "direction": "bidirectional", "compatibility": ["storage.solid-state"], "state": "available" } },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "Armazenamento de estado sólido mantém dados mesmo sem energia.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "energy.battery.lithium-ion-v1",
+      "version": "1",
+      "name": "Lithium-Ion Battery Pack",
+      "type": "BatteryPack",
+      "domain": "energy",
+      "productFamilies": ["smartphone", "tablet", "notebook", "robotics", "embedded"],
+      "tags": ["battery", "energy", "lithium-ion"],
+      "defaultState": "charged",
+      "properties": {
+        "capacityWh": { "id": "capacityWh", "value": 15, "unit": "Wh", "source": "studio", "confidence": 0.75, "min": 1, "max": 200 },
+        "nominalVoltageV": { "id": "nominalVoltageV", "value": 3.85, "unit": "V", "source": "studio", "confidence": 0.8, "min": 2.5, "max": 60 }
+      },
+      "ports": {
+        "dc-output": { "id": "dc-output", "kind": "electrical", "direction": "out", "compatibility": ["power.dc.source"], "state": "available" },
+        "charge-input": { "id": "charge-input", "kind": "electrical", "direction": "in", "compatibility": ["power.charge"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "A bateria armazena energia química e fornece corrente contínua ao produto.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "power.regulator.dc-v1",
+      "version": "1",
+      "name": "DC Power Regulator",
+      "type": "PowerRegulator",
+      "domain": "power",
+      "productFamilies": ["desktop", "notebook", "smartphone", "tablet", "robotics", "embedded", "generic"],
+      "tags": ["power", "regulator", "dc"],
+      "defaultState": "ready",
+      "properties": { "efficiencyPercent": { "id": "efficiencyPercent", "value": 92, "unit": "%", "source": "studio", "confidence": 0.75, "min": 50, "max": 100 } },
+      "ports": {
+        "dc-input": { "id": "dc-input", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.source"], "state": "available" },
+        "regulated-output": { "id": "regulated-output", "kind": "electrical", "direction": "out", "compatibility": ["power.dc.low-voltage"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O regulador converte uma fonte DC em tensão adequada aos circuitos internos.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "display.oled.touch-v1",
+      "version": "1",
+      "name": "OLED Touch Display",
+      "type": "DisplayModule",
+      "domain": "display",
+      "productFamilies": ["smartphone", "tablet", "display-system"],
+      "tags": ["display", "oled", "touch"],
+      "defaultState": "off",
+      "properties": {
+        "diagonalIn": { "id": "diagonalIn", "value": 6.2, "unit": "in", "source": "studio", "confidence": 0.75, "min": 1, "max": 100 },
+        "refreshHz": { "id": "refreshHz", "value": 120, "unit": "Hz", "source": "studio", "confidence": 0.75, "min": 24, "max": 480 }
+      },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "display-in": { "id": "display-in", "kind": "data", "direction": "in", "compatibility": ["display.mipi-dsi"], "state": "available" },
+        "touch-data": { "id": "touch-data", "kind": "data", "direction": "bidirectional", "compatibility": ["bus.i2c-spi"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "A tela OLED produz imagem por pixels emissivos e integra entrada por toque.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "sensing.imu.6dof-v1",
+      "version": "1",
+      "name": "6-DoF IMU",
+      "type": "InertialSensor",
+      "domain": "sensing",
+      "productFamilies": ["smartphone", "tablet", "robotics", "embedded"],
+      "tags": ["sensor", "imu", "motion"],
+      "defaultState": "ready",
+      "properties": { "axes": { "id": "axes", "value": 6, "source": "studio", "confidence": 1, "min": 3, "max": 9 } },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "sensor-data": { "id": "sensor-data", "kind": "data", "direction": "bidirectional", "compatibility": ["bus.i2c-spi"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "A IMU mede aceleração e rotação para estimar movimento e orientação.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "sensing.camera.rgb-v1",
+      "version": "1",
+      "name": "RGB Camera Module",
+      "type": "CameraModule",
+      "domain": "sensing",
+      "productFamilies": ["smartphone", "tablet", "notebook", "robotics", "embedded"],
+      "tags": ["sensor", "camera", "rgb"],
+      "defaultState": "ready",
+      "properties": { "megapixels": { "id": "megapixels", "value": 12, "unit": "MP", "source": "studio", "confidence": 0.75, "min": 0.3, "max": 200 } },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "video-out": { "id": "video-out", "kind": "data", "direction": "out", "compatibility": ["camera.mipi-csi"], "state": "available" },
+        "control": { "id": "control", "kind": "data", "direction": "bidirectional", "compatibility": ["bus.i2c-spi"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O módulo de câmera converte luz em dados digitais para processamento de imagem.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "communication.wireless.combo-v1",
+      "version": "1",
+      "name": "Wireless Connectivity Module",
+      "type": "WirelessModule",
+      "domain": "communication",
+      "productFamilies": ["smartphone", "tablet", "notebook", "embedded"],
+      "tags": ["wireless", "wifi", "bluetooth", "radio"],
+      "defaultState": "ready",
+      "properties": { "radios": { "id": "radios", "value": "Wi-Fi + Bluetooth", "source": "studio", "confidence": 0.8 } },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "host-data": { "id": "host-data", "kind": "data", "direction": "bidirectional", "compatibility": ["bus.sdio-pcie"], "state": "available" },
+        "rf": { "id": "rf", "kind": "signal", "direction": "bidirectional", "compatibility": ["rf.antenna"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O módulo wireless conecta o produto a redes e periféricos por rádio.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "control.mcu.general-v1",
+      "version": "1",
+      "name": "General Microcontroller",
+      "type": "Microcontroller",
+      "domain": "control",
+      "productFamilies": ["robotics", "embedded", "generic"],
+      "tags": ["mcu", "controller", "embedded"],
+      "defaultState": "ready",
+      "properties": { "clockMHz": { "id": "clockMHz", "value": 160, "unit": "MHz", "source": "studio", "confidence": 0.75, "min": 1, "max": 1000 } },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "sensor-bus": { "id": "sensor-bus", "kind": "data", "direction": "bidirectional", "compatibility": ["bus.i2c-spi"], "state": "available" },
+        "control-out": { "id": "control-out", "kind": "signal", "direction": "out", "compatibility": ["control.pwm"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "Um microcontrolador executa lógica embarcada e controla sensores e atuadores.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "control.robot-controller-v1",
+      "version": "1",
+      "name": "Robot Motion Controller",
+      "type": "RobotController",
+      "domain": "control",
+      "productFamilies": ["robotics"],
+      "tags": ["robotics", "motion", "controller"],
+      "defaultState": "idle",
+      "properties": { "controlLoopHz": { "id": "controlLoopHz", "value": 500, "unit": "Hz", "source": "studio", "confidence": 0.75, "min": 10, "max": 5000 } },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "sensor-bus": { "id": "sensor-bus", "kind": "data", "direction": "bidirectional", "compatibility": ["bus.i2c-spi"], "state": "available" },
+        "motion-control": { "id": "motion-control", "kind": "signal", "direction": "out", "compatibility": ["control.pwm"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O controlador de movimento coordena sensores, juntas e atuadores de um robô.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "actuation.servo.rotary-v1",
+      "version": "1",
+      "name": "Rotary Servo Actuator",
+      "type": "RotaryActuator",
+      "domain": "actuation",
+      "productFamilies": ["robotics", "embedded"],
+      "tags": ["servo", "actuator", "motor"],
+      "defaultState": "idle",
+      "properties": {
+        "torqueNm": { "id": "torqueNm", "value": 8, "unit": "N·m", "source": "studio", "confidence": 0.7, "min": 0.1, "max": 500 },
+        "angleDeg": { "id": "angleDeg", "value": 0, "unit": "deg", "source": "simulated", "confidence": 1, "min": -180, "max": 180 }
+      },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "control-in": { "id": "control-in", "kind": "signal", "direction": "in", "compatibility": ["control.pwm"], "state": "available" },
+        "shaft": { "id": "shaft", "kind": "mechanical", "direction": "out", "compatibility": ["mechanical.rotary-shaft"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O servo converte energia elétrica e comandos em movimento angular controlado.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "thermal.cooling.compact-v1",
+      "version": "1",
+      "name": "Compact Cooling System",
+      "type": "CoolingSystem",
+      "domain": "thermal",
+      "productFamilies": ["desktop", "notebook", "embedded", "generic"],
+      "tags": ["thermal", "cooling", "heatsink"],
+      "defaultState": "ready",
+      "properties": { "thermalCapacityW": { "id": "thermalCapacityW", "value": 45, "unit": "W", "source": "studio", "confidence": 0.7, "min": 1, "max": 1000 } },
+      "ports": {
+        "thermal-interface": { "id": "thermal-interface", "kind": "thermal", "direction": "bidirectional", "compatibility": ["thermal.compute-spreader"], "state": "available" },
+        "fan-power": { "id": "fan-power", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O sistema térmico transporta calor de componentes para o ambiente.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "structural.frame.modular-v1",
+      "version": "1",
+      "name": "Modular Structural Frame",
+      "type": "StructuralFrame",
+      "domain": "structural",
+      "productFamilies": ["desktop", "notebook", "smartphone", "tablet", "robotics", "embedded", "display-system", "generic"],
+      "tags": ["structure", "frame", "mount"],
+      "defaultState": "ready",
+      "properties": { "massKg": { "id": "massKg", "value": 0.2, "unit": "kg", "source": "studio", "confidence": 0.6, "min": 0.001, "max": 100 } },
+      "ports": { "mount": { "id": "mount", "kind": "mechanical", "direction": "bidirectional", "compatibility": ["mechanical.mount.generic"], "state": "available" } },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "A estrutura mantém os componentes posicionados e transfere cargas mecânicas.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "interface.usb-c.port-v1",
+      "version": "1",
+      "name": "USB-C Interface",
+      "type": "ExternalInterface",
+      "domain": "interface",
+      "productFamilies": ["notebook", "smartphone", "tablet", "embedded", "display-system", "generic"],
+      "tags": ["usb-c", "interface", "data", "charging"],
+      "defaultState": "available",
+      "properties": { "reversible": { "id": "reversible", "value": true, "source": "studio", "confidence": 1 } },
+      "ports": {
+        "external": { "id": "external", "kind": "data", "direction": "bidirectional", "compatibility": ["usb.usb-c"], "state": "available" },
+        "charge": { "id": "charge", "kind": "electrical", "direction": "out", "compatibility": ["power.charge"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "USB-C é uma interface reversível que pode transportar dados e energia.", "provenance": "authored-template" }
+    }
+  ]
+}
