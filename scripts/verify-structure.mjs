@@ -21,13 +21,16 @@ const required = [
   "packages/spatial-runtime/src/index.ts",
   "packages/simulation-runtime/src/index.ts",
   "packages/robotics-runtime/src/index.ts",
+  "packages/failure-simulation/src/index.ts",
   "packages/engineering-session/src/index.ts",
   "packages/studio-behavior/src/index.ts",
   "packages/studio-robotics/src/index.ts",
+  "packages/studio-failure/src/index.ts",
   "packages/intelligence-runtime/src/index.ts",
   "packages/studio-intelligence/src/index.ts",
   "presets/desktop-pc/project.json",
   "presets/arm-01/project.json",
+  "presets/arm-01/failure-profile.json",
   "tests/domain/spatial-runtime.test.mjs",
   "tests/domain/engineering-session.test.mjs",
   "tests/domain/desktop-pc-system.test.mjs",
@@ -40,6 +43,8 @@ const required = [
   "tests/domain/robotics-runtime.test.mjs",
   "tests/domain/studio-robotics.test.mjs",
   "tests/domain/studio-robotics-intelligence.test.mjs",
+  "tests/domain/failure-simulation.test.mjs",
+  "tests/domain/studio-failure.test.mjs",
   ".github/workflows/ci.yml"
 ];
 
@@ -129,6 +134,13 @@ for (const type of ["contains", "mountedTo", "controlledBy", "moves", "reads"]) 
   if (!armRelationshipTypes.has(type)) throw new Error(`ARM engineering relationship missing: ${type}`);
 }
 
+const failureProfile = JSON.parse(await readFile("presets/arm-01/failure-profile.json", "utf8"));
+if (failureProfile.signature !== "Tehkné Solutions") throw new Error("Failure profile signature missing");
+if (failureProfile.provenance?.maturity !== "functional-model") throw new Error("Failure profile maturity must remain explicit");
+for (const property of ["torqueLimitNm", "currentLimitA", "maxTemperatureC", "torqueConstantNmPerA", "warningMarginPercent"]) {
+  if (typeof failureProfile[property] !== "number") throw new Error(`Failure profile missing ${property}`);
+}
+
 const projectFormat = await readFile("packages/project-format/src/index.ts", "utf8");
 if (!projectFormat.includes("behaviors?: readonly BehaviorDefinition[]")) throw new Error("Behavior IR is not first-class in project format");
 const graphRuntime = await readFile("packages/engineering-graph/src/index.ts", "utf8");
@@ -154,6 +166,16 @@ for (const token of ["Arm01Controller", "MotionPlanCreated", "MotionWaypointReac
 if (!studioRobotics.includes("payloadKg")) throw new Error("ARM payload gate missing");
 if (!studioRobotics.includes("arm.sensor.object")) throw new Error("ARM sensor gate missing");
 
+const failureRuntime = await readFile("packages/failure-simulation/src/index.ts", "utf8");
+for (const token of ["assessArmLoad", "buildFailureTrace", "requiredTorqueNm", "currentA", "temperatureC", "limitingMarginPercent", "multi_limit"]) {
+  if (!failureRuntime.includes(token)) throw new Error(`Failure Simulation contract missing: ${token}`);
+}
+const studioFailure = await readFile("packages/studio-failure/src/index.ts", "utf8");
+for (const token of ["ArmFailureLab", "PayloadChanged", "FailureRiskObserved", "FailureDetected", "FailureCausalityExplained", "requiredTorqueNm", "motorCurrentA", "motorTemperatureC"]) {
+  if (!studioFailure.includes(token)) throw new Error(`Failure Lab orchestration missing: ${token}`);
+}
+if (!studioFailure.includes("session.graph.replaceEntity")) throw new Error("Failure Lab is not updating Engineering State");
+
 const workbench = await readFile("apps/studio-web/components/SpatialWorkbench.tsx", "utf8");
 for (const token of [
   "EngineeringSession", "StudioIntelligence", "StudioBehaviorController", "BehaviorPanel", "DesktopPcAssembly",
@@ -163,6 +185,11 @@ for (const token of [
   if (!workbench.includes(token)) throw new Error(`Workbench integration missing: ${token}`);
 }
 if (workbench.includes("createEngineeringEntity")) throw new Error("Workbench must not duplicate EngineeringEntity definitions locally");
+
+const armRuntimePanel = await readFile("apps/studio-web/components/ArmRuntimePanel.tsx", "utf8");
+for (const token of ["ArmFailureLab", "failureProfile", "runFailureCase", "explainFailure", "requiredTorqueNm", "currentA", "temperatureC", "limitingMarginPercent", "CAUSAL TRACE"]) {
+  if (!armRuntimePanel.includes(token)) throw new Error(`Failure Lab UI missing: ${token}`);
+}
 
 const armAssembly = await readFile("apps/studio-web/components/Arm01Assembly.tsx", "utf8");
 for (const token of ["arm.joint.base", "arm.joint.shoulder", "arm.joint.elbow", "arm.gripper", "object.cube.red"]) {
@@ -194,4 +221,4 @@ if (!speech.includes("speechSynthesis")) throw new Error("Optional spoken Studio
 const nextConfig = await readFile("apps/studio-web/next.config.mjs", "utf8");
 if (!nextConfig.includes("extensionAlias")) throw new Error("Next shared-source extension alias missing");
 
-console.log(`S1.8 structure PASS · ${required.length} required surfaces · Desktop + Behavior + ARM-01 robotics · Tehkné Solutions`);
+console.log(`S1.9 structure PASS · ${required.length} required surfaces · Desktop + Behavior + ARM-01 + Failure Lab · Tehkné Solutions`);
