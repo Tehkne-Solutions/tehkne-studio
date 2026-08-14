@@ -23,10 +23,12 @@
     "packages/simulation-runtime/src/**/*.ts",
     "packages/robotics-runtime/src/**/*.ts",
     "packages/failure-simulation/src/**/*.ts",
+    "packages/variant-runtime/src/**/*.ts",
     "packages/engineering-session/src/**/*.ts",
     "packages/studio-behavior/src/**/*.ts",
     "packages/studio-robotics/src/**/*.ts",
     "packages/studio-failure/src/**/*.ts",
+    "packages/studio-variants/src/**/*.ts",
     "packages/intelligence-runtime/src/**/*.ts",
     "packages/studio-intelligence/src/**/*.ts"
   ]
