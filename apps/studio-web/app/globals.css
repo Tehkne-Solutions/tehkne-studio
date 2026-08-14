@@ -106,7 +106,7 @@ h1 { margin: 4px 0 0; font-size: 18px; letter-spacing: .08em; font-weight: 600; 
   z-index: 6;
   right: 20px;
   bottom: 22px;
-  width: min(370px, calc(100vw - 40px));
+  width: min(390px, calc(100vw - 40px));
   max-height: calc(100% - 44px);
   overflow: auto;
   padding: 18px;
@@ -119,6 +119,23 @@ h1 { margin: 4px 0 0; font-size: 18px; letter-spacing: .08em; font-weight: 600; 
 .entity-kind { color: #b29b69; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
 .entity-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
 .entity-actions button { padding: 8px 10px; font-size: 12px; }
+
+.entity-relations {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #3d3f39;
+}
+.entity-relations > span { color: #8f8f86; font-size: 9px; letter-spacing: .14em; }
+.entity-relations > div {
+  display: grid;
+  grid-template-columns: minmax(88px, .72fr) 1.28fr;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid #343630;
+}
+.entity-relations small { color: #9a9992; font-size: 10px; }
+.entity-relations strong { margin: 0; font-size: 12px; font-weight: 520; text-align: right; }
 
 .capability-result {
   margin-top: 16px;
