@@ -9,15 +9,20 @@
       "id": "pc.root",
       "type": "Computer",
       "name": "Desktop PC",
-      "state": "off",
+      "state": "closed",
       "properties": {},
       "ports": {},
       "capabilities": [
-        { "id": "open", "label": "Open" },
-        { "id": "explode", "label": "Explode" },
-        { "id": "powerOn", "label": "Power On" }
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" },
+        { "id": "open", "label": "Abrir" },
+        { "id": "explode", "label": "Explodir" },
+        { "id": "powerOn", "label": "Ligar" }
       ],
-      "metadata": { "preset": true }
+      "metadata": {
+        "preset": true,
+        "simpleExplanation": "Um computador de mesa é um sistema modular em que energia, processamento, memória e armazenamento trabalham juntos."
+      }
     },
     {
       "id": "pc.ram.01",
@@ -26,7 +31,8 @@
       "parentId": "pc.root",
       "state": "connected",
       "properties": {
-        "connected": { "id": "connected", "value": true, "source": "studio" }
+        "connected": { "id": "connected", "value": true, "source": "studio" },
+        "capacity": { "id": "capacity", "value": 16, "unit": "GB", "source": "studio", "confidence": 1 }
       },
       "ports": {
         "memory-bus": {
@@ -38,11 +44,14 @@
         }
       },
       "capabilities": [
-        { "id": "inspect", "label": "Inspect" },
-        { "id": "explain", "label": "Explain" },
-        { "id": "remove", "label": "Remove" }
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" },
+        { "id": "remove", "label": "Remover" }
       ],
-      "metadata": { "learningDepth": ["simple", "technical", "engineering"] }
+      "metadata": {
+        "learningDepth": ["simple", "technical", "engineering"],
+        "simpleExplanation": "A memória RAM mantém temporariamente os dados que o processador precisa acessar rapidamente enquanto o computador está trabalhando."
+      }
     },
     {
       "id": "pc.boot",
@@ -53,8 +62,8 @@
       "properties": {},
       "ports": {},
       "capabilities": [
-        { "id": "simulate", "label": "Simulate" },
-        { "id": "why", "label": "Why?" }
+        { "id": "simulate", "label": "Simular" },
+        { "id": "why", "label": "Por quê?" }
       ],
       "metadata": {}
     }
