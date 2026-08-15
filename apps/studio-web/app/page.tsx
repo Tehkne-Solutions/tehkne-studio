@@ -1,4 +1,5 @@
 import { BlankInventionExperience } from "../components/BlankInventionExperience";
+import { BlankInventionTrigger } from "../components/BlankInventionTrigger";
 import { ComponentLibraryPanel } from "../components/ComponentLibraryPanel";
 import { ElectronicsWorkbenchExperience } from "../components/ElectronicsWorkbenchExperience";
 import { SpatialWorkbench } from "../components/SpatialWorkbench";
@@ -17,6 +18,7 @@ export default function StudioPage() {
       <SpatialWorkbench />
       <ComponentLibraryPanel />
       <ElectronicsWorkbenchExperience />
+      <BlankInventionTrigger />
       <BlankInventionExperience />
 
       <footer className="studio-footer">
