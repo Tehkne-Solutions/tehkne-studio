@@ -16,6 +16,14 @@ import {
 } from "../../../packages/component-library/src/overlay";
 import { EngineeringSession } from "../../../packages/engineering-session/src/index";
 import {
+  coincidentFollowerPosition,
+  deriveMechanicalAssemblyConstraints,
+  endpointsAreCoincident,
+  mechanicalAssemblyMembers,
+  planMechanicalAssemblyTranslation,
+  type MechanicalAssemblyConstraint
+} from "../../../packages/invention-assembly-runtime/src/index";
+import {
   INVENTION_SPATIAL_BOUNDS,
   InventionSpatialScene,
   parseInventionSpatialDocument,
@@ -37,6 +45,7 @@ import type {
 import componentCatalog from "../../../library/components/catalog.json";
 import assetForgeExtension from "../../../library/components/extensions/asset-forge-v1.json";
 import displaySystemExtension from "../../../library/components/extensions/display-system-v1.json";
+import mechanicalAssemblyExtension from "../../../library/components/extensions/mechanical-assembly-v1.json";
 import displaySystemOverlay from "../../../library/components/overlays/display-system-v1.json";
 import notebookOverlay from "../../../library/components/overlays/notebook-v1.json";
 import tabletOverlay from "../../../library/components/overlays/tablet-v1.json";
@@ -47,7 +56,8 @@ import {
 } from "../lib/projectPersistence";
 import {
   AssetBackedComponent,
-  useAssetSocketEndpoint,
+  spatialProxyForEntity,
+  useSpatialPortEndpoint,
   visualAssetForEntity,
   type GltfVisualAssetDescriptor
 } from "./InventionAssetVisual";
@@ -57,7 +67,8 @@ const baseCatalog = parseComponentCatalog(componentCatalog);
 const notebookCatalog = applyComponentCatalogOverlay(baseCatalog, notebookOverlay as ComponentCatalogOverlay);
 const tabletCatalog = applyComponentCatalogOverlay(notebookCatalog, tabletOverlay as ComponentCatalogOverlay);
 const assetForgeCatalog = applyComponentCatalogExtension(tabletCatalog, assetForgeExtension);
-const displayExtendedCatalog = applyComponentCatalogExtension(assetForgeCatalog, displaySystemExtension);
+const mechanicalCatalog = applyComponentCatalogExtension(assetForgeCatalog, mechanicalAssemblyExtension);
+const displayExtendedCatalog = applyComponentCatalogExtension(mechanicalCatalog, displaySystemExtension);
 const expandedCatalog = applyComponentCatalogOverlay(displayExtendedCatalog, displaySystemOverlay as ComponentCatalogOverlay);
 const registry = new ComponentRegistry(expandedCatalog);
 
@@ -159,6 +170,21 @@ function componentMaterial(domain: string, selected: boolean) {
   return <meshStandardMaterial color={color} metalness={0.42} roughness={0.52} />;
 }
 
+function ProxyAnchorMarkers({ entity }: { readonly entity: EngineeringEntity }) {
+  const proxy = spatialProxyForEntity(entity);
+  if (!proxy) return null;
+  return Object.entries(proxy.portAnchors).map(([portId, anchor]) => (
+    <mesh
+      key={portId}
+      name={`proxy-port-anchor-${entity.id}-${portId}-${anchor.name}`}
+      position={[anchor.position.x, anchor.position.y, anchor.position.z]}
+    >
+      <sphereGeometry args={[0.003, 10, 8]} />
+      <meshStandardMaterial color="#d7d2bd" metalness={0.12} roughness={0.35} />
+    </mesh>
+  ));
+}
+
 function ComponentProxy({
   entity,
   binding,
@@ -171,6 +197,12 @@ function ComponentProxy({
   readonly onSelect: (entityId: string) => void;
 }) {
   const domain = String(entity.metadata.componentDomain ?? "generic");
+  const proxy = spatialProxyForEntity(entity);
+  const click = (event: { stopPropagation: () => void }) => {
+    event.stopPropagation();
+    onSelect(entity.id);
+  };
+
   return (
     <group
       position={[binding.position.x, binding.position.y, binding.position.z]}
@@ -178,19 +210,45 @@ function ComponentProxy({
       scale={[binding.scale.x, binding.scale.y, binding.scale.z]}
       name={`invention-3d-${entity.id}`}
     >
-      <mesh
-        onClick={(event) => {
-          event.stopPropagation();
-          onSelect(entity.id);
-        }}
-      >
-        {domainGeometry(domain)}
-        {componentMaterial(domain, selected)}
-      </mesh>
-      <mesh position={[0, -0.052, 0]}>
-        <boxGeometry args={[0.15, 0.008, 0.08]} />
-        <meshStandardMaterial color="#2c302d" metalness={0.15} roughness={0.8} />
-      </mesh>
+      {proxy?.kind === "wheel" ? (
+        <group onClick={click}>
+          <mesh>
+            <torusGeometry args={[proxy.dimensionsM.radius ?? 0.0325, Math.max((proxy.dimensionsM.width ?? 0.018) * 0.42, 0.004), 12, 32]} />
+            <meshStandardMaterial color={selected ? "#d7d2bd" : "#343733"} metalness={0.12} roughness={0.86} />
+          </mesh>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[proxy.dimensionsM.hubRadius ?? 0.006, proxy.dimensionsM.hubRadius ?? 0.006, proxy.dimensionsM.width ?? 0.018, 18]} />
+            <meshStandardMaterial color="#6b6d65" metalness={0.62} roughness={0.42} />
+          </mesh>
+        </group>
+      ) : proxy?.kind === "motor-bracket" ? (
+        <group onClick={click}>
+          <mesh position={[0, -0.014, 0]}>
+            <boxGeometry args={[proxy.dimensionsM.width ?? 0.038, proxy.dimensionsM.thickness ?? 0.002, proxy.dimensionsM.depth ?? 0.018]} />
+            <meshStandardMaterial color={selected ? "#d7d2bd" : "#666961"} metalness={0.74} roughness={0.4} />
+          </mesh>
+          <mesh position={[-0.018, 0, 0]}>
+            <boxGeometry args={[proxy.dimensionsM.thickness ?? 0.002, proxy.dimensionsM.height ?? 0.032, proxy.dimensionsM.depth ?? 0.018]} />
+            <meshStandardMaterial color="#666961" metalness={0.74} roughness={0.4} />
+          </mesh>
+          <mesh position={[0.018, 0, 0]}>
+            <boxGeometry args={[proxy.dimensionsM.thickness ?? 0.002, proxy.dimensionsM.height ?? 0.032, proxy.dimensionsM.depth ?? 0.018]} />
+            <meshStandardMaterial color="#666961" metalness={0.74} roughness={0.4} />
+          </mesh>
+        </group>
+      ) : (
+        <>
+          <mesh onClick={click}>
+            {domainGeometry(domain)}
+            {componentMaterial(domain, selected)}
+          </mesh>
+          <mesh position={[0, -0.052, 0]}>
+            <boxGeometry args={[0.15, 0.008, 0.08]} />
+            <meshStandardMaterial color="#2c302d" metalness={0.15} roughness={0.8} />
+          </mesh>
+        </>
+      )}
+      {selected ? <ProxyAnchorMarkers entity={entity} /> : null}
     </group>
   );
 }
@@ -245,9 +303,21 @@ function ComponentVisual({
   );
 }
 
-function ConnectionTube({ segment }: { readonly segment: InventionSpatialConnectionSegment }) {
-  const sourceEndpoint = useAssetSocketEndpoint(segment.sourceEntityId, segment.sourcePortId, segment.source);
-  const targetEndpoint = useAssetSocketEndpoint(segment.targetEntityId, segment.targetPortId, segment.target);
+function ConnectionTube({
+  segment,
+  sourceEntity,
+  targetEntity,
+  sourceBinding,
+  targetBinding
+}: {
+  readonly segment: InventionSpatialConnectionSegment;
+  readonly sourceEntity: EngineeringEntity;
+  readonly targetEntity: EngineeringEntity;
+  readonly sourceBinding: SpatialEntityBinding;
+  readonly targetBinding: SpatialEntityBinding;
+}) {
+  const sourceEndpoint = useSpatialPortEndpoint(sourceEntity, sourceBinding, segment.sourcePortId);
+  const targetEndpoint = useSpatialPortEndpoint(targetEntity, targetBinding, segment.targetPortId);
   const start = useMemo(
     () => new Vector3(sourceEndpoint.position.x, sourceEndpoint.position.y, sourceEndpoint.position.z),
     [sourceEndpoint.position.x, sourceEndpoint.position.y, sourceEndpoint.position.z]
@@ -273,7 +343,9 @@ function ConnectionTube({ segment }: { readonly segment: InventionSpatialConnect
         sourcePortId: segment.sourcePortId,
         targetPortId: segment.targetPortId,
         sourceSocket: sourceEndpoint.socketName,
-        targetSocket: targetEndpoint.socketName
+        targetSocket: targetEndpoint.socketName,
+        sourceEndpointSource: sourceEndpoint.source,
+        targetEndpointSource: targetEndpoint.source
       }}
     >
       <cylinderGeometry args={[0.005, 0.005, Math.max(length, 0.001), 8]} />
@@ -282,16 +354,25 @@ function ConnectionTube({ segment }: { readonly segment: InventionSpatialConnect
   );
 }
 
-function SocketAwareWireEvidence({
+function EndpointAwareWireEvidence({
   wire,
+  sourceEntity,
+  targetEntity,
+  sourceBinding,
+  targetBinding,
   onDisconnect
 }: {
   readonly wire: InventionSpatialConnectionSegment;
+  readonly sourceEntity: EngineeringEntity;
+  readonly targetEntity: EngineeringEntity;
+  readonly sourceBinding: SpatialEntityBinding;
+  readonly targetBinding: SpatialEntityBinding;
   readonly onDisconnect: () => void;
 }) {
-  const sourceEndpoint = useAssetSocketEndpoint(wire.sourceEntityId, wire.sourcePortId, wire.source);
-  const targetEndpoint = useAssetSocketEndpoint(wire.targetEntityId, wire.targetPortId, wire.target);
-  const socketAware = Boolean(sourceEndpoint.socketName || targetEndpoint.socketName);
+  const sourceEndpoint = useSpatialPortEndpoint(sourceEntity, sourceBinding, wire.sourcePortId);
+  const targetEndpoint = useSpatialPortEndpoint(targetEntity, targetBinding, wire.targetPortId);
+  const socketAware = sourceEndpoint.source !== "center-fallback" || targetEndpoint.source !== "center-fallback";
+  const mechanical = wire.sharedInterfaces.some((token) => token.startsWith("mechanical."));
   return (
     <div
       data-testid={`invention-3d-wire-${wire.relationshipId}`}
@@ -299,7 +380,10 @@ function SocketAwareWireEvidence({
       data-target-port={wire.targetPortId}
       data-source-socket={sourceEndpoint.socketName}
       data-target-socket={targetEndpoint.socketName}
+      data-source-endpoint-source={sourceEndpoint.source}
+      data-target-endpoint-source={targetEndpoint.source}
       data-socket-aware={socketAware ? "true" : "false"}
+      data-mechanical={mechanical ? "true" : "false"}
       data-source-x={format(sourceEndpoint.position.x)}
       data-source-y={format(sourceEndpoint.position.y)}
       data-source-z={format(sourceEndpoint.position.z)}
@@ -310,9 +394,84 @@ function SocketAwareWireEvidence({
       <strong>{wire.sharedInterfaces.join(" · ")}</strong>
       <small>
         {wire.relationshipId} · {wire.sourcePortId} → {wire.targetPortId}
-        {socketAware ? ` · SOCKET ${sourceEndpoint.socketName || "CENTER"} → ${targetEndpoint.socketName || "CENTER"}` : " · CENTER FALLBACK"}
+        {` · ${sourceEndpoint.source.toUpperCase()} ${sourceEndpoint.socketName || "CENTER"} → ${targetEndpoint.source.toUpperCase()} ${targetEndpoint.socketName || "CENTER"}`}
       </small>
       <button type="button" onClick={onDisconnect}>Desconectar</button>
+    </div>
+  );
+}
+
+function MechanicalConstraintSynchronizer({
+  constraint,
+  sourceEntity,
+  targetEntity,
+  sourceBinding,
+  targetBinding,
+  spatial,
+  onSnapped,
+  onBlocked
+}: {
+  readonly constraint: MechanicalAssemblyConstraint;
+  readonly sourceEntity: EngineeringEntity;
+  readonly targetEntity: EngineeringEntity;
+  readonly sourceBinding: SpatialEntityBinding;
+  readonly targetBinding: SpatialEntityBinding;
+  readonly spatial: InventionSpatialScene;
+  readonly onSnapped: (constraint: MechanicalAssemblyConstraint) => void;
+  readonly onBlocked: (constraint: MechanicalAssemblyConstraint, cause: unknown) => void;
+}) {
+  const driverEndpoint = useSpatialPortEndpoint(sourceEntity, sourceBinding, constraint.driver.portId);
+  const followerEndpoint = useSpatialPortEndpoint(targetEntity, targetBinding, constraint.follower.portId);
+  const resolved = driverEndpoint.source !== "center-fallback" && followerEndpoint.source !== "center-fallback";
+  const coincident = resolved && endpointsAreCoincident(driverEndpoint.position, followerEndpoint.position);
+
+  useEffect(() => {
+    if (!resolved || coincident) return;
+    try {
+      const next = coincidentFollowerPosition(driverEndpoint.position, followerEndpoint.position, targetBinding);
+      spatial.move(constraint.follower.entityId, next);
+      onSnapped(constraint);
+    } catch (cause) {
+      onBlocked(constraint, cause);
+    }
+  }, [
+    coincident,
+    constraint.follower.entityId,
+    constraint.relationshipId,
+    driverEndpoint.position.x,
+    driverEndpoint.position.y,
+    driverEndpoint.position.z,
+    followerEndpoint.position.x,
+    followerEndpoint.position.y,
+    followerEndpoint.position.z,
+    resolved,
+    spatial,
+    targetBinding.position.x,
+    targetBinding.position.y,
+    targetBinding.position.z
+  ]);
+
+  return (
+    <div
+      data-testid={`mechanical-constraint-${constraint.relationshipId}`}
+      data-state={!resolved ? "waiting" : coincident ? "snapped" : "aligning"}
+      data-driver-entity={constraint.driver.entityId}
+      data-driver-port={constraint.driver.portId}
+      data-driver-endpoint={driverEndpoint.socketName}
+      data-driver-endpoint-source={driverEndpoint.source}
+      data-follower-entity={constraint.follower.entityId}
+      data-follower-port={constraint.follower.portId}
+      data-follower-endpoint={followerEndpoint.socketName}
+      data-follower-endpoint-source={followerEndpoint.source}
+      data-driver-x={format(driverEndpoint.position.x)}
+      data-driver-y={format(driverEndpoint.position.y)}
+      data-driver-z={format(driverEndpoint.position.z)}
+      data-follower-x={format(followerEndpoint.position.x)}
+      data-follower-y={format(followerEndpoint.position.y)}
+      data-follower-z={format(followerEndpoint.position.z)}
+    >
+      <strong>ASSEMBLY · {constraint.sharedInterfaces.join(" · ")}</strong>
+      <small>{constraint.driver.portId} → {constraint.follower.portId} · {resolved ? (coincident ? "SNAPPED" : "ALIGNING") : "WAITING FOR PHYSICAL ENDPOINT"}</small>
     </div>
   );
 }
@@ -333,6 +492,7 @@ function Scene({
   readonly onSelect: (entityId: string) => void;
 }) {
   const bindingMap = useMemo(() => new Map(bindings.map((binding) => [binding.entityId, binding])), [bindings]);
+  const componentMap = useMemo(() => new Map(components.map((entity) => [entity.id, entity])), [components]);
   return (
     <>
       <color attach="background" args={["#171916"]} />
@@ -341,7 +501,23 @@ function Scene({
       <directionalLight position={[-0.8, 0.4, 0.6]} intensity={0.75} />
       <gridHelper args={[1.4, 28, "#62665d", "#2b2e29"]} position={[0, -0.31, 0.08]} />
       <CameraRig preset={cameraPreset} />
-      {wires.map((wire) => <ConnectionTube key={wire.relationshipId} segment={wire} />)}
+      {wires.map((wire) => {
+        const sourceEntity = componentMap.get(wire.sourceEntityId);
+        const targetEntity = componentMap.get(wire.targetEntityId);
+        const sourceBinding = bindingMap.get(wire.sourceEntityId);
+        const targetBinding = bindingMap.get(wire.targetEntityId);
+        if (!sourceEntity || !targetEntity || !sourceBinding || !targetBinding) return null;
+        return (
+          <ConnectionTube
+            key={wire.relationshipId}
+            segment={wire}
+            sourceEntity={sourceEntity}
+            targetEntity={targetEntity}
+            sourceBinding={sourceBinding}
+            targetBinding={targetBinding}
+          />
+        );
+      })}
       {components.map((entity) => {
         const binding = bindingMap.get(entity.id);
         if (!binding) return null;
@@ -361,6 +537,13 @@ function Scene({
 
 function visualDescriptor(entity: EngineeringEntity | null): GltfVisualAssetDescriptor | null {
   return entity ? visualAssetForEntity(entity) : null;
+}
+
+function physicalEndpointDeclared(entity: EngineeringEntity, portId: string): boolean {
+  return Boolean(
+    visualAssetForEntity(entity)?.portSocketMap[portId]
+    || spatialProxyForEntity(entity)?.portAnchors[portId]
+  );
 }
 
 export function Invention3DWorkbench() {
@@ -386,18 +569,24 @@ export function Invention3DWorkbench() {
   const document = useMemo(() => runtime.builder.document(), [runtime, revision]);
   const bindings = useMemo(() => runtime.spatial.bindings(), [runtime, revision]);
   const wires = useMemo(() => runtime.spatial.connectionSegments(connections), [connections, runtime, revision]);
+  const mechanicalConstraints = useMemo(
+    () => deriveMechanicalAssemblyConstraints(runtime.session, connections),
+    [connections, runtime, revision]
+  );
   const selectedEntity = selectedEntityId ? components.find((entity) => entity.id === selectedEntityId) ?? null : null;
   const selectedBinding = selectedEntityId ? bindings.find((binding) => binding.entityId === selectedEntityId) ?? null : null;
   const selectedVisual = visualDescriptor(selectedEntity);
+  const selectedProxy = selectedEntity ? spatialProxyForEntity(selectedEntity) : null;
   const assetBackedCount = components.reduce((count, entity) => count + (visualAssetForEntity(entity) ? 1 : 0), 0);
   const proxyCount = components.length - assetBackedCount;
   const componentMap = useMemo(() => new Map(components.map((entity) => [entity.id, entity])), [components]);
+  const bindingMap = useMemo(() => new Map(bindings.map((binding) => [binding.entityId, binding])), [bindings]);
   const socketAwareWireCount = wires.reduce((count, wire) => {
     const source = componentMap.get(wire.sourceEntityId);
     const target = componentMap.get(wire.targetEntityId);
-    const sourceSocket = source ? visualAssetForEntity(source)?.portSocketMap[wire.sourcePortId] : undefined;
-    const targetSocket = target ? visualAssetForEntity(target)?.portSocketMap[wire.targetPortId] : undefined;
-    return count + (sourceSocket || targetSocket ? 1 : 0);
+    const sourceEndpoint = source ? physicalEndpointDeclared(source, wire.sourcePortId) : false;
+    const targetEndpoint = target ? physicalEndpointDeclared(target, wire.targetPortId) : false;
+    return count + (sourceEndpoint || targetEndpoint ? 1 : 0);
   }, 0);
 
   const sourceOptions = useMemo<readonly PortOption[]>(() => components.flatMap((entity) =>
@@ -469,24 +658,25 @@ export function Invention3DWorkbench() {
       }
       setSelectedEntityId(entity.id);
       const visual = visualAssetForEntity(entity);
-      changed(`${entity.name} materializado na mesma Engineering Entity e binding espacial · ${visual ? `ASSET ${visual.assetId}` : "PROXY EXPLÍCITO"}.`);
+      const proxy = spatialProxyForEntity(entity);
+      changed(`${entity.name} materializado na mesma Engineering Entity e binding espacial · ${visual ? `ASSET ${visual.assetId}` : proxy ? `PROXY ${proxy.kind}` : "PROXY EXPLÍCITO"}.`);
     } catch (cause) {
       blocked(cause);
     }
   };
 
-  const moveSelected = (axis: keyof SpatialVector3, delta: number): void => {
+  const moveSelected = (axis: keyof SpatialVector3, requestedDelta: number): void => {
     if (!selectedEntityId || !selectedBinding) return;
     try {
       const { min, max } = INVENTION_SPATIAL_BOUNDS;
-      const next: SpatialVector3 = {
-        x: selectedBinding.position.x,
-        y: selectedBinding.position.y,
-        z: selectedBinding.position.z,
-        [axis]: clamp(selectedBinding.position[axis] + delta, min[axis], max[axis])
-      };
-      const moved = runtime.spatial.move(selectedEntityId, next);
-      changed(`Transform 3D · ${selectedEntity?.name ?? selectedEntityId} · x ${format(moved.position.x)} · y ${format(moved.position.y)} · z ${format(moved.position.z)}.`);
+      const clamped = clamp(selectedBinding.position[axis] + requestedDelta, min[axis], max[axis]);
+      const deltaValue = clamped - selectedBinding.position[axis];
+      const delta: SpatialVector3 = { x: 0, y: 0, z: 0, [axis]: deltaValue };
+      const members = mechanicalAssemblyMembers(mechanicalConstraints, selectedEntityId);
+      const plan = planMechanicalAssemblyTranslation(bindings, members, delta);
+      for (const move of plan) runtime.spatial.move(move.entityId, move.to);
+      const moved = runtime.spatial.binding(selectedEntityId);
+      changed(`Transform 3D · ${selectedEntity?.name ?? selectedEntityId} · x ${format(moved.position.x)} · y ${format(moved.position.y)} · z ${format(moved.position.z)} · assembly ${members.length} peça(s).`);
     } catch (cause) {
       blocked(cause);
     }
@@ -500,10 +690,25 @@ export function Invention3DWorkbench() {
       return;
     }
     try {
+      const sourceEntity = componentMap.get(from.entityId);
+      const targetEntity = componentMap.get(to.entityId);
+      if (!sourceEntity || !targetEntity) throw new Error("Componentes da conexão não estão materializados.");
+      const sourcePort = sourceEntity.ports[from.portId];
+      const targetPort = targetEntity.ports[to.portId];
+      if (!sourcePort || !targetPort) throw new Error("Portas da conexão não existem mais.");
+      const mechanical = sourcePort.kind === "mechanical" || targetPort.kind === "mechanical";
+      if (mechanical) {
+        if (sourcePort.kind !== "mechanical" || targetPort.kind !== "mechanical") {
+          throw new Error("Montagem mecânica exige duas portas mecânicas.");
+        }
+        if (!physicalEndpointDeclared(sourceEntity, from.portId) || !physicalEndpointDeclared(targetEntity, to.portId)) {
+          throw new Error("Montagem mecânica bloqueada: ambas as portas precisam de socket Asset Forge ou âncora proxy explícita.");
+        }
+      }
       const connection = runtime.builder.connect(from, to);
       setSourceKey("");
       setTargetKey("");
-      changed(`Wire 3D criado a partir da relação connectedTo · ${connection.sharedInterfaces.join(", ")} · endpoints socket-aware quando disponíveis.`);
+      changed(`${mechanical ? "Assembly constraint" : "Wire 3D"} criado a partir da relação connectedTo · ${connection.sharedInterfaces.join(", ")} · mesma topologia autoritativa.`);
     } catch (cause) {
       blocked(cause);
     }
@@ -518,7 +723,7 @@ export function Invention3DWorkbench() {
         }
       }));
       setSaved(true);
-      changed(`Bancada 3D salva · ${components.length} componentes · ${connections.length} conexões · ${bindings.length} bindings · sem simulação implícita.`);
+      changed(`Bancada 3D salva · ${components.length} componentes · ${connections.length} conexões · ${bindings.length} bindings · ${mechanicalConstraints.length} constraints derivadas · sem simulação implícita.`);
     } catch (cause) {
       blocked(cause);
     }
@@ -537,6 +742,23 @@ export function Invention3DWorkbench() {
     }
   };
 
+  const assemblySnapped = (constraint: MechanicalAssemblyConstraint): void => {
+    setMessage(`Assembly ${constraint.relationshipId} encaixado por endpoints físicos · ${constraint.sharedInterfaces.join(", ")} · constraint derivada do Engineering Graph.`);
+    setError(false);
+    setRevision((current) => current + 1);
+  };
+
+  const assemblyBlocked = (constraint: MechanicalAssemblyConstraint, cause: unknown): void => {
+    try {
+      runtime.builder.disconnect(constraint.relationshipId);
+    } catch {
+      // The constraint may already have been removed by another fail-closed path.
+    }
+    setError(true);
+    setMessage(cause instanceof Error ? `Assembly ${constraint.relationshipId} bloqueado: ${cause.message}` : `Assembly ${constraint.relationshipId} bloqueado.`);
+    setRevision((current) => current + 1);
+  };
+
   return (
     <>
       <button type="button" className={styles.trigger} data-testid="invention-3d-trigger" onClick={openWorkbench}>
@@ -548,8 +770,8 @@ export function Invention3DWorkbench() {
           <div className={styles.shell}>
             <header className={styles.header}>
               <div>
-                <span>TEHKNÉ SOLUTIONS · S2.14</span>
-                <strong>Socket-Aware 3D Invention Workbench</strong>
+                <span>TEHKNÉ SOLUTIONS · S2.15</span>
+                <strong>Mechanical Assembly 3D Invention Workbench</strong>
               </div>
               <div className={styles.actions}>
                 <button type="button" onClick={newProject}>Novo projeto</button>
@@ -565,17 +787,18 @@ export function Invention3DWorkbench() {
               data-real-assets={assetBackedCount}
               data-proxies={proxyCount}
               data-socket-aware-wires={socketAwareWireCount}
+              data-mechanical-assemblies={mechanicalConstraints.length}
             >
-              <strong>INVENTION 3D · {components.length} COMPONENTES · {connections.length} WIRES</strong>
+              <strong>INVENTION 3D · {components.length} COMPONENTES · {connections.length} RELAÇÕES</strong>
               <span>MESMO ENGINEERING GRAPH · {bindings.length} BINDINGS · SIMULAÇÃO {document.simulationStatus.toUpperCase()}</span>
-              <span>VISUAL · {assetBackedCount} REAL ASSET · {proxyCount} PROXY · {socketAwareWireCount} SOCKET-AWARE WIRES</span>
+              <span>VISUAL · {assetBackedCount} REAL ASSET · {proxyCount} PROXY · {mechanicalConstraints.length} ASSEMBLY CONSTRAINT(S)</span>
             </div>
 
             <div className={styles.body}>
               <aside className={styles.library}>
                 <label>
                   Componente canônico
-                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="battery, regulator, motor, sensor..." />
+                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="battery, regulator, motor, wheel, bracket..." />
                 </label>
                 <select
                   aria-label="Definição 3D"
@@ -592,16 +815,18 @@ export function Invention3DWorkbench() {
                 <div className={styles.entityList}>
                   {components.map((entity) => {
                     const visual = visualAssetForEntity(entity);
+                    const proxy = spatialProxyForEntity(entity);
                     return (
                       <button
                         type="button"
                         key={entity.id}
                         data-selected={selectedEntityId === entity.id}
                         data-visual-source={visual ? "asset" : "proxy"}
+                        data-proxy-kind={proxy?.kind ?? ""}
                         onClick={() => setSelectedEntityId(runtime.spatial.select(entity.id).entity.id)}
                       >
                         <strong>{entity.name}</strong>
-                        <small>{entity.id} · {visual ? "REAL ASSET" : "PROXY"}</small>
+                        <small>{entity.id} · {visual ? "REAL ASSET" : proxy ? `PROXY ${proxy.kind.toUpperCase()}` : "PROXY"}</small>
                       </button>
                     );
                   })}
@@ -661,12 +886,17 @@ export function Invention3DWorkbench() {
                       data-asset-lod={selectedVisual?.lod ?? ""}
                       data-socket-count={selectedVisual ? Object.keys(selectedVisual.portSocketMap).length : 0}
                       data-sockets={selectedVisual ? Object.values(selectedVisual.portSocketMap).join(",") : ""}
+                      data-proxy-kind={selectedProxy?.kind ?? ""}
+                      data-anchor-count={selectedProxy ? Object.keys(selectedProxy.portAnchors).length : 0}
+                      data-anchors={selectedProxy ? Object.values(selectedProxy.portAnchors).map((anchor) => anchor.name).join(",") : ""}
                     >
-                      <strong>{selectedVisual ? "REAL ASSET" : "PROXY EXPLÍCITO"}</strong>
+                      <strong>{selectedVisual ? "REAL ASSET" : selectedProxy ? "PROXY MECÂNICO EXPLÍCITO" : "PROXY EXPLÍCITO"}</strong>
                       <small>
                         {selectedVisual
                           ? `${selectedVisual.assetId} · ${selectedVisual.version} · ${selectedVisual.lod} · ${Object.keys(selectedVisual.portSocketMap).length} SOCKETS`
-                          : "Ainda sem arte Asset Forge cadastrada."}
+                          : selectedProxy
+                            ? `${selectedProxy.kind} · ${Object.keys(selectedProxy.portAnchors).length} PHYSICAL ANCHOR(S) · ainda sem arte Asset Forge`
+                            : "Ainda sem arte Asset Forge cadastrada."}
                       </small>
                     </div>
                     <div className={styles.axisGrid}>
@@ -680,7 +910,7 @@ export function Invention3DWorkbench() {
                   </>
                 ) : <p>Selecione uma entidade na lista ou diretamente na viewport.</p>}
 
-                <span>WIRING REAL</span>
+                <span>WIRING + ASSEMBLY</span>
                 <label>
                   Origem
                   <select aria-label="Origem 3D" value={sourceKey} onChange={(event) => { setSourceKey(event.target.value); setTargetKey(""); }}>
@@ -695,23 +925,54 @@ export function Invention3DWorkbench() {
                     {targetOptions.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
                   </select>
                 </label>
-                <button type="button" onClick={connect} disabled={!sourceRef || !targetKey}>Conectar no 3D</button>
+                <button type="button" onClick={connect} disabled={!sourceRef || !targetKey}>Conectar / Montar</button>
 
                 <div className={styles.wireEvidence} aria-label="3D wire evidence">
-                  {wires.map((wire) => (
-                    <SocketAwareWireEvidence
-                      key={wire.relationshipId}
-                      wire={wire}
-                      onDisconnect={() => {
-                        try {
-                          runtime.builder.disconnect(wire.relationshipId);
-                          changed(`${wire.relationshipId} desconectado do Engineering Graph e removido da viewport 3D.`);
-                        } catch (cause) {
-                          blocked(cause);
-                        }
-                      }}
-                    />
-                  ))}
+                  {mechanicalConstraints.map((constraint) => {
+                    const sourceEntity = componentMap.get(constraint.driver.entityId);
+                    const targetEntity = componentMap.get(constraint.follower.entityId);
+                    const sourceBinding = bindingMap.get(constraint.driver.entityId);
+                    const targetBinding = bindingMap.get(constraint.follower.entityId);
+                    if (!sourceEntity || !targetEntity || !sourceBinding || !targetBinding) return null;
+                    return (
+                      <MechanicalConstraintSynchronizer
+                        key={`assembly-${constraint.relationshipId}`}
+                        constraint={constraint}
+                        sourceEntity={sourceEntity}
+                        targetEntity={targetEntity}
+                        sourceBinding={sourceBinding}
+                        targetBinding={targetBinding}
+                        spatial={runtime.spatial}
+                        onSnapped={assemblySnapped}
+                        onBlocked={assemblyBlocked}
+                      />
+                    );
+                  })}
+                  {wires.map((wire) => {
+                    const sourceEntity = componentMap.get(wire.sourceEntityId);
+                    const targetEntity = componentMap.get(wire.targetEntityId);
+                    const sourceBinding = bindingMap.get(wire.sourceEntityId);
+                    const targetBinding = bindingMap.get(wire.targetEntityId);
+                    if (!sourceEntity || !targetEntity || !sourceBinding || !targetBinding) return null;
+                    return (
+                      <EndpointAwareWireEvidence
+                        key={wire.relationshipId}
+                        wire={wire}
+                        sourceEntity={sourceEntity}
+                        targetEntity={targetEntity}
+                        sourceBinding={sourceBinding}
+                        targetBinding={targetBinding}
+                        onDisconnect={() => {
+                          try {
+                            runtime.builder.disconnect(wire.relationshipId);
+                            changed(`${wire.relationshipId} desconectado do Engineering Graph e removido da viewport 3D.`);
+                          } catch (cause) {
+                            blocked(cause);
+                          }
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               </aside>
             </div>
