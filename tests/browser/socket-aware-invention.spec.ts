@@ -29,7 +29,8 @@ test("S2.14 attaches invention wiring to real Asset Forge socket nodes and follo
   );
   await definition.selectOption("actuation.motor.dc-brushed-v1");
   await add.click();
-  await motorResponse;
+  const response = await motorResponse;
+  expect(response.headers()["x-tehkne-asset-version"]).toBe("0.6.6-hero-candidate");
 
   await workspace.getByRole("button", { name: /Brushed DC Motor/ }).click();
   const visual = page.getByTestId("invention-3d-visual-source");
@@ -67,11 +68,12 @@ test("S2.14 attaches invention wiring to real Asset Forge socket nodes and follo
     y: Number(await wire.getAttribute("data-target-y")),
     z: Number(await wire.getAttribute("data-target-z"))
   };
-  expect(
-    Math.abs(endpointBefore.x - centerBefore.x) > 0.0001 ||
-    Math.abs(endpointBefore.y - centerBefore.y) > 0.0001 ||
-    Math.abs(endpointBefore.z - centerBefore.z) > 0.0001
-  ).toBe(true);
+
+  // AF-001 v0.6.6 serializes the physical terminal in GLB-local coordinates.
+  // These absolute deltas catch both missing Empty translations and a binding applied twice.
+  expect(endpointBefore.x - centerBefore.x).toBeCloseTo(-0.0047, 3);
+  expect(endpointBefore.y - centerBefore.y).toBeCloseTo(-0.00085, 3);
+  expect(endpointBefore.z - centerBefore.z).toBeCloseTo(-0.01936, 3);
 
   await workspace.getByRole("button", { name: "Z +" }).click();
   await expect(selected).toHaveAttribute("data-z", (centerBefore.z + 0.05).toFixed(3));
