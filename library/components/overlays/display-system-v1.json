@@ -1,0 +1,27 @@
+{
+  "overlayId": "display-system-v1",
+  "overlayVersion": "1",
+  "signature": "Tehkné Solutions",
+  "mutations": [
+    {
+      "definitionId": "power.regulator.dc-v1",
+      "addProductFamilies": ["display-system"]
+    },
+    {
+      "definitionId": "memory.lpddr.package-v1",
+      "addProductFamilies": ["display-system"]
+    },
+    {
+      "definitionId": "storage.solid-state.general-v1",
+      "addProductFamilies": ["display-system"]
+    },
+    {
+      "definitionId": "communication.wireless.combo-v1",
+      "addProductFamilies": ["display-system"]
+    },
+    {
+      "definitionId": "thermal.cooling.compact-v1",
+      "addProductFamilies": ["display-system"]
+    }
+  ]
+}
