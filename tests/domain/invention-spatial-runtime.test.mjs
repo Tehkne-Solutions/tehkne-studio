@@ -95,3 +95,17 @@ test("S2.11 default layout covers the complete canonical base catalog without le
   }
   assert.equal(spatial.bindings().length, catalog.components.length);
 });
+
+test("S2.11 automatic layout reuses the first free slot after removal without colliding with surviving nodes", async () => {
+  const { builder, spatial, regulator } = await canonicalSpatialCore();
+  const released = spatial.binding(regulator.id).position;
+  builder.removeComponent(regulator.id);
+  spatial.removeComponent(regulator.id);
+
+  const replacement = builder.addComponent("power.regulator.dc-v1");
+  const replacementBinding = spatial.ensureComponent(replacement.id);
+  assert.deepEqual(replacementBinding.position, released);
+
+  const occupied = spatial.bindings().map((binding) => `${binding.position.x}:${binding.position.y}:${binding.position.z}`);
+  assert.equal(new Set(occupied).size, occupied.length, "automatic spatial slots must remain unique");
+});
