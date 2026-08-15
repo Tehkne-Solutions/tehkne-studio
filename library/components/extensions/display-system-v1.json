@@ -1,0 +1,111 @@
+{
+  "extensionId": "display-system-v1",
+  "extensionVersion": "1",
+  "signature": "Tehkné Solutions",
+  "components": [
+    {
+      "definitionId": "power.ac-dc.supply-v1",
+      "version": "1",
+      "name": "AC/DC Display Power Supply",
+      "type": "PowerSupply",
+      "domain": "power",
+      "productFamilies": ["display-system"],
+      "tags": ["power", "ac-dc", "mains", "tv"],
+      "defaultState": "ready",
+      "properties": {
+        "ratedPowerW": { "id": "ratedPowerW", "value": 160, "unit": "W", "source": "studio", "confidence": 0.75, "min": 20, "max": 1000 },
+        "efficiencyPercent": { "id": "efficiencyPercent", "value": 90, "unit": "%", "source": "studio", "confidence": 0.75, "min": 60, "max": 100 }
+      },
+      "ports": {
+        "ac-input": { "id": "ac-input", "kind": "electrical", "direction": "in", "compatibility": ["power.ac.mains"], "state": "available" },
+        "dc-output": { "id": "dc-output", "kind": "electrical", "direction": "out", "compatibility": ["power.dc.low-voltage"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "A fonte converte a tensão alternada da rede elétrica em linhas contínuas seguras para os circuitos internos da TV.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "compute.media-controller.display-v1",
+      "version": "1",
+      "name": "Display Media Controller",
+      "type": "MediaController",
+      "domain": "compute",
+      "productFamilies": ["display-system"],
+      "tags": ["media", "video", "controller", "tv", "compute"],
+      "defaultState": "ready",
+      "properties": {
+        "videoPipelines": { "id": "videoPipelines", "value": 3, "source": "studio", "confidence": 0.75, "min": 1, "max": 16 },
+        "nominalPowerW": { "id": "nominalPowerW", "value": 20, "unit": "W", "source": "studio", "confidence": 0.75, "min": 2, "max": 150 }
+      },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "storage": { "id": "storage", "kind": "data", "direction": "bidirectional", "compatibility": ["storage.solid-state"], "state": "available" },
+        "wireless-bus": { "id": "wireless-bus", "kind": "data", "direction": "bidirectional", "compatibility": ["bus.sdio-pcie"], "state": "available" },
+        "display-out": { "id": "display-out", "kind": "data", "direction": "out", "compatibility": ["display.internal-video"], "state": "available" },
+        "audio-out": { "id": "audio-out", "kind": "signal", "direction": "out", "compatibility": ["audio.pcm-i2s"], "state": "available" },
+        "hdmi-in": { "id": "hdmi-in", "kind": "data", "direction": "in", "compatibility": ["video.hdmi"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O controlador de mídia recebe vídeo, executa o sistema da TV, processa imagem e áudio e coordena armazenamento e conectividade.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "display.panel.large-oled-v1",
+      "version": "1",
+      "name": "Large OLED Display Panel",
+      "type": "DisplayModule",
+      "domain": "display",
+      "productFamilies": ["display-system"],
+      "tags": ["display", "oled", "panel", "tv"],
+      "defaultState": "off",
+      "properties": {
+        "diagonalIn": { "id": "diagonalIn", "value": 55, "unit": "in", "source": "studio", "confidence": 0.75, "min": 20, "max": 120 },
+        "refreshHz": { "id": "refreshHz", "value": 120, "unit": "Hz", "source": "studio", "confidence": 0.75, "min": 24, "max": 480 },
+        "peakBrightnessNits": { "id": "peakBrightnessNits", "value": 1000, "unit": "nit", "source": "studio", "confidence": 0.7, "min": 100, "max": 5000 }
+      },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "display-in": { "id": "display-in", "kind": "data", "direction": "in", "compatibility": ["display.internal-video"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O painel OLED transforma o fluxo de vídeo processado em luz visível por pixels emissivos.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "interface.hdmi.input-v1",
+      "version": "1",
+      "name": "HDMI Input Interface",
+      "type": "ExternalInterface",
+      "domain": "interface",
+      "productFamilies": ["display-system", "generic"],
+      "tags": ["hdmi", "video", "input", "interface"],
+      "defaultState": "available",
+      "properties": {
+        "ports": { "id": "ports", "value": 2, "source": "studio", "confidence": 0.9, "min": 1, "max": 8 }
+      },
+      "ports": {
+        "external-input": { "id": "external-input", "kind": "data", "direction": "in", "compatibility": ["video.hdmi"], "state": "available" },
+        "host-output": { "id": "host-output", "kind": "data", "direction": "out", "compatibility": ["video.hdmi"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "A interface HDMI recebe vídeo e áudio digital de consoles, computadores e outros equipamentos externos.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "actuation.speaker.stereo-v1",
+      "version": "1",
+      "name": "Stereo Speaker Module",
+      "type": "ElectroacousticActuator",
+      "domain": "actuation",
+      "productFamilies": ["display-system", "embedded", "generic"],
+      "tags": ["speaker", "audio", "sound", "actuator"],
+      "defaultState": "ready",
+      "properties": {
+        "channels": { "id": "channels", "value": 2, "source": "studio", "confidence": 0.9, "min": 1, "max": 16 },
+        "ratedPowerW": { "id": "ratedPowerW", "value": 30, "unit": "W", "source": "studio", "confidence": 0.75, "min": 1, "max": 500 }
+      },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "audio-in": { "id": "audio-in", "kind": "signal", "direction": "in", "compatibility": ["audio.pcm-i2s"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O módulo de alto-falantes converte o sinal elétrico de áudio em ondas sonoras audíveis.", "provenance": "authored-template" }
+    }
+  ]
+}
