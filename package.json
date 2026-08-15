@@ -13,6 +13,8 @@
     "test:domain": "npm run build:core && node --test tests/domain/*.test.mjs",
     "security:audit": "npm audit --audit-level=high",
     "smoke:browser": "playwright test --config=playwright.config.ts",
+    "bench:af001l:hardware": "playwright test --config=playwright.af001l.config.ts",
+    "verify:af001l:contract": "node scripts/verify-af001l-contract.mjs",
     "verify:structure": "node scripts/verify-structure.mjs",
     "verify:s1.1": "npm run verify:structure && npm run typecheck:core && npm run test:domain",
     "verify:s1.2": "npm run verify:structure && npm run typecheck:core && npm run test:domain && npm run build:web",
