@@ -36,13 +36,13 @@
         "visualAsset": {
           "kind": "gltf",
           "assetId": "TS_ELEC_MOTOR_DC_A",
-          "version": "0.6.5-hero-candidate",
+          "version": "0.6.6-hero-candidate",
           "status": "HERO_CANDIDATE",
           "lod": "LOD0",
           "runtimeUrl": "/api/asset-forge/af001/motor/lod0",
           "triangles": 3292,
-          "bytes": 243672,
-          "sha256": "ad73d83d0dcd8485a8c2a7a680f83090a98d637cea455dde4915f0d771cd6552"
+          "bytes": 243812,
+          "sha256": "d19e51fd33c461cf761b7c2c086c1284fc4ddfb38f3274acabd88e33fc5ce487"
         },
         "portSocketMap": {
           "power-pos": "SOCKET_ELEC_POWER_POS",
