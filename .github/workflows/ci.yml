@@ -12,7 +12,7 @@ jobs:
   tablet-preset:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -30,6 +30,21 @@ jobs:
             package-lock.json
           if-no-files-found: error
           retention-days: 7
+      - name: Commit synthesized dependency files to PR head
+        if: github.event_name == 'pull_request'
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          git fetch origin "$HEAD_REF"
+          git checkout -B "$HEAD_REF" "origin/$HEAD_REF"
+          npm install --package-lock-only --ignore-scripts --workspace @tehkne/studio-web --save-dev @types/three@0.170.0
+          git config user.name "Tehkne Asset Forge CI"
+          git config user.email "asset-forge-ci@users.noreply.github.com"
+          git add apps/studio-web/package.json package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "AF-001I — add Three typings dependency"
+            git push origin "HEAD:$HEAD_REF"
+          fi
       - run: npm ci --ignore-scripts
       - name: Dependency security audit
         run: npm run security:audit
