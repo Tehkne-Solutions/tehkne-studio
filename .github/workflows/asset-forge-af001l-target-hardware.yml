@@ -1,0 +1,74 @@
+name: AF-001L Target Hardware Bench
+
+on:
+  pull_request:
+    paths:
+      - "package.json"
+      - "playwright.af001l.config.ts"
+      - "tests/hardware/asset-forge-af001l.spec.ts"
+      - "scripts/verify-af001l-contract.mjs"
+      - ".github/workflows/asset-forge-af001l-target-hardware.yml"
+  workflow_dispatch:
+    inputs:
+      hardware_id:
+        description: "Stable physical target-hardware identifier (for example LAB-PC-01)"
+        required: true
+        type: string
+      physical_attestation:
+        description: "Type PHYSICAL_HARDWARE_CONFIRMED only when the self-hosted runner is a physical target device"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: af001l-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - run: npm run verify:af001l:contract
+
+  target-hardware:
+    name: af001l-physical-target-hardware
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs: contract
+    runs-on: [self-hosted, tehkne-af001l]
+    timeout-minutes: 25
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      AF001L_HARDWARE_ID: ${{ inputs.hardware_id }}
+      AF001L_PHYSICAL_ATTESTATION: ${{ inputs.physical_attestation }}
+      AF001L_RUNNER_CONTEXT: "self-hosted:tehkne-af001l"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - run: npm run security:audit
+      - run: npm run verify:af001l:contract
+      - run: npm run build:web
+      - run: npx playwright install chromium
+      - name: Run AF-001L on allocated physical target hardware
+        run: npm run bench:af001l:hardware
+        env:
+          AF001L_RUNNER_NAME: ${{ runner.name }}
+          AF001L_RUNNER_OS: ${{ runner.os }}
+          AF001L_RUNNER_ARCH: ${{ runner.arch }}
+      - name: Preserve AF-001L target-hardware evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: af001l-target-hardware-${{ github.sha }}
+          path: test-results/af001l-hardware-evidence
+          if-no-files-found: ignore
+          retention-days: 30
