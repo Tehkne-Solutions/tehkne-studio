@@ -138,10 +138,15 @@ export function GoldenMotorPbrReviewGate() {
   const [view, setView] = useState<CameraView>("three-quarter");
   const [inspection, setInspection] = useState<AssetInspection | null>(null);
   const [stats, setStats] = useState<RuntimeStats | null>(null);
+  const [viewportContext, setViewportContext] = useState("pending");
 
   const markReady = useCallback((next: AssetInspection) => setInspection(next), []);
   const runtimeReady = inspection !== null;
   const nodeGatePass = Boolean(inspection && inspection.missingNodes.length === 0);
+
+  useEffect(() => {
+    setViewportContext(`${window.innerWidth}×${window.innerHeight} @ ${window.devicePixelRatio.toFixed(2)}x`);
+  }, []);
 
   useEffect(() => {
     if (!runtimeReady || !nodeGatePass || stats) return;
@@ -192,9 +197,6 @@ export function GoldenMotorPbrReviewGate() {
     stats.p95FrameMs < MAX_P95_FRAME_MS
   );
   const runtimePass = Boolean(runtimeReady && nodeGatePass && benchmarkPass);
-  const viewportContext = typeof window === "undefined"
-    ? "server"
-    : `${window.innerWidth}×${window.innerHeight} @ ${window.devicePixelRatio.toFixed(2)}x`;
 
   return (
     <section
