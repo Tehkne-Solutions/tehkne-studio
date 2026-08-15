@@ -1,12 +1,17 @@
 import { expect, test } from "@playwright/test";
+import { mkdir, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
 
 const EXPECTED_BYTES = 74_472;
 const EXPECTED_SHA256 = "2142509d651e5ae1683da383360675b4343cbad83fbbb498326a894cf0c2baae";
 const EXPECTED_TRIANGLES = "3904";
+const EVIDENCE_DIR = resolve("test-results", "af001i-evidence");
 
 test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", async ({ page }, testInfo) => {
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
+
+  await mkdir(EVIDENCE_DIR, { recursive: true });
 
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => {
@@ -61,7 +66,7 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
     await expect(canvasShell).toHaveAttribute("data-camera-view", cameraView);
     await page.waitForTimeout(180);
 
-    const screenshotPath = testInfo.outputPath(`af001i-${cameraView}.png`);
+    const screenshotPath = resolve(EVIDENCE_DIR, `af001i-${cameraView}.png`);
     await canvasShell.screenshot({ path: screenshotPath });
     await testInfo.attach(`AF001I ${cameraView}`, {
       path: screenshotPath,
@@ -79,20 +84,24 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
     }
   }));
 
+  const runtimeEvidence = {
+    gate: "AF001I",
+    asset: "TS_ELEC_MOTOR_DC_A",
+    version: "0.5.1-hero-candidate",
+    lod: "LOD0",
+    triangles: Number(EXPECTED_TRIANGLES),
+    bytes: EXPECTED_BYTES,
+    sha256: EXPECTED_SHA256,
+    averageFrameMs,
+    p95FrameMs,
+    samples: 180,
+    ...runtimeContext
+  };
+
+  const runtimeEvidencePath = resolve(EVIDENCE_DIR, "af001i-runtime-context.json");
+  await writeFile(runtimeEvidencePath, JSON.stringify(runtimeEvidence, null, 2), "utf8");
   await testInfo.attach("AF001I runtime context", {
-    body: Buffer.from(JSON.stringify({
-      gate: "AF001I",
-      asset: "TS_ELEC_MOTOR_DC_A",
-      version: "0.5.1-hero-candidate",
-      lod: "LOD0",
-      triangles: Number(EXPECTED_TRIANGLES),
-      bytes: EXPECTED_BYTES,
-      sha256: EXPECTED_SHA256,
-      averageFrameMs,
-      p95FrameMs,
-      samples: 180,
-      ...runtimeContext
-    }, null, 2)),
+    path: runtimeEvidencePath,
     contentType: "application/json"
   });
 
