@@ -27,6 +27,13 @@
           "direction": "bidirectional",
           "compatibility": ["usb.usb-c"],
           "state": "available"
+        },
+        "memory-ddr": {
+          "id": "memory-ddr",
+          "kind": "data",
+          "direction": "bidirectional",
+          "compatibility": ["memory.ddr"],
+          "state": "available"
         }
       }
     }
