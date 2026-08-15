@@ -69,6 +69,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: af001l-target-hardware-${{ github.sha }}
-          path: test-results
+          path: test-results/af001l-hardware-evidence
           if-no-files-found: ignore
           retention-days: 30
