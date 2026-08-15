@@ -1,15 +1,8 @@
 "use client";
 
 import { Canvas, useThree } from "@react-three/fiber";
-import {
-  useEffect,
-  useMemo,
-  useState
-} from "react";
-import {
-  Quaternion,
-  Vector3
-} from "three";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { Quaternion, Vector3 } from "three";
 import type { EngineeringEntity } from "../../../packages/engineering-core/src/index";
 import {
   ComponentRegistry,
@@ -42,6 +35,7 @@ import type {
   SpatialVector3
 } from "../../../packages/spatial-runtime/src/index";
 import componentCatalog from "../../../library/components/catalog.json";
+import assetForgeExtension from "../../../library/components/extensions/asset-forge-v1.json";
 import displaySystemExtension from "../../../library/components/extensions/display-system-v1.json";
 import displaySystemOverlay from "../../../library/components/overlays/display-system-v1.json";
 import notebookOverlay from "../../../library/components/overlays/notebook-v1.json";
@@ -51,12 +45,18 @@ import {
   loadBrowserProject,
   saveBrowserProject
 } from "../lib/projectPersistence";
+import {
+  AssetBackedComponent,
+  visualAssetForEntity,
+  type GltfVisualAssetDescriptor
+} from "./InventionAssetVisual";
 import styles from "./Invention3DWorkbench.module.css";
 
 const baseCatalog = parseComponentCatalog(componentCatalog);
 const notebookCatalog = applyComponentCatalogOverlay(baseCatalog, notebookOverlay as ComponentCatalogOverlay);
 const tabletCatalog = applyComponentCatalogOverlay(notebookCatalog, tabletOverlay as ComponentCatalogOverlay);
-const displayExtendedCatalog = applyComponentCatalogExtension(tabletCatalog, displaySystemExtension);
+const assetForgeCatalog = applyComponentCatalogExtension(tabletCatalog, assetForgeExtension);
+const displayExtendedCatalog = applyComponentCatalogExtension(assetForgeCatalog, displaySystemExtension);
 const expandedCatalog = applyComponentCatalogOverlay(displayExtendedCatalog, displaySystemOverlay as ComponentCatalogOverlay);
 const registry = new ComponentRegistry(expandedCatalog);
 
@@ -194,6 +194,56 @@ function ComponentProxy({
   );
 }
 
+function AssetLoadingPlaceholder({
+  entity,
+  binding
+}: {
+  readonly entity: EngineeringEntity;
+  readonly binding: SpatialEntityBinding;
+}) {
+  return (
+    <group
+      position={[binding.position.x, binding.position.y, binding.position.z]}
+      rotation={[binding.rotation.x, binding.rotation.y, binding.rotation.z]}
+      scale={[binding.scale.x, binding.scale.y, binding.scale.z]}
+      name={`invention-3d-loading-${entity.id}`}
+    >
+      <mesh>
+        <boxGeometry args={[0.06, 0.04, 0.08]} />
+        <meshBasicMaterial color="#77786f" wireframe transparent opacity={0.45} />
+      </mesh>
+    </group>
+  );
+}
+
+function ComponentVisual({
+  entity,
+  binding,
+  selected,
+  onSelect
+}: {
+  readonly entity: EngineeringEntity;
+  readonly binding: SpatialEntityBinding;
+  readonly selected: boolean;
+  readonly onSelect: (entityId: string) => void;
+}) {
+  const descriptor = visualAssetForEntity(entity);
+  if (!descriptor) {
+    return <ComponentProxy entity={entity} binding={binding} selected={selected} onSelect={onSelect} />;
+  }
+  return (
+    <Suspense fallback={<AssetLoadingPlaceholder entity={entity} binding={binding} />}>
+      <AssetBackedComponent
+        entity={entity}
+        binding={binding}
+        descriptor={descriptor}
+        selected={selected}
+        onSelect={onSelect}
+      />
+    </Suspense>
+  );
+}
+
 function ConnectionTube({ segment }: { readonly segment: InventionSpatialConnectionSegment }) {
   const start = useMemo(() => new Vector3(segment.source.x, segment.source.y, segment.source.z), [segment]);
   const end = useMemo(() => new Vector3(segment.target.x, segment.target.y, segment.target.z), [segment]);
@@ -242,7 +292,7 @@ function Scene({
         const binding = bindingMap.get(entity.id);
         if (!binding) return null;
         return (
-          <ComponentProxy
+          <ComponentVisual
             key={entity.id}
             entity={entity}
             binding={binding}
@@ -253,6 +303,10 @@ function Scene({
       })}
     </>
   );
+}
+
+function visualDescriptor(entity: EngineeringEntity | null): GltfVisualAssetDescriptor | null {
+  return entity ? visualAssetForEntity(entity) : null;
 }
 
 export function Invention3DWorkbench() {
@@ -280,6 +334,9 @@ export function Invention3DWorkbench() {
   const wires = useMemo(() => runtime.spatial.connectionSegments(connections), [connections, runtime, revision]);
   const selectedEntity = selectedEntityId ? components.find((entity) => entity.id === selectedEntityId) ?? null : null;
   const selectedBinding = selectedEntityId ? bindings.find((binding) => binding.entityId === selectedEntityId) ?? null : null;
+  const selectedVisual = visualDescriptor(selectedEntity);
+  const assetBackedCount = components.reduce((count, entity) => count + (visualAssetForEntity(entity) ? 1 : 0), 0);
+  const proxyCount = components.length - assetBackedCount;
 
   const sourceOptions = useMemo<readonly PortOption[]>(() => components.flatMap((entity) =>
     Object.values(entity.ports)
@@ -349,7 +406,8 @@ export function Invention3DWorkbench() {
         throw cause;
       }
       setSelectedEntityId(entity.id);
-      changed(`${entity.name} materializado na mesma Engineering Entity e binding espacial.`);
+      const visual = visualAssetForEntity(entity);
+      changed(`${entity.name} materializado na mesma Engineering Entity e binding espacial · ${visual ? `ASSET ${visual.assetId}` : "PROXY EXPLÍCITO"}.`);
     } catch (cause) {
       blocked(cause);
     }
@@ -428,8 +486,8 @@ export function Invention3DWorkbench() {
           <div className={styles.shell}>
             <header className={styles.header}>
               <div>
-                <span>TEHKNÉ SOLUTIONS · S2.12</span>
-                <strong>3D Invention Workbench</strong>
+                <span>TEHKNÉ SOLUTIONS · S2.13</span>
+                <strong>Asset-Backed 3D Invention Workbench</strong>
               </div>
               <div className={styles.actions}>
                 <button type="button" onClick={newProject}>Novo projeto</button>
@@ -439,16 +497,17 @@ export function Invention3DWorkbench() {
               </div>
             </header>
 
-            <div className={styles.status} data-testid="invention-3d-status">
+            <div className={styles.status} data-testid="invention-3d-status" data-real-assets={assetBackedCount} data-proxies={proxyCount}>
               <strong>INVENTION 3D · {components.length} COMPONENTES · {connections.length} WIRES</strong>
               <span>MESMO ENGINEERING GRAPH · {bindings.length} BINDINGS · SIMULAÇÃO {document.simulationStatus.toUpperCase()}</span>
+              <span>VISUAL · {assetBackedCount} REAL ASSET · {proxyCount} PROXY</span>
             </div>
 
             <div className={styles.body}>
               <aside className={styles.library}>
                 <label>
                   Componente canônico
-                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="battery, regulator, sensor..." />
+                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="battery, regulator, motor, sensor..." />
                 </label>
                 <select
                   aria-label="Definição 3D"
@@ -463,17 +522,21 @@ export function Invention3DWorkbench() {
 
                 <span>ENTIDADES</span>
                 <div className={styles.entityList}>
-                  {components.map((entity) => (
-                    <button
-                      type="button"
-                      key={entity.id}
-                      data-selected={selectedEntityId === entity.id}
-                      onClick={() => setSelectedEntityId(runtime.spatial.select(entity.id).entity.id)}
-                    >
-                      <strong>{entity.name}</strong>
-                      <small>{entity.id}</small>
-                    </button>
-                  ))}
+                  {components.map((entity) => {
+                    const visual = visualAssetForEntity(entity);
+                    return (
+                      <button
+                        type="button"
+                        key={entity.id}
+                        data-selected={selectedEntityId === entity.id}
+                        data-visual-source={visual ? "asset" : "proxy"}
+                        onClick={() => setSelectedEntityId(runtime.spatial.select(entity.id).entity.id)}
+                      >
+                        <strong>{entity.name}</strong>
+                        <small>{entity.id} · {visual ? "REAL ASSET" : "PROXY"}</small>
+                      </button>
+                    );
+                  })}
                 </div>
               </aside>
 
@@ -511,9 +574,26 @@ export function Invention3DWorkbench() {
                 <span>TRANSFORM 3D</span>
                 {selectedEntity && selectedBinding ? (
                   <>
-                    <div className={styles.selected} data-testid="invention-3d-selected" data-x={format(selectedBinding.position.x)} data-y={format(selectedBinding.position.y)} data-z={format(selectedBinding.position.z)}>
+                    <div
+                      className={styles.selected}
+                      data-testid="invention-3d-selected"
+                      data-x={format(selectedBinding.position.x)}
+                      data-y={format(selectedBinding.position.y)}
+                      data-z={format(selectedBinding.position.z)}
+                    >
                       <strong>{selectedEntity.name}</strong>
                       <small>x {format(selectedBinding.position.x)} · y {format(selectedBinding.position.y)} · z {format(selectedBinding.position.z)}</small>
+                    </div>
+                    <div
+                      className={styles.selected}
+                      data-testid="invention-3d-visual-source"
+                      data-source={selectedVisual ? "asset" : "proxy"}
+                      data-asset-id={selectedVisual?.assetId ?? ""}
+                      data-asset-version={selectedVisual?.version ?? ""}
+                      data-asset-lod={selectedVisual?.lod ?? ""}
+                    >
+                      <strong>{selectedVisual ? "REAL ASSET" : "PROXY EXPLÍCITO"}</strong>
+                      <small>{selectedVisual ? `${selectedVisual.assetId} · ${selectedVisual.version} · ${selectedVisual.lod}` : "Ainda sem arte Asset Forge cadastrada."}</small>
                     </div>
                     <div className={styles.axisGrid}>
                       <button type="button" onClick={() => moveSelected("x", -MOVE_STEP)}>X −</button>
