@@ -19,9 +19,9 @@ const BENCHMARK_WINDOW_MS = 8_000;
 const MAX_VALID_DELTA_MS = 1_000;
 const MIN_BENCHMARK_SAMPLES = 30;
 
+// AF-001 v0.6 replaced the v0.5 helper-pivot convention with explicit
+// engineering sockets authored and QA-checked by the Blender DCC source.
 const REQUIRED_NODES = [
-  "PIVOT_MAIN",
-  "PIVOT_SHAFT",
   "BODY_CAN",
   "FRONT_CAP",
   "REAR_CAP",
@@ -212,7 +212,7 @@ export function GoldenMotorPbrReviewGate() {
           <span style={{ color: "#82aeb1", fontWeight: 800, letterSpacing: ".16em", fontSize: 11 }}>TEHKNÉ SOLUTIONS · ASSET FORGE</span>
           <h1 style={{ margin: "8px 0 0", fontSize: "clamp(26px, 4vw, 42px)", letterSpacing: "-.03em" }}>AF-001I · LOD0 PBR Runtime Review</h1>
           <p style={{ color: "#9da7ae", margin: "8px 0 0", maxWidth: 820, lineHeight: 1.55 }}>
-            Golden Motor Hero v0.5.1 · LOD0 real de 3.904 tris · PBR estático key+fill · frames lentos contam contra o gate.
+            Golden Motor Hero v0.6.5 · LOD0 real de 3.292 tris · sockets DCC v0.6 · PBR estático key+fill · frames lentos contam contra o gate.
           </p>
         </div>
         <div style={{ border: `1px solid ${runtimePass ? "#51765f" : "#62533a"}`, background: runtimePass ? "#142019" : "#201b14", padding: "10px 14px", borderRadius: 12, color: runtimePass ? "#8dc9a0" : stats ? "#e08378" : "#d6ae6c", fontWeight: 900 }}>
@@ -245,7 +245,7 @@ export function GoldenMotorPbrReviewGate() {
           <h2 style={{ margin: "0 0 16px", fontSize: 18 }}>Gate técnico</h2>
           <dl style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "10px 16px", margin: 0 }}>
             <dt>Asset</dt><dd style={{ margin: 0, fontWeight: 800 }}>TS_ELEC_MOTOR_DC_A</dd>
-            <dt>LOD / tris</dt><dd style={{ margin: 0, fontWeight: 800 }}>LOD0 · 3.904</dd>
+            <dt>LOD / tris</dt><dd style={{ margin: 0, fontWeight: 800 }}>LOD0 · 3.292</dd>
             <dt>Meshes</dt><dd data-testid="mesh-count" style={{ margin: 0, fontWeight: 800 }}>{inspection?.meshCount ?? "—"}</dd>
             <dt>Materiais</dt><dd data-testid="material-count" style={{ margin: 0, fontWeight: 800 }}>{inspection?.materialCount ?? "—"}</dd>
             <dt>Nodes</dt><dd data-testid="node-gate-verdict" style={{ margin: 0, fontWeight: 900, color: nodeGatePass ? "#8dc9a0" : "#e08378" }}>{nodeGatePass ? "PASS" : runtimeReady ? "BLOCKED" : "WAIT"}</dd>
