@@ -8,10 +8,16 @@ import {
   type ProductFamily
 } from "../../../packages/component-library/src/index";
 import {
+  applyComponentCatalogExtension,
+  type ComponentCatalogExtension
+} from "../../../packages/component-library/src/extension";
+import {
   applyComponentCatalogOverlay,
   type ComponentCatalogOverlay
 } from "../../../packages/component-library/src/overlay";
 import componentCatalog from "../../../library/components/catalog.json";
+import displaySystemExtension from "../../../library/components/extensions/display-system-v1.json";
+import displaySystemOverlay from "../../../library/components/overlays/display-system-v1.json";
 import notebookOverlay from "../../../library/components/overlays/notebook-v1.json";
 import tabletOverlay from "../../../library/components/overlays/tablet-v1.json";
 import styles from "./ComponentLibraryPanel.module.css";
@@ -21,11 +27,20 @@ const notebookCatalog = applyComponentCatalogOverlay(
   baseCatalog,
   notebookOverlay as ComponentCatalogOverlay
 );
-const expandedCatalog = applyComponentCatalogOverlay(
+const tabletCatalog = applyComponentCatalogOverlay(
   notebookCatalog,
   tabletOverlay as ComponentCatalogOverlay
 );
+const displayExtendedCatalog = applyComponentCatalogExtension(
+  tabletCatalog,
+  displaySystemExtension as ComponentCatalogExtension
+);
+const expandedCatalog = applyComponentCatalogOverlay(
+  displayExtendedCatalog,
+  displaySystemOverlay as ComponentCatalogOverlay
+);
 const registry = new ComponentRegistry(expandedCatalog);
+const extensionDefinitionIds = new Set(displaySystemExtension.components.map((definition) => definition.definitionId));
 
 const productFamilies: readonly (ProductFamily | "all")[] = [
   "all", "smartphone", "tablet", "notebook", "desktop", "robotics", "embedded", "display-system", "generic"
@@ -81,7 +96,7 @@ export function ComponentLibraryPanel() {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar SoC, bateria, câmera, servo…"
+              placeholder="Buscar SoC, bateria, HDMI, áudio, servo…"
               aria-label="Buscar componentes"
             />
             <select value={family} onChange={(event) => setFamily(event.target.value as ProductFamily | "all")} aria-label="Filtrar família de produto">
@@ -147,7 +162,7 @@ export function ComponentLibraryPanel() {
                 </section>
 
                 <footer className={styles.footer}>
-                  <span>AUTHORED TEMPLATE · COMPONENT-LIBRARY</span>
+                  <span>{extensionDefinitionIds.has(selected.definitionId) ? "CATALOG EXTENSION · DISPLAY-SYSTEM-V1" : "AUTHORED TEMPLATE · COMPONENT-LIBRARY"}</span>
                   <strong>Tehkné Solutions</strong>
                 </footer>
               </section>
