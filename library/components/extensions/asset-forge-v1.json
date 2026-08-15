@@ -41,8 +41,8 @@
           "lod": "LOD0",
           "runtimeUrl": "/api/asset-forge/af001/motor/lod0",
           "triangles": 3292,
-          "bytes": 243812,
-          "sha256": "d19e51fd33c461cf761b7c2c086c1284fc4ddfb38f3274acabd88e33fc5ce487"
+          "bytes": 243848,
+          "sha256": "65b82b78ecc038fa872a8d8ff9e6e720956cdcdec9e4e51d9eb7904adac8622c"
         },
         "portSocketMap": {
           "power-pos": "SOCKET_ELEC_POWER_POS",
