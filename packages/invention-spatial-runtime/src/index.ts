@@ -44,14 +44,22 @@ function isInventionComponent(entity: EngineeringEntity): boolean {
   return entity.metadata.inventionComponent === true && entity.parentId === "invention.root";
 }
 
-function assertFinitePosition(position: SpatialVector3): void {
-  for (const [axis, value] of Object.entries(position)) {
-    if (!Number.isFinite(value)) throw new Error(`Spatial ${axis} must be finite`);
+function assertFiniteVector(vector: SpatialVector3, label: string): void {
+  for (const [axis, value] of Object.entries(vector)) {
+    if (!Number.isFinite(value)) throw new Error(`${label} ${axis} must be finite`);
   }
+}
+
+function assertFinitePosition(position: SpatialVector3): void {
+  assertFiniteVector(position, "Spatial position");
   const { min, max } = INVENTION_SPATIAL_BOUNDS;
   if (position.x < min.x || position.x > max.x || position.y < min.y || position.y > max.y || position.z < min.z || position.z > max.z) {
     throw new Error(`Spatial position outside invention workspace bounds: ${position.x},${position.y},${position.z}`);
   }
+}
+
+function assertFiniteRotation(rotation: SpatialVector3): void {
+  assertFiniteVector(rotation, "Spatial rotation");
 }
 
 function defaultPosition(index: number): SpatialVector3 {
@@ -81,9 +89,8 @@ function parseBinding(value: unknown): SpatialEntityBinding {
   if (typeof candidate.entityId !== "string" || !candidate.entityId) throw new Error("Invalid invention spatial entityId");
   if (!candidate.position || !candidate.rotation || !candidate.scale) throw new Error(`Incomplete invention spatial binding: ${candidate.entityId}`);
   assertFinitePosition(candidate.position);
-  for (const vector of [candidate.rotation, candidate.scale]) {
-    if (![vector.x, vector.y, vector.z].every(Number.isFinite)) throw new Error(`Invalid invention spatial transform: ${candidate.entityId}`);
-  }
+  assertFiniteRotation(candidate.rotation);
+  assertFiniteVector(candidate.scale, "Spatial scale");
   if (typeof candidate.selectable !== "boolean") throw new Error(`Invalid invention spatial selectable flag: ${candidate.entityId}`);
   return clone(candidate as SpatialEntityBinding);
 }
@@ -174,6 +181,15 @@ export class InventionSpatialScene {
     const binding = this.#bindings.get(entityId);
     if (!binding) throw new Error(`Unknown invention spatial binding: ${entityId}`);
     const next: SpatialEntityBinding = { ...binding, position: clone(position) };
+    this.#bindings.set(entityId, next);
+    return clone(next);
+  }
+
+  rotate(entityId: EntityId, rotation: SpatialVector3): SpatialEntityBinding {
+    assertFiniteRotation(rotation);
+    const binding = this.#bindings.get(entityId);
+    if (!binding) throw new Error(`Unknown invention spatial binding: ${entityId}`);
+    const next: SpatialEntityBinding = { ...binding, rotation: clone(rotation) };
     this.#bindings.set(entityId, next);
     return clone(next);
   }
