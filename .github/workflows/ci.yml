@@ -52,6 +52,18 @@ jobs:
           path: .ci-evidence/s2-4-smartphone.log
           if-no-files-found: error
           retention-days: 7
+      - name: Build web for browser runtime
+        run: |
+          mkdir -p .ci-evidence
+          npm run build:web 2>&1 | tee .ci-evidence/browser-web-build.log
+      - name: Preserve browser web build diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-web-build-diagnostic-${{ github.sha }}
+          path: .ci-evidence/browser-web-build.log
+          if-no-files-found: error
+          retention-days: 7
       - name: Install Chromium runtime
         run: npx playwright install --with-deps chromium
       - name: Alpha and platform browser smoke
