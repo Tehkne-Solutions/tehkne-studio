@@ -1,0 +1,99 @@
+{
+  "extensionId": "mechanical-assembly-v1",
+  "extensionVersion": "1",
+  "signature": "Tehkné Solutions",
+  "components": [
+    {
+      "definitionId": "mechanical.wheel.drive-v1",
+      "version": "1",
+      "name": "Drive Wheel",
+      "type": "DriveWheel",
+      "domain": "structural",
+      "productFamilies": ["robotics", "embedded", "generic"],
+      "tags": ["wheel", "drive", "mechanical", "robotics"],
+      "defaultState": "ready",
+      "properties": {
+        "diameterM": { "id": "diameterM", "value": 0.065, "unit": "m", "source": "studio", "confidence": 0.85, "min": 0.02, "max": 0.5 },
+        "widthM": { "id": "widthM", "value": 0.018, "unit": "m", "source": "studio", "confidence": 0.85, "min": 0.005, "max": 0.2 },
+        "boreDiameterM": { "id": "boreDiameterM", "value": 0.002, "unit": "m", "source": "studio", "confidence": 0.9, "min": 0.001, "max": 0.05 }
+      },
+      "ports": {
+        "hub-in": {
+          "id": "hub-in",
+          "kind": "mechanical",
+          "direction": "in",
+          "compatibility": ["mechanical.rotary-shaft"],
+          "state": "available"
+        }
+      },
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" },
+        { "id": "assemble", "label": "Montar" }
+      ],
+      "metadata": {
+        "simpleExplanation": "Roda de tração que recebe torque de um eixo rotativo compatível.",
+        "provenance": "authored-template",
+        "signature": "Tehkné Solutions",
+        "spatialProxy": {
+          "kind": "wheel",
+          "status": "PROXY_EXPLICIT",
+          "dimensionsM": { "radius": 0.0325, "width": 0.018, "hubRadius": 0.006 },
+          "portAnchors": {
+            "hub-in": { "name": "PROXY_HUB_CENTER", "position": [0, 0, 0] }
+          }
+        }
+      }
+    },
+    {
+      "definitionId": "mechanical.bracket.motor-a-v1",
+      "version": "1",
+      "name": "Motor Mount Bracket",
+      "type": "MotorMountBracket",
+      "domain": "structural",
+      "productFamilies": ["robotics", "embedded", "generic"],
+      "tags": ["bracket", "motor", "mount", "mechanical", "robotics"],
+      "defaultState": "ready",
+      "properties": {
+        "widthM": { "id": "widthM", "value": 0.038, "unit": "m", "source": "studio", "confidence": 0.8, "min": 0.02, "max": 0.2 },
+        "heightM": { "id": "heightM", "value": 0.032, "unit": "m", "source": "studio", "confidence": 0.8, "min": 0.02, "max": 0.2 },
+        "thicknessM": { "id": "thicknessM", "value": 0.002, "unit": "m", "source": "studio", "confidence": 0.8, "min": 0.001, "max": 0.02 }
+      },
+      "ports": {
+        "motor-mount": {
+          "id": "motor-mount",
+          "kind": "mechanical",
+          "direction": "in",
+          "compatibility": ["mechanical.motor-mount"],
+          "state": "available"
+        },
+        "frame-mount": {
+          "id": "frame-mount",
+          "kind": "mechanical",
+          "direction": "bidirectional",
+          "compatibility": ["mechanical.mount.generic"],
+          "state": "available"
+        }
+      },
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" },
+        { "id": "assemble", "label": "Montar" }
+      ],
+      "metadata": {
+        "simpleExplanation": "Suporte mecânico que adapta a face frontal do motor a uma estrutura genérica.",
+        "provenance": "authored-template",
+        "signature": "Tehkné Solutions",
+        "spatialProxy": {
+          "kind": "motor-bracket",
+          "status": "PROXY_EXPLICIT",
+          "dimensionsM": { "width": 0.038, "height": 0.032, "depth": 0.018, "thickness": 0.002 },
+          "portAnchors": {
+            "motor-mount": { "name": "PROXY_MOTOR_FACE", "position": [0, 0, 0.009] },
+            "frame-mount": { "name": "PROXY_FRAME_BASE", "position": [0, -0.016, 0] }
+          }
+        }
+      }
+    }
+  ]
+}
