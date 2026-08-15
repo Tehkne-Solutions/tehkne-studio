@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
-import { brotliDecompressSync } from "node:zlib";
+import { readFile } from "node:fs/promises";
 
-const EXPECTED_BYTES = 74_472;
-const EXPECTED_SHA256 = "2142509d651e5ae1683da383360675b4343cbad83fbbb498326a894cf0c2baae";
+const EXPECTED_BYTES = 76_000;
+const EXPECTED_SHA256 = "b88bdbc842dc4852ff6c0f996259cd7c213653c49d53c9541a9ccc13d77cdb8a";
 const EXPECTED_TRIANGLES = 3_904;
 const EXPECTED_LOD = "LOD0";
-const COMPRESSED_ASSET_PATH = "/asset-forge/af001/motor-lod0.brotli.bin";
+const ASSET_VERSION = "0.5.1-hero-candidate-r1";
 
 let cachedMotor: Buffer | null = null;
 
@@ -13,51 +13,20 @@ function digest(buffer: Buffer): string {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
-function isExpectedMotor(buffer: Buffer): boolean {
-  return buffer.byteLength === EXPECTED_BYTES && digest(buffer) === EXPECTED_SHA256;
-}
+async function loadMotor(): Promise<Buffer> {
+  if (cachedMotor) return cachedMotor;
 
-function materializeMotor(payload: Buffer): Buffer {
-  // The public payload is intentionally served as an opaque .bin so the web
-  // server cannot reinterpret it as Content-Encoding. The direct-GLB branch is
-  // retained for portability, but either representation must end at the exact
-  // expected byte length and SHA-256.
-  if (isExpectedMotor(payload)) return payload;
-
-  let motor: Buffer;
-  try {
-    motor = brotliDecompressSync(payload);
-  } catch (error) {
-    throw new Error(
-      `AF001I LOD0 payload is neither the expected GLB nor valid Brotli: ${error instanceof Error ? error.message : String(error)}`
-    );
-  }
-
+  const motor = await readFile(new URL("./motor-lod0-r1.glb", import.meta.url));
   if (motor.byteLength !== EXPECTED_BYTES) {
-    throw new Error(`AF001I LOD0 byte-length mismatch: expected ${EXPECTED_BYTES}, received ${motor.byteLength}`);
+    throw new Error(`AF001I LOD0 R1 byte-length mismatch: expected ${EXPECTED_BYTES}, received ${motor.byteLength}`);
   }
 
   const motorDigest = digest(motor);
   if (motorDigest !== EXPECTED_SHA256) {
-    throw new Error(`AF001I LOD0 SHA-256 mismatch: expected ${EXPECTED_SHA256}, received ${motorDigest}`);
+    throw new Error(`AF001I LOD0 R1 SHA-256 mismatch: expected ${EXPECTED_SHA256}, received ${motorDigest}`);
   }
 
-  return motor;
-}
-
-async function loadMotor(requestUrl: string): Promise<Buffer> {
-  if (cachedMotor) return cachedMotor;
-
-  const assetUrl = new URL(COMPRESSED_ASSET_PATH, requestUrl);
-  const assetResponse = await fetch(assetUrl, { cache: "force-cache" });
-  if (!assetResponse.ok) {
-    throw new Error(
-      `AF001I compressed LOD0 fetch failed: ${assetResponse.status} ${assetResponse.statusText}`
-    );
-  }
-
-  const payload = Buffer.from(await assetResponse.arrayBuffer());
-  cachedMotor = materializeMotor(payload);
+  cachedMotor = motor;
   return cachedMotor;
 }
 
@@ -67,8 +36,8 @@ function toResponseBody(buffer: Buffer): ArrayBuffer {
   return body;
 }
 
-export async function GET(request: Request) {
-  const motor = await loadMotor(request.url);
+export async function GET() {
+  const motor = await loadMotor();
 
   return new Response(toResponseBody(motor), {
     status: 200,
@@ -77,11 +46,11 @@ export async function GET(request: Request) {
       "Content-Length": String(motor.byteLength),
       "Cache-Control": "public, max-age=31536000, immutable",
       "X-Tehkne-Asset-Id": "TS_ELEC_MOTOR_DC_A",
-      "X-Tehkne-Asset-Version": "0.5.1-hero-candidate",
+      "X-Tehkne-Asset-Version": ASSET_VERSION,
       "X-Tehkne-Asset-Lod": EXPECTED_LOD,
       "X-Tehkne-Asset-Triangles": String(EXPECTED_TRIANGLES),
       "X-Tehkne-Asset-Sha256": EXPECTED_SHA256,
-      "X-Tehkne-Gate": "AF001I"
+      "X-Tehkne-Gate": "AF001I-R1"
     }
   });
 }
