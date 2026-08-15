@@ -22,8 +22,9 @@ jobs:
       - name: Install Blender DCC
         run: |
           sudo apt-get update
-          sudo apt-get install -y blender
+          sudo apt-get install -y blender python3-numpy
           blender --version
+          blender --background --python-expr "import numpy; print('AF001_BLENDER_NUMPY', numpy.__version__)"
 
       - name: Build Golden Motor v0.6
         run: blender --background --python tools/asset_forge/af001_v06/build_golden_motor_v06.py
