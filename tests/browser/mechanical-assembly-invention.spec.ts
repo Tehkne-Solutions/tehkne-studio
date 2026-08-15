@@ -17,6 +17,7 @@ test("S2.15 snaps a proxy wheel to the real AF-001 shaft socket and moves the co
   const definition = workspace.getByLabel("Definição 3D");
   const add = workspace.getByRole("button", { name: "Adicionar ao 3D" });
   const status = page.getByTestId("invention-3d-status");
+  const selected = page.getByTestId("invention-3d-selected");
 
   const motorResponse = page.waitForResponse((response) =>
     response.url().includes("/api/asset-forge/af001/motor/lod0") && response.status() === 200
@@ -24,6 +25,9 @@ test("S2.15 snaps a proxy wheel to the real AF-001 shaft socket and moves the co
   await definition.selectOption("actuation.motor.dc-brushed-v1");
   await add.click();
   await motorResponse;
+  await workspace.getByRole("button", { name: /Brushed DC Motor/ }).click();
+  const motorXBefore = Number(await selected.getAttribute("data-x"));
+  const motorYBefore = Number(await selected.getAttribute("data-y"));
 
   await definition.selectOption("mechanical.wheel.drive-v1");
   await add.click();
@@ -48,6 +52,11 @@ test("S2.15 snaps a proxy wheel to the real AF-001 shaft socket and moves the co
   await expect(constraint).toHaveAttribute("data-state", "snapped", { timeout: 20_000 });
   await expect(status).toHaveAttribute("data-mechanical-assemblies", "1");
 
+  // The v0.6.5 shaft is centered on the motor X/Y axis. This assertion proves
+  // that the spatial binding is applied exactly once to the GLTF-local socket.
+  await expect.poll(async () => Number(await constraint.getAttribute("data-driver-x"))).toBeCloseTo(motorXBefore, 3);
+  await expect.poll(async () => Number(await constraint.getAttribute("data-driver-y"))).toBeCloseTo(motorYBefore, 3);
+
   const wire = page.getByTestId("invention-3d-wire-invention-connection-1");
   await expect(wire).toHaveAttribute("data-mechanical", "true");
   await expect(wire).toHaveAttribute("data-source-socket", "SOCKET_MECH_AXIS_OUT");
@@ -70,7 +79,6 @@ test("S2.15 snaps a proxy wheel to the real AF-001 shaft socket and moves the co
   }).toBeLessThanOrEqual(0.001);
 
   await workspace.getByRole("button", { name: /Brushed DC Motor/ }).click();
-  const selected = page.getByTestId("invention-3d-selected");
   const motorZBefore = Number(await selected.getAttribute("data-z"));
   const endpointZBefore = Number(await constraint.getAttribute("data-driver-z"));
 
