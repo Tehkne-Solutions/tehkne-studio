@@ -9,6 +9,7 @@ export default defineConfig({
   reporter: "line",
   use: {
     baseURL: "http://127.0.0.1:3000",
+    headless: false,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off"
@@ -18,6 +19,7 @@ export default defineConfig({
       name: "target-hardware-chromium",
       use: {
         ...devices["Desktop Chrome"],
+        headless: false,
         launchOptions: {
           args: ["--enable-gpu", "--ignore-gpu-blocklist"]
         }
