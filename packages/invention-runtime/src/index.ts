@@ -56,6 +56,16 @@ function portKey(ref: InventionPortRef): string {
   return `${ref.entityId}:${ref.portId}`;
 }
 
+function numericSuffix(id: string, prefix: string): number {
+  if (!id.startsWith(prefix)) return 0;
+  const value = Number(id.slice(prefix.length));
+  return Number.isSafeInteger(value) && value > 0 ? value : 0;
+}
+
+function maximumSequence(ids: readonly string[], prefix: string): number {
+  return ids.reduce((maximum, id) => Math.max(maximum, numericSuffix(id, prefix)), 0);
+}
+
 function isInventionConnection(relationship: EngineeringRelationship): boolean {
   return relationship.type === "connectedTo" && relationship.metadata.inventionRuntime === true;
 }
@@ -143,8 +153,14 @@ export class InventionBuilder {
       throw new Error(`InventionBuilder requires root ${INVENTION_ROOT_ID}`);
     }
     const snapshot = session.graph.snapshot();
-    this.#instanceSequence = snapshot.entities.filter(isInventionComponent).length;
-    this.#connectionSequence = snapshot.relationships.filter(isInventionConnection).length;
+    this.#instanceSequence = maximumSequence(
+      snapshot.entities.filter(isInventionComponent).map((entity) => entity.id),
+      "invention.component."
+    );
+    this.#connectionSequence = maximumSequence(
+      snapshot.relationships.filter(isInventionConnection).map((relationship) => relationship.id),
+      "invention-connection-"
+    );
   }
 
   components(): readonly EngineeringEntity[] {
