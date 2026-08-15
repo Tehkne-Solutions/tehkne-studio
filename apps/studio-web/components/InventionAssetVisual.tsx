@@ -1,10 +1,14 @@
 "use client";
 
 import { useLoader } from "@react-three/fiber";
-import { useMemo } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { Euler, Vector3 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { EngineeringEntity } from "../../../packages/engineering-core/src/index";
-import type { SpatialEntityBinding } from "../../../packages/spatial-runtime/src/index";
+import type {
+  SpatialEntityBinding,
+  SpatialVector3
+} from "../../../packages/spatial-runtime/src/index";
 
 export interface GltfVisualAssetDescriptor {
   readonly kind: "gltf";
@@ -16,7 +20,19 @@ export interface GltfVisualAssetDescriptor {
   readonly triangles: number;
   readonly bytes: number;
   readonly sha256: string;
+  readonly portSocketMap: Readonly<Record<string, string>>;
 }
+
+export interface AssetSocketEvidence {
+  readonly entityId: string;
+  readonly portId: string;
+  readonly socketName: string;
+  readonly position: SpatialVector3;
+}
+
+const socketEndpoints = new Map<string, AssetSocketEvidence>();
+const socketListeners = new Set<() => void>();
+let socketRevision = 0;
 
 function record(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -32,6 +48,96 @@ function requiredPositiveInteger(source: Record<string, unknown>, key: string): 
   const value = source[key];
   if (!Number.isInteger(value) || Number(value) <= 0) throw new Error(`Visual asset ${key} must be a positive integer`);
   return Number(value);
+}
+
+function parsePortSocketMap(entity: EngineeringEntity): Readonly<Record<string, string>> {
+  const raw = entity.metadata.portSocketMap;
+  if (raw === undefined) return {};
+  if (!record(raw)) throw new Error(`Port socket map must be an object: ${entity.id}`);
+
+  const mapping: Record<string, string> = {};
+  for (const [portId, socketName] of Object.entries(raw)) {
+    if (!entity.ports[portId]) throw new Error(`Port socket map references unknown port ${entity.id}:${portId}`);
+    if (typeof socketName !== "string" || !socketName.trim()) {
+      throw new Error(`Port socket map requires a socket node for ${entity.id}:${portId}`);
+    }
+    mapping[portId] = socketName;
+  }
+  return Object.freeze(mapping);
+}
+
+function socketKey(entityId: string, portId: string): string {
+  return `${entityId}::${portId}`;
+}
+
+function publishSocketEvidence(evidence: readonly AssetSocketEvidence[]): void {
+  let changed = false;
+  for (const item of evidence) {
+    const key = socketKey(item.entityId, item.portId);
+    const current = socketEndpoints.get(key);
+    if (
+      !current ||
+      current.socketName !== item.socketName ||
+      current.position.x !== item.position.x ||
+      current.position.y !== item.position.y ||
+      current.position.z !== item.position.z
+    ) {
+      socketEndpoints.set(key, item);
+      changed = true;
+    }
+  }
+  if (!changed) return;
+  socketRevision += 1;
+  for (const listener of socketListeners) listener();
+}
+
+function clearSocketEvidence(entityId: string): void {
+  let changed = false;
+  for (const [key, evidence] of socketEndpoints) {
+    if (evidence.entityId !== entityId) continue;
+    socketEndpoints.delete(key);
+    changed = true;
+  }
+  if (!changed) return;
+  socketRevision += 1;
+  for (const listener of socketListeners) listener();
+}
+
+function subscribeSockets(listener: () => void): () => void {
+  socketListeners.add(listener);
+  return () => socketListeners.delete(listener);
+}
+
+function socketSnapshot(): number {
+  return socketRevision;
+}
+
+function transformSocketPosition(local: Vector3, binding: SpatialEntityBinding): SpatialVector3 {
+  const transformed = local
+    .clone()
+    .multiply(new Vector3(binding.scale.x, binding.scale.y, binding.scale.z))
+    .applyEuler(new Euler(binding.rotation.x, binding.rotation.y, binding.rotation.z))
+    .add(new Vector3(binding.position.x, binding.position.y, binding.position.z));
+  return { x: transformed.x, y: transformed.y, z: transformed.z };
+}
+
+export function portSocketNameForEntity(entity: EngineeringEntity, portId: string): string | null {
+  const visual = visualAssetForEntity(entity);
+  return visual?.portSocketMap[portId] ?? null;
+}
+
+export function useAssetSocketEndpoint(
+  entityId: string,
+  portId: string,
+  fallback: SpatialVector3
+): AssetSocketEvidence {
+  useSyncExternalStore(subscribeSockets, socketSnapshot, socketSnapshot);
+  return socketEndpoints.get(socketKey(entityId, portId)) ?? {
+    entityId,
+    portId,
+    socketName: "",
+    position: fallback
+  };
 }
 
 export function visualAssetForEntity(entity: EngineeringEntity): GltfVisualAssetDescriptor | null {
@@ -57,7 +163,8 @@ export function visualAssetForEntity(entity: EngineeringEntity): GltfVisualAsset
     runtimeUrl,
     triangles: requiredPositiveInteger(raw, "triangles"),
     bytes: requiredPositiveInteger(raw, "bytes"),
-    sha256
+    sha256,
+    portSocketMap: parsePortSocketMap(entity)
   };
 }
 
@@ -76,6 +183,39 @@ export function AssetBackedComponent({
 }) {
   const gltf = useLoader(GLTFLoader, descriptor.runtimeUrl);
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
+  const localSockets = useMemo(() => {
+    scene.updateMatrixWorld(true);
+    return Object.entries(descriptor.portSocketMap).map(([portId, socketName]) => {
+      const node = scene.getObjectByName(socketName);
+      if (!node) {
+        throw new Error(`Asset ${descriptor.assetId} missing required socket node ${socketName} for ${entity.id}:${portId}`);
+      }
+      const position = node.getWorldPosition(new Vector3());
+      return { portId, socketName, position };
+    });
+  }, [descriptor.assetId, descriptor.portSocketMap, entity.id, scene]);
+
+  useEffect(() => {
+    publishSocketEvidence(localSockets.map(({ portId, socketName, position }) => ({
+      entityId: entity.id,
+      portId,
+      socketName,
+      position: transformSocketPosition(position, binding)
+    })));
+    return () => clearSocketEvidence(entity.id);
+  }, [
+    binding.position.x,
+    binding.position.y,
+    binding.position.z,
+    binding.rotation.x,
+    binding.rotation.y,
+    binding.rotation.z,
+    binding.scale.x,
+    binding.scale.y,
+    binding.scale.z,
+    entity.id,
+    localSockets
+  ]);
 
   return (
     <group
@@ -89,6 +229,16 @@ export function AssetBackedComponent({
       }}
     >
       <primitive object={scene} />
+      {selected ? localSockets.map(({ portId, socketName, position }) => (
+        <mesh
+          key={portId}
+          name={`port-socket-${entity.id}-${portId}-${socketName}`}
+          position={[position.x, position.y, position.z]}
+        >
+          <sphereGeometry args={[0.003, 10, 8]} />
+          <meshStandardMaterial color="#d7d2bd" metalness={0.15} roughness={0.35} />
+        </mesh>
+      )) : null}
       {selected ? (
         <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -0.014, 0]}>
           <torusGeometry args={[0.044, 0.0015, 8, 40]} />

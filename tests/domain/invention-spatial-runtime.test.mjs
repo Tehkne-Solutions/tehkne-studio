@@ -59,12 +59,16 @@ test("S2.11 visual wire segments derive from the authored connectedTo relationsh
   const before = spatial.connectionSegments(builder.connections());
   assert.equal(before.length, 1);
   assert.equal(before[0].relationshipId, connection.id);
+  assert.equal(before[0].sourcePortId, "dc-output");
+  assert.equal(before[0].targetPortId, "dc-input");
   assert.deepEqual(before[0].sharedInterfaces, ["power.dc.source"]);
 
   spatial.move(battery.id, { x: -0.45, y: -0.22, z: 0 });
   const after = spatial.connectionSegments(builder.connections());
   assert.deepEqual(after[0].source, { x: -0.45, y: -0.22, z: 0 });
   assert.deepEqual(after[0].target, before[0].target);
+  assert.equal(after[0].sourcePortId, before[0].sourcePortId);
+  assert.equal(after[0].targetPortId, before[0].targetPortId);
 });
 
 test("S2.11 spatial document restores exact layout and rejects tampered or incomplete evidence", async () => {

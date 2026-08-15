@@ -28,7 +28,9 @@ export interface InventionSpatialDocument {
 export interface InventionSpatialConnectionSegment {
   readonly relationshipId: string;
   readonly sourceEntityId: EntityId;
+  readonly sourcePortId: string;
   readonly targetEntityId: EntityId;
+  readonly targetPortId: string;
   readonly source: SpatialVector3;
   readonly target: SpatialVector3;
   readonly sharedInterfaces: readonly string[];
@@ -84,6 +86,14 @@ function parseBinding(value: unknown): SpatialEntityBinding {
   }
   if (typeof candidate.selectable !== "boolean") throw new Error(`Invalid invention spatial selectable flag: ${candidate.entityId}`);
   return clone(candidate as SpatialEntityBinding);
+}
+
+function relationshipPortId(relationship: EngineeringRelationship, key: "sourcePortId" | "targetPortId"): string {
+  const value = relationship.metadata[key];
+  if (typeof value !== "string" || !value) {
+    throw new Error(`Spatial wiring requires ${key} on ${relationship.id}`);
+  }
+  return value;
 }
 
 export function parseInventionSpatialDocument(value: unknown): InventionSpatialDocument {
@@ -188,7 +198,9 @@ export class InventionSpatialScene {
         return {
           relationshipId: relationship.id,
           sourceEntityId: relationship.source,
+          sourcePortId: relationshipPortId(relationship, "sourcePortId"),
           targetEntityId: relationship.target,
+          targetPortId: relationshipPortId(relationship, "targetPortId"),
           source: clone(source.position),
           target: clone(target.position),
           sharedInterfaces: Array.isArray(relationship.metadata.sharedInterfaces)
