@@ -1,0 +1,169 @@
+{
+  "compositionVersion": "1",
+  "profileId": "tv-01-v1",
+  "projectId": "tv-01",
+  "name": "TV 01",
+  "signature": "Tehkné Solutions",
+  "productFamily": "display-system",
+  "projectType": "teardown",
+  "root": {
+    "id": "tv.root",
+    "name": "TV 01",
+    "type": "Television",
+    "formFactor": "flat-panel-tv",
+    "voiceAliases": ["tv", "televisao", "televisão", "smart tv", "tv 01"],
+    "simpleExplanation": "Uma TV moderna combina fonte AC/DC, processador de mídia, memória, armazenamento, painel, conectividade, entradas de vídeo, áudio, sensores de controle e gerenciamento térmico."
+  },
+  "boot": {
+    "id": "tv.boot",
+    "name": "TV Boot Process",
+    "voiceAliases": ["boot da tv", "inicializacao da tv", "inicialização da tv"],
+    "simpleExplanation": "O boot valida alimentação, regulação, processamento, memória, armazenamento e painel antes de iniciar a interface da TV."
+  },
+  "requiredSlots": ["frame", "psu", "regulator", "soc", "memory", "storage", "display", "wireless", "hdmi", "amplifier", "speakers", "ir", "cooling"],
+  "slots": [
+    {
+      "slotId": "frame",
+      "definitionId": "structural.frame.modular-v1",
+      "entityId": "tv.frame",
+      "name": "TV Chassis",
+      "voiceAliases": ["chassi", "estrutura", "carcaca", "carcaça"],
+      "spatial": { "position": [0, 0, -0.2], "exploded": [0, 0, -1.4], "size": [5.9, 3.45, 0.18] }
+    },
+    {
+      "slotId": "psu",
+      "definitionId": "power.supply.ac-dc.display-v1",
+      "entityId": "tv.psu",
+      "name": "TV AC/DC Power Supply",
+      "teardown": true,
+      "voiceAliases": ["fonte", "fonte de alimentacao", "fonte de alimentação", "psu", "ac dc"],
+      "spatial": { "position": [-1.65, -0.75, -0.05], "exploded": [-3.9, -1.0, 0.55], "size": [1.35, 0.8, 0.12] }
+    },
+    {
+      "slotId": "regulator",
+      "definitionId": "power.regulator.dc-v1",
+      "entityId": "tv.regulator",
+      "name": "TV Logic Power Regulator",
+      "voiceAliases": ["regulador", "dc regulator", "alimentacao logica", "alimentação lógica"],
+      "spatial": { "position": [-0.55, -0.7, -0.04], "exploded": [-2.2, -1.0, 0.55], "size": [0.55, 0.45, 0.1] }
+    },
+    {
+      "slotId": "soc",
+      "definitionId": "compute.soc.media-v1",
+      "entityId": "tv.soc",
+      "name": "TV Media SoC",
+      "voiceAliases": ["processador", "media soc", "soc", "chip principal", "processador de imagem"],
+      "spatial": { "position": [0.25, -0.45, -0.03], "exploded": [0.4, -1.1, 0.7], "size": [0.62, 0.62, 0.11] }
+    },
+    {
+      "slotId": "memory",
+      "definitionId": "memory.lpddr.package-v1",
+      "entityId": "tv.memory",
+      "name": "TV LPDDR Memory",
+      "voiceAliases": ["memoria", "memória", "ram", "lpddr"],
+      "spatial": { "position": [0.95, -0.42, -0.03], "exploded": [1.65, -1.05, 0.65], "size": [0.45, 0.32, 0.09] }
+    },
+    {
+      "slotId": "storage",
+      "definitionId": "storage.solid-state.general-v1",
+      "entityId": "tv.storage",
+      "name": "TV Flash Storage",
+      "voiceAliases": ["armazenamento", "storage", "flash", "memoria interna", "memória interna"],
+      "spatial": { "position": [1.45, -0.45, -0.03], "exploded": [2.55, -1.05, 0.65], "size": [0.42, 0.34, 0.09] }
+    },
+    {
+      "slotId": "display",
+      "definitionId": "display.panel.4k-v1",
+      "entityId": "tv.display",
+      "name": "55-inch 4K Display Panel",
+      "teardown": true,
+      "voiceAliases": ["painel", "tela", "display", "painel 4k"],
+      "spatial": { "position": [0, 0, 0.16], "exploded": [0, 0, 1.35], "size": [5.55, 3.12, 0.05] }
+    },
+    {
+      "slotId": "wireless",
+      "definitionId": "communication.wireless.combo-v1",
+      "entityId": "tv.wireless",
+      "name": "TV Wireless Module",
+      "voiceAliases": ["wifi", "wi-fi", "bluetooth", "wireless"],
+      "spatial": { "position": [2.15, -0.55, -0.03], "exploded": [3.6, -0.8, 0.6], "size": [0.45, 0.3, 0.09] }
+    },
+    {
+      "slotId": "hdmi",
+      "definitionId": "interface.hdmi.input-v1",
+      "entityId": "tv.hdmi",
+      "name": "TV HDMI Input",
+      "teardown": true,
+      "voiceAliases": ["hdmi", "entrada hdmi", "porta hdmi"],
+      "spatial": { "position": [2.55, 0.0, -0.02], "exploded": [4.0, 0.1, 0.65], "size": [0.4, 0.25, 0.11] }
+    },
+    {
+      "slotId": "amplifier",
+      "definitionId": "audio.amplifier.stereo-v1",
+      "entityId": "tv.amplifier",
+      "name": "TV Audio Amplifier",
+      "voiceAliases": ["amplificador", "audio amp", "amplificador de audio", "amplificador de áudio"],
+      "spatial": { "position": [-0.15, 0.65, -0.03], "exploded": [-0.15, 1.7, 0.65], "size": [0.55, 0.4, 0.1] }
+    },
+    {
+      "slotId": "speakers",
+      "definitionId": "audio.speaker.stereo-v1",
+      "entityId": "tv.speakers",
+      "name": "TV Stereo Speakers",
+      "voiceAliases": ["alto falantes", "alto-falantes", "speakers", "som"],
+      "spatial": { "position": [0, -1.42, -0.04], "exploded": [0, -2.35, 0.55], "size": [3.3, 0.28, 0.1] }
+    },
+    {
+      "slotId": "ir",
+      "definitionId": "sensing.ir.receiver-v1",
+      "entityId": "tv.ir",
+      "name": "TV Infrared Receiver",
+      "voiceAliases": ["infravermelho", "ir", "receptor do controle", "controle remoto"],
+      "spatial": { "position": [2.2, -1.38, 0.02], "exploded": [3.6, -2.15, 0.65], "size": [0.28, 0.15, 0.08] }
+    },
+    {
+      "slotId": "cooling",
+      "definitionId": "thermal.cooling.compact-v1",
+      "entityId": "tv.cooling",
+      "name": "TV SoC Cooling",
+      "voiceAliases": ["refrigeracao", "refrigeração", "dissipador", "cooling"],
+      "spatial": { "position": [0.35, 0.15, -0.02], "exploded": [0.55, 0.9, 0.75], "size": [0.78, 0.58, 0.12] }
+    }
+  ],
+  "connections": [
+    { "id": "tv-power-source", "from": ["psu", "dc-output"], "to": ["regulator", "dc-input"] },
+    { "id": "tv-power-panel", "from": ["psu", "panel-output"], "to": ["display", "power-in"] },
+    { "id": "tv-power-soc", "from": ["regulator", "regulated-output"], "to": ["soc", "power-in"] },
+    { "id": "tv-power-wireless", "from": ["regulator", "regulated-output"], "to": ["wireless", "power-in"] },
+    { "id": "tv-power-amplifier", "from": ["regulator", "regulated-output"], "to": ["amplifier", "power-in"] },
+    { "id": "tv-power-ir", "from": ["regulator", "regulated-output"], "to": ["ir", "power-in"] },
+    { "id": "tv-power-cooling", "from": ["regulator", "regulated-output"], "to": ["cooling", "fan-power"] },
+    { "id": "tv-memory", "from": ["soc", "memory"], "to": ["memory", "memory-bus"] },
+    { "id": "tv-storage", "from": ["soc", "storage"], "to": ["storage", "storage-bus"] },
+    { "id": "tv-display-data", "from": ["soc", "display-out"], "to": ["display", "display-in"] },
+    { "id": "tv-wireless", "from": ["soc", "wireless-bus"], "to": ["wireless", "host-data"] },
+    { "id": "tv-hdmi", "from": ["hdmi", "internal"], "to": ["soc", "hdmi-in"] },
+    { "id": "tv-audio", "from": ["soc", "audio-out"], "to": ["amplifier", "audio-in"] },
+    { "id": "tv-speakers", "from": ["amplifier", "speaker-out"], "to": ["speakers", "audio-in"] },
+    { "id": "tv-ir-control", "from": ["ir", "control-out"], "to": ["soc", "control-bus"] },
+    { "id": "tv-thermal", "from": ["soc", "thermal"], "to": ["cooling", "thermal-interface"] }
+  ],
+  "bootDependencies": [
+    { "slotId": "psu", "reason": "converter a energia da rede em alimentação contínua" },
+    { "slotId": "regulator", "reason": "gerar as linhas de baixa tensão da lógica" },
+    { "slotId": "soc", "reason": "executar firmware, sistema e processamento de mídia" },
+    { "slotId": "memory", "reason": "fornecer memória de trabalho ao sistema" },
+    { "slotId": "storage", "reason": "fornecer firmware, apps e dados persistentes" },
+    { "slotId": "display", "reason": "inicializar o painel e a saída visual principal" }
+  ],
+  "tuning": [
+    { "slotId": "psu", "propertyValues": { "maxOutputW": 220, "efficiencyPercent": 92 } },
+    { "slotId": "soc", "propertyValues": { "cpuCores": 8, "nominalPowerW": 22 } },
+    { "slotId": "memory", "propertyValues": { "capacityGB": 4 } },
+    { "slotId": "storage", "propertyValues": { "capacityGB": 32 } },
+    { "slotId": "display", "propertyValues": { "diagonalIn": 55, "refreshHz": 120 } },
+    { "slotId": "amplifier", "propertyValues": { "outputPowerW": 30 } },
+    { "slotId": "speakers", "propertyValues": { "ratedPowerW": 20 } },
+    { "slotId": "cooling", "propertyValues": { "thermalCapacityW": 35 } }
+  ]
+}
