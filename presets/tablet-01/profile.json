@@ -1,0 +1,159 @@
+{
+  "compositionVersion": "1",
+  "profileId": "tablet-01-v1",
+  "projectId": "tablet-01",
+  "name": "Tablet 01",
+  "signature": "Tehkné Solutions",
+  "productFamily": "tablet",
+  "projectType": "teardown",
+  "root": {
+    "id": "tablet.root",
+    "name": "Tablet 01",
+    "type": "Tablet",
+    "formFactor": "slab-tablet",
+    "voiceAliases": ["tablet", "tablete", "tablet 01"],
+    "simpleExplanation": "Um tablet combina processamento móvel, tela ampla, bateria, memória, armazenamento, sensores, câmera e conectividade em um computador portátil de toque."
+  },
+  "boot": {
+    "id": "tablet.boot",
+    "name": "Tablet Boot Process",
+    "voiceAliases": ["boot do tablet", "inicializacao do tablet", "inicialização do tablet"],
+    "simpleExplanation": "O boot do tablet valida energia, processamento, memória, armazenamento e tela antes de iniciar o sistema."
+  },
+  "requiredSlots": ["frame", "battery", "regulator", "soc", "memory", "storage", "display", "imu", "camera", "wireless", "input", "usbC"],
+  "slots": [
+    {
+      "slotId": "frame",
+      "definitionId": "structural.frame.modular-v1",
+      "entityId": "tablet.frame",
+      "name": "Tablet Midframe",
+      "voiceAliases": ["estrutura", "chassi", "midframe"],
+      "spatial": { "position": [0, 0, 0], "exploded": [0, 0, -0.6], "size": [2.7, 3.8, 0.16] }
+    },
+    {
+      "slotId": "battery",
+      "definitionId": "energy.battery.lithium-ion-v1",
+      "entityId": "tablet.battery",
+      "name": "Tablet Battery",
+      "teardown": true,
+      "voiceAliases": ["bateria", "battery", "bateria do tablet"],
+      "spatial": { "position": [0, -0.25, 0.12], "exploded": [-2.35, -0.25, 0.72], "size": [2.05, 2.25, 0.16] }
+    },
+    {
+      "slotId": "regulator",
+      "definitionId": "power.regulator.dc-v1",
+      "entityId": "tablet.regulator",
+      "name": "Tablet Power Management",
+      "voiceAliases": ["regulador", "pmic", "energia"],
+      "spatial": { "position": [0.84, 1.18, 0.13], "exploded": [2.4, 1.4, 0.72], "size": [0.36, 0.38, 0.12] }
+    },
+    {
+      "slotId": "soc",
+      "definitionId": "compute.soc.mobile-v1",
+      "entityId": "tablet.soc",
+      "name": "Tablet SoC",
+      "voiceAliases": ["soc", "processador", "chip principal"],
+      "spatial": { "position": [0.2, 1.22, 0.13], "exploded": [0.45, 2.55, 0.8], "size": [0.56, 0.56, 0.12] }
+    },
+    {
+      "slotId": "memory",
+      "definitionId": "memory.lpddr.package-v1",
+      "entityId": "tablet.memory",
+      "name": "Tablet LPDDR",
+      "voiceAliases": ["memoria", "memória", "ram", "lpddr"],
+      "spatial": { "position": [-0.48, 1.2, 0.13], "exploded": [-1.35, 2.35, 0.72], "size": [0.4, 0.34, 0.1] }
+    },
+    {
+      "slotId": "storage",
+      "definitionId": "storage.solid-state.general-v1",
+      "entityId": "tablet.storage",
+      "name": "Tablet Storage",
+      "voiceAliases": ["armazenamento", "storage", "flash"],
+      "spatial": { "position": [-0.98, 0.78, 0.13], "exploded": [-2.35, 1.1, 0.72], "size": [0.32, 0.4, 0.1] }
+    },
+    {
+      "slotId": "display",
+      "definitionId": "display.oled.touch-v1",
+      "entityId": "tablet.display",
+      "name": "11-inch OLED Touch Display",
+      "voiceAliases": ["tela", "display", "oled", "touch"],
+      "spatial": { "position": [0, 0, 0.35], "exploded": [0, 0, 1.55], "size": [2.52, 3.62, 0.06] }
+    },
+    {
+      "slotId": "imu",
+      "definitionId": "sensing.imu.6dof-v1",
+      "entityId": "tablet.imu",
+      "name": "Tablet Motion Sensor",
+      "voiceAliases": ["imu", "sensor de movimento", "acelerometro", "acelerômetro"],
+      "spatial": { "position": [0.95, 0.62, 0.13], "exploded": [2.35, 0.45, 0.72], "size": [0.2, 0.2, 0.08] }
+    },
+    {
+      "slotId": "camera",
+      "definitionId": "sensing.camera.rgb-v1",
+      "entityId": "tablet.camera",
+      "name": "Tablet Camera",
+      "voiceAliases": ["camera", "câmera", "camera do tablet", "câmera do tablet"],
+      "spatial": { "position": [-0.98, 1.55, 0.16], "exploded": [-2.3, 2.65, 0.82], "size": [0.3, 0.3, 0.18] }
+    },
+    {
+      "slotId": "wireless",
+      "definitionId": "communication.wireless.combo-v1",
+      "entityId": "tablet.wireless",
+      "name": "Tablet Wireless",
+      "voiceAliases": ["wifi", "wi-fi", "bluetooth", "wireless"],
+      "spatial": { "position": [0.92, 1.58, 0.13], "exploded": [2.3, 2.7, 0.72], "size": [0.34, 0.26, 0.1] }
+    },
+    {
+      "slotId": "input",
+      "definitionId": "control.mcu.general-v1",
+      "entityId": "tablet.input",
+      "name": "Touch & Pen Controller",
+      "voiceAliases": ["controlador touch", "controlador de toque", "caneta", "pen controller"],
+      "spatial": { "position": [0.82, -1.35, 0.13], "exploded": [2.2, -1.8, 0.72], "size": [0.34, 0.28, 0.1] }
+    },
+    {
+      "slotId": "usbC",
+      "definitionId": "interface.usb-c.port-v1",
+      "entityId": "tablet.usb-c",
+      "name": "Tablet USB-C Port",
+      "voiceAliases": ["usb-c", "usb c", "porta usb", "carregador"],
+      "spatial": { "position": [0, -1.82, 0.13], "exploded": [0, -2.7, 0.75], "size": [0.4, 0.15, 0.12] }
+    }
+  ],
+  "connections": [
+    { "id": "tablet-power-source", "from": ["battery", "dc-output"], "to": ["regulator", "dc-input"] },
+    { "id": "tablet-charge", "from": ["usbC", "charge"], "to": ["battery", "charge-input"] },
+    { "id": "tablet-power-soc", "from": ["regulator", "regulated-output"], "to": ["soc", "power-in"] },
+    { "id": "tablet-power-display", "from": ["regulator", "regulated-output"], "to": ["display", "power-in"] },
+    { "id": "tablet-power-imu", "from": ["regulator", "regulated-output"], "to": ["imu", "power-in"] },
+    { "id": "tablet-power-camera", "from": ["regulator", "regulated-output"], "to": ["camera", "power-in"] },
+    { "id": "tablet-power-wireless", "from": ["regulator", "regulated-output"], "to": ["wireless", "power-in"] },
+    { "id": "tablet-power-input", "from": ["regulator", "regulated-output"], "to": ["input", "power-in"] },
+    { "id": "tablet-memory", "from": ["soc", "memory"], "to": ["memory", "memory-bus"] },
+    { "id": "tablet-storage", "from": ["soc", "storage"], "to": ["storage", "storage-bus"] },
+    { "id": "tablet-display-data", "from": ["soc", "display-out"], "to": ["display", "display-in"] },
+    { "id": "tablet-imu-data", "from": ["soc", "sensor-bus"], "to": ["imu", "sensor-data"] },
+    { "id": "tablet-camera-video", "from": ["camera", "video-out"], "to": ["soc", "camera-in"] },
+    { "id": "tablet-camera-control", "from": ["soc", "sensor-bus"], "to": ["camera", "control"] },
+    { "id": "tablet-wireless", "from": ["soc", "wireless-bus"], "to": ["wireless", "host-data"] },
+    { "id": "tablet-input-host", "from": ["soc", "sensor-bus"], "to": ["input", "sensor-bus"] },
+    { "id": "tablet-touch-controller", "from": ["input", "sensor-bus"], "to": ["display", "touch-data"] }
+  ],
+  "bootDependencies": [
+    { "slotId": "battery", "reason": "fornecer energia primária ao tablet" },
+    { "slotId": "regulator", "reason": "regular as linhas de alimentação internas" },
+    { "slotId": "soc", "reason": "executar firmware e processamento principal" },
+    { "slotId": "memory", "reason": "fornecer memória de trabalho" },
+    { "slotId": "storage", "reason": "fornecer armazenamento persistente" },
+    { "slotId": "display", "reason": "inicializar a interface visual principal" }
+  ],
+  "tuning": [
+    { "slotId": "battery", "propertyValues": { "capacityWh": 30, "nominalVoltageV": 7.7 } },
+    { "slotId": "soc", "propertyValues": { "cpuCores": 10, "nominalPowerW": 15 } },
+    { "slotId": "memory", "propertyValues": { "capacityGB": 12 } },
+    { "slotId": "storage", "propertyValues": { "capacityGB": 512 } },
+    { "slotId": "display", "propertyValues": { "diagonalIn": 11, "refreshHz": 120 } },
+    { "slotId": "camera", "propertyValues": { "megapixels": 12 } },
+    { "slotId": "input", "propertyValues": { "clockMHz": 240 } }
+  ]
+}
