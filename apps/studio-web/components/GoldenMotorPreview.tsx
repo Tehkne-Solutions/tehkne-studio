@@ -4,7 +4,7 @@ import { Canvas, useFrame, useLoader } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
-const MOTOR_URL = "/asset-forge/af001/TS_ELEC_MOTOR_DC_A_LOD2_RUNTIME_PREVIEW.glb";
+const MOTOR_URL = "/api/asset-forge/af001/motor";
 const MOTOR_SCENE_NAME = "AF001_RUNTIME_MOTOR";
 
 interface RuntimeStats {
