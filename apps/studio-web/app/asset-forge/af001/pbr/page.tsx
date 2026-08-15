@@ -1,5 +1,5 @@
-import { GoldenMotorPbrReviewV065 } from "../../../../components/GoldenMotorPbrReviewV065";
+import { GoldenMotorPbrReviewGateV065RuntimeOptimized } from "../../../../components/GoldenMotorPbrReviewGateV065RuntimeOptimized";
 
 export default function AssetForgeAf001PbrPage() {
-  return <GoldenMotorPbrReviewV065 />;
+  return <GoldenMotorPbrReviewGateV065RuntimeOptimized />;
 }
