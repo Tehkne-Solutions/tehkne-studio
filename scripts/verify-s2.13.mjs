@@ -22,10 +22,10 @@ if (motor.metadata?.provenance !== "authored-template") throw new Error("S2.13 D
 const visual = motor.metadata?.visualAsset;
 if (visual?.kind !== "gltf") throw new Error("S2.13 motor visual asset must be GLTF");
 if (visual?.assetId !== "TS_ELEC_MOTOR_DC_A") throw new Error("S2.13 motor visual asset identity mismatch");
-if (visual?.version !== "0.6.5-hero-candidate") throw new Error("S2.13 motor visual version mismatch");
+if (visual?.version !== "0.6.6-hero-candidate") throw new Error("S2.13 motor visual version mismatch");
 if (visual?.status !== "HERO_CANDIDATE") throw new Error("S2.13 must not promote AF-001 beyond HERO_CANDIDATE");
-if (visual?.lod !== "LOD0" || visual?.triangles !== 3292 || visual?.bytes !== 243672) throw new Error("S2.13 motor LOD0 evidence mismatch");
-if (visual?.sha256 !== "ad73d83d0dcd8485a8c2a7a680f83090a98d637cea455dde4915f0d771cd6552") throw new Error("S2.13 motor GLB SHA mismatch");
+if (visual?.lod !== "LOD0" || visual?.triangles !== 3292 || visual?.bytes !== 243812) throw new Error("S2.13 motor LOD0 evidence mismatch");
+if (visual?.sha256 !== "d19e51fd33c461cf761b7c2c086c1284fc4ddfb38f3274acabd88e33fc5ce487") throw new Error("S2.13 motor GLB SHA mismatch");
 if (visual?.runtimeUrl !== "/api/asset-forge/af001/motor/lod0") throw new Error("S2.13 motor runtime URL mismatch");
 for (const [portId, socket] of Object.entries({
   "power-pos": "SOCKET_ELEC_POWER_POS",
@@ -86,7 +86,7 @@ const browser = await readFile("tests/browser/asset-backed-invention.spec.ts", "
 for (const token of [
   "actuation.motor.dc-brushed-v1",
   "TS_ELEC_MOTOR_DC_A",
-  "0.6.5-hero-candidate",
+  "0.6.6-hero-candidate",
   "data-real-assets",
   "data-proxies",
   "PROXY EXPLÍCITO",
@@ -106,4 +106,4 @@ const workflow = await readFile(".github/workflows/ci.yml", "utf8");
 if (!workflow.includes("npm run verify:s2.13")) throw new Error("S2.13 CI contract missing");
 if (workflow.includes("contents: write")) throw new Error("S2.13 CI must remain read-only");
 
-console.log("S2.13 Asset-Backed Invention Rendering PASS · declarative Asset Forge extension + real GLB materialization + explicit proxy fallback + same Engineering Graph/spatial persistence + HERO_CANDIDATE preserved · Tehkné Solutions");
+console.log("S2.13 Asset-Backed Invention Rendering PASS · declarative Asset Forge extension + AF-001 v0.6.6 physical socket candidate + explicit proxy fallback + same Engineering Graph/spatial persistence + HERO_CANDIDATE preserved · Tehkné Solutions");
