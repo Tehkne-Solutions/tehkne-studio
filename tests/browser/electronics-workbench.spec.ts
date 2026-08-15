@@ -51,7 +51,7 @@ test("S2.8 Electronics Workbench teaches safe circuit, measurement, fault and pe
   await page.getByRole("button", { name: "Restaurar bancada eletrônica" }).click();
 
   await expect(page.getByLabel("Tehkné Electronics Workbench")).toBeVisible();
-  await expect(page.getByLabel("Electronics Studio Intelligence")).toContainText(/restaurada · 2 simulações · sem replay/);
+  await expect(page.getByLabel("Electronics Studio Intelligence")).toContainText(/restaurada · 2 simulações S2\.8 · 0 simulações S2\.9 · sem replay/);
   await expect(electronicsPanel(page).getByText("FAULT", { exact: true })).toBeVisible();
 
   expect(pageErrors, `page errors: ${pageErrors.join(" | ")}`).toEqual([]);
