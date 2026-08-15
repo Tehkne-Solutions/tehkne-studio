@@ -1,0 +1,25 @@
+name: AF-001I v0.6.5 Contract Gate
+
+on:
+  pull_request:
+    paths:
+      - "apps/studio-web/app/api/asset-forge/af001/motor/lod0/**"
+      - "tools/asset_forge/af001_v065/**"
+      - ".github/workflows/asset-forge-af001i-v065-contract.yml"
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Verify AF-001I v0.6.5 transport, GLB and node contract
+        run: node tools/asset_forge/af001_v065/verify_runtime_payload.mjs

@@ -2,14 +2,14 @@ import { expect, test } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const EXPECTED_BYTES = 74_472;
-const EXPECTED_SHA256 = "2142509d651e5ae1683da383360675b4343cbad83fbbb498326a894cf0c2baae";
-const EXPECTED_TRANSPORT_SHA256 = "747034a1fe0082c7b96e66df3891d84895f81d63820d4235730b92ae5e23cd8f";
-const EXPECTED_TRIANGLES = "3904";
+const EXPECTED_BYTES = 243_672;
+const EXPECTED_SHA256 = "ad73d83d0dcd8485a8c2a7a680f83090a98d637cea455dde4915f0d771cd6552";
+const EXPECTED_TRANSPORT_SHA256 = "f6b1062238c941f81bbd5c38e154add9bb4ab56b81c06f9c45989c9604dd90c8";
+const EXPECTED_TRIANGLES = "3292";
 const MIN_BENCHMARK_SAMPLES = 30;
 const EVIDENCE_DIR = resolve("test-results", "af001i-evidence");
 
-test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", async ({ page }, testInfo) => {
+test("AF-001I Golden Motor v0.6.5 runs LOD0 PBR review and preserves visual evidence", async ({ page }, testInfo) => {
   test.setTimeout(60_000);
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
@@ -25,7 +25,7 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
   expect(assetResponse.status()).toBe(200);
   expect(assetResponse.headers()["content-type"]).toContain("model/gltf-binary");
   expect(assetResponse.headers()["x-tehkne-asset-id"]).toBe("TS_ELEC_MOTOR_DC_A");
-  expect(assetResponse.headers()["x-tehkne-asset-version"]).toBe("0.5.1-hero-candidate");
+  expect(assetResponse.headers()["x-tehkne-asset-version"]).toBe("0.6.5-hero-candidate");
   expect(assetResponse.headers()["x-tehkne-asset-lod"]).toBe("LOD0");
   expect(assetResponse.headers()["x-tehkne-asset-triangles"]).toBe(EXPECTED_TRIANGLES);
   expect(assetResponse.headers()["x-tehkne-asset-sha256"]).toBe(EXPECTED_SHA256);
@@ -33,7 +33,7 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
   expect((await assetResponse.body()).byteLength).toBe(EXPECTED_BYTES);
 
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/asset-forge/af001/pbr", { waitUntil: "networkidle" });
+  await page.goto("/asset-forge/af001/pbr-batched", { waitUntil: "networkidle" });
 
   const review = page.getByLabel("AF-001I Golden Motor LOD0 PBR Runtime Review");
   await expect(review).toBeVisible();
@@ -43,7 +43,7 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
   await expect(page.getByTestId("node-gate-verdict")).toHaveText("PASS");
 
   // Preserve all six visual views before enforcing the performance verdict.
-  // A PERF FAIL is still useful evidence for AF-001K and must not erase art review.
+  // A PERF FAIL remains useful evidence and must never erase the art review.
   const canvasShell = page.getByTestId("pbr-canvas-shell");
   const cameraViews = [
     "three-quarter",
@@ -66,9 +66,18 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
   const sampleText = await page.getByTestId("benchmark-samples-i").innerText();
   const averageText = await page.getByTestId("average-frame-ms-i").innerText();
   const p95Text = await page.getByTestId("p95-frame-ms-i").innerText();
+  const sourceMeshText = await page.getByTestId("mesh-count").innerText();
+  const renderMeshText = await page.getByTestId("render-mesh-count").innerText();
+  const materialText = await page.getByTestId("material-count").innerText();
+  const shadowCasterText = await page.getByTestId("shadow-caster-count").innerText();
+
   const samples = Number.parseInt(sampleText, 10);
   const averageFrameMs = Number.parseFloat(averageText);
   const p95FrameMs = Number.parseFloat(p95Text);
+  const sourceMeshCount = Number.parseInt(sourceMeshText, 10);
+  const renderMeshCount = Number.parseInt(renderMeshText, 10);
+  const materialCount = Number.parseInt(materialText, 10);
+  const shadowCasterCount = Number.parseInt(shadowCasterText, 10);
 
   const runtimeContext = await page.evaluate(() => ({
     userAgent: navigator.userAgent,
@@ -83,12 +92,16 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
   const runtimeEvidence = {
     gate: "AF001I",
     asset: "TS_ELEC_MOTOR_DC_A",
-    version: "0.5.1-hero-candidate",
+    version: "0.6.5-hero-candidate",
     lod: "LOD0",
     triangles: Number(EXPECTED_TRIANGLES),
     bytes: EXPECTED_BYTES,
     sha256: EXPECTED_SHA256,
     transportSha256: EXPECTED_TRANSPORT_SHA256,
+    sourceMeshCount,
+    renderMeshCount,
+    materialCount,
+    shadowCasterCount,
     samples,
     averageFrameMs,
     p95FrameMs,
@@ -101,9 +114,13 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
 
   console.log(
     `AF001I_METRICS average_frame_ms=${averageFrameMs} p95_frame_ms=${p95FrameMs} samples=${samples} ` +
-    `triangles=${EXPECTED_TRIANGLES} bytes=${EXPECTED_BYTES} sha256=${EXPECTED_SHA256}`
+    `source_meshes=${sourceMeshCount} render_meshes=${renderMeshCount} materials=${materialCount} ` +
+    `shadow_casters=${shadowCasterCount} triangles=${EXPECTED_TRIANGLES} bytes=${EXPECTED_BYTES} sha256=${EXPECTED_SHA256}`
   );
 
+  expect(Number.isFinite(sourceMeshCount)).toBe(true);
+  expect(Number.isFinite(renderMeshCount)).toBe(true);
+  expect(renderMeshCount).toBeLessThanOrEqual(sourceMeshCount);
   expect(Number.isFinite(samples)).toBe(true);
   expect(samples).toBeGreaterThanOrEqual(MIN_BENCHMARK_SAMPLES);
   expect(Number.isFinite(averageFrameMs)).toBe(true);
