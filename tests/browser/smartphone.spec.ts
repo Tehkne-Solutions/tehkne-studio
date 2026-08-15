@@ -64,5 +64,5 @@ test("S2.4 empty Workbench routes a natural-language smartphone command to Smart
 
   await command(page, "Abra o smartphone");
   await expect(page.getByText(/SMARTPHONE-01 · 11 COMPONENTES · OPEN/)).toBeVisible();
-  await expect(page.getByText(/Smartphone 01 materializado|aberto/i)).toBeVisible();
+  await expect(page.getByLabel("Studio Intelligence").getByText("Aberto: Smartphone 01", { exact: true })).toBeVisible();
 });
