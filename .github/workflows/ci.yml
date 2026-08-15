@@ -58,21 +58,21 @@ jobs:
         run: |
           mkdir -p .ci-evidence
           npm run smoke:browser 2>&1 | tee .ci-evidence/browser-smoke.log
-      - name: Preserve browser smoke diagnostic
-        if: failure()
+      - name: Preserve browser smoke log
+        if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: browser-smoke-diagnostic-${{ github.sha }}
+          name: browser-smoke-log-${{ github.sha }}
           path: .ci-evidence/browser-smoke.log
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 14
       - name: Preserve AF-001I browser evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: af001i-browser-evidence-${{ github.sha }}
-          path: test-results
-          if-no-files-found: ignore
+          path: test-results/af001i-evidence
+          if-no-files-found: error
           retention-days: 14
       - name: Preserve browser failure evidence
         if: failure()
