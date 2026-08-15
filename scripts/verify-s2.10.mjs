@@ -18,6 +18,9 @@ for (const token of [
   'projectType: "invention"',
   "preset: false",
   "class InventionBuilder",
+  "maximumSequence",
+  '"invention.component."',
+  '"invention-connection-"',
   "addComponent",
   "removeComponent",
   "compatibleTargets",
@@ -39,7 +42,8 @@ for (const token of [
   "connects only compatible available ports",
   "remains fail closed for self, incompatible and occupied port connections",
   "requires explicit disconnect before component removal",
-  "snapshot restores the authored topology without replay"
+  "snapshot restores the authored topology without replay",
+  "restored builders keep monotonic IDs after sparse component and connection histories"
 ]) {
   if (!domain.includes(token)) throw new Error(`S2.10 domain evidence missing: ${token}`);
 }
@@ -118,4 +122,4 @@ for (const token of [
 }
 if (workflow.includes("contents: write")) throw new Error("S2.10 CI must remain read-only");
 
-console.log("S2.10 Blank Invention PASS · canonical Component Library composition + live port compatibility + fail-closed wiring/removal + persistence without replay + no implicit solver · Tehkné Solutions");
+console.log("S2.10 Blank Invention PASS · canonical Component Library composition + live port compatibility + fail-closed wiring/removal + monotonic restore IDs + persistence without replay + no implicit solver · Tehkné Solutions");
