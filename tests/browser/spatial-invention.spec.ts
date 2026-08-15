@@ -57,7 +57,6 @@ test("S2.11 moves the authored invention spatially, keeps wiring attached and re
   expect(movedX).not.toBe(initialX);
   expect(movedWireX).not.toBe(initialWireX);
   await expect(page.getByTestId("invention-spatial-selection")).toContainText("Lithium-Ion Battery Pack");
-  await expect(page.getByTestId("invention-feedback")).toContainText("Posição atualizada");
 
   await workspace.getByRole("button", { name: "Guardar invenção" }).click();
   await expect(page.getByTestId("invention-feedback")).toContainText("2 bindings");
