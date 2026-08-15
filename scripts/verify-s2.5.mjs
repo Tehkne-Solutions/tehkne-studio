@@ -145,6 +145,33 @@ for (const token of [
   if (!assembly.includes(token)) throw new Error(`S2.5 Notebook spatial UX missing: ${token}`);
 }
 
+const workbench = await readFile("apps/studio-web/components/SpatialWorkbench.tsx", "utf8");
+for (const token of [
+  "createNotebookRegistry",
+  "createNotebookProject",
+  "createNotebookRuntime",
+  "notebookSession",
+  "notebookIntelligence",
+  "<NotebookAssembly session={notebookSession}",
+  "Chamar Notebook 01",
+  "Restaurar Notebook salvo",
+  'saveBrowserProject("notebook"',
+  "looksNotebook",
+  'execution.targetEntityId?.startsWith("notebook.")',
+  "NOTEBOOK-01",
+  "POWER {notebookPowerState.toUpperCase()} · BOOT {notebookBootStage}"
+]) {
+  if (!workbench.includes(token)) throw new Error(`S2.5 Notebook Workbench integration missing: ${token}`);
+}
+
+const persistence = await readFile("apps/studio-web/lib/projectPersistence.ts", "utf8");
+if (!persistence.includes('"notebook"')) throw new Error("S2.5 persistence adapter does not include notebook");
+
+const libraryPanel = await readFile("apps/studio-web/components/ComponentLibraryPanel.tsx", "utf8");
+for (const token of ["applyComponentCatalogOverlay", "notebookOverlay", "notebookCatalog", '"notebook"']) {
+  if (!libraryPanel.includes(token)) throw new Error(`S2.5 Notebook overlay is not surfaced in Component Library UX: ${token}`);
+}
+
 const browser = await readFile("tests/browser/notebook.spec.ts", "utf8");
 for (const token of [
   "Chamar Notebook 01",
@@ -173,4 +200,4 @@ for (const include of [
   if (!tsconfig.includes(include)) throw new Error(`S2.5 core compile surface missing: ${include}`);
 }
 
-console.log("S2.5 Notebook structure PASS · shared product composition + signed overlay + 12 components + 17 connections · Tehkné Solutions");
+console.log("S2.5 Notebook structure PASS · shared product composition + signed overlay + 12 components + 17 connections + Workbench persistence · Tehkné Solutions");
