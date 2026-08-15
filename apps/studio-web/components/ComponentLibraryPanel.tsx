@@ -8,10 +8,16 @@ import {
   type ProductFamily
 } from "../../../packages/component-library/src/index";
 import {
+  applyComponentCatalogExtension,
+  type ComponentCatalogExtension
+} from "../../../packages/component-library/src/extension";
+import {
   applyComponentCatalogOverlay,
   type ComponentCatalogOverlay
 } from "../../../packages/component-library/src/overlay";
 import componentCatalog from "../../../library/components/catalog.json";
+import displaySystemExtension from "../../../library/components/extensions/display-system-v1.json";
+import displaySystemOverlay from "../../../library/components/overlays/display-system-v1.json";
 import notebookOverlay from "../../../library/components/overlays/notebook-v1.json";
 import tabletOverlay from "../../../library/components/overlays/tablet-v1.json";
 import styles from "./ComponentLibraryPanel.module.css";
@@ -21,9 +27,17 @@ const notebookCatalog = applyComponentCatalogOverlay(
   baseCatalog,
   notebookOverlay as ComponentCatalogOverlay
 );
-const expandedCatalog = applyComponentCatalogOverlay(
+const tabletCatalog = applyComponentCatalogOverlay(
   notebookCatalog,
   tabletOverlay as ComponentCatalogOverlay
+);
+const displayTechnologyCatalog = applyComponentCatalogExtension(
+  tabletCatalog,
+  displaySystemExtension as ComponentCatalogExtension
+);
+const expandedCatalog = applyComponentCatalogOverlay(
+  displayTechnologyCatalog,
+  displaySystemOverlay as ComponentCatalogOverlay
 );
 const registry = new ComponentRegistry(expandedCatalog);
 
@@ -81,11 +95,11 @@ export function ComponentLibraryPanel() {
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar SoC, bateria, câmera, servo…"
+              placeholder="Buscar SoC, bateria, câmera, HDMI, fonte…"
               aria-label="Buscar componentes"
             />
             <select value={family} onChange={(event) => setFamily(event.target.value as ProductFamily | "all")} aria-label="Filtrar família de produto">
-              {productFamilies.map((option) => <option key={option} value={option}>{option === "all" ? "Todas as famílias" : option}</option>)}
+              {productFamilies.map((option) => <option key={option} value={option}>{option === "all" ? "Todas as famílias" : option}</option> )}
             </select>
           </div>
 
