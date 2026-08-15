@@ -41,7 +41,17 @@ jobs:
       - name: S2.3 component library contract
         run: npm run verify:s2.3
       - name: S2.4 smartphone product contract
-        run: npm run verify:s2.4
+        run: |
+          mkdir -p .ci-evidence
+          npm run verify:s2.4 2>&1 | tee .ci-evidence/s2-4-smartphone.log
+      - name: Preserve S2.4 diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: s2-4-smartphone-diagnostic-${{ github.sha }}
+          path: .ci-evidence/s2-4-smartphone.log
+          if-no-files-found: error
+          retention-days: 7
       - name: Install Chromium runtime
         run: npx playwright install --with-deps chromium
       - name: Alpha and platform browser smoke
