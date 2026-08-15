@@ -103,6 +103,8 @@ export function ElectronicsWorkbenchPanel({ session, bench, revision, onChanged 
 
   const closed = switchEntity.properties.closed?.value === true;
   const currentMa = result ? result.circuitCurrentA * 1000 : 0;
+  const parsedVoltage = Number(voltage.replace(",", "."));
+  const displayVoltage = result?.sourceVoltageV ?? (Number.isFinite(parsedVoltage) ? parsedVoltage : 0);
 
   return (
     <aside className={styles.panel} aria-label="Electronics Workbench">
@@ -134,7 +136,7 @@ export function ElectronicsWorkbenchPanel({ session, bench, revision, onChanged 
 
       <span className={styles.sectionTitle}>ENGINEERING READOUT</span>
       <div className={styles.readouts}>
-        <div className={styles.readout}><small>Fonte</small><strong>{result?.sourceVoltageV ?? Number(voltage) || 0} V</strong></div>
+        <div className={styles.readout}><small>Fonte</small><strong>{displayVoltage} V</strong></div>
         <div className={styles.readout}><small>Corrente</small><strong>{currentMa.toFixed(2)} mA</strong></div>
         <div className={styles.readout}><small>V resistor</small><strong>{(result?.resistorVoltageV ?? 0).toFixed(3)} V</strong></div>
         <div className={styles.readout}><small>V LED</small><strong>{(result?.ledVoltageV ?? 0).toFixed(3)} V</strong></div>
@@ -160,7 +162,7 @@ export function ElectronicsWorkbenchPanel({ session, bench, revision, onChanged 
       ) : null}
 
       <p className={styles.note}>
-        Modelo funcional educacional. Valores marcados como calculated/simulated não representam medição física de bancada.
+        Modelo funcional educacional. Valores marked as calculated/simulated não representam medição física de bancada.
         A etapa S2.9 generaliza netlists, instrumentos e montagem livre.
       </p>
     </aside>
