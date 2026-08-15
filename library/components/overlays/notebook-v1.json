@@ -14,6 +14,13 @@
     {
       "definitionId": "compute.soc.mobile-v1",
       "addPorts": {
+        "memory-ddr": {
+          "id": "memory-ddr",
+          "kind": "data",
+          "direction": "bidirectional",
+          "compatibility": ["memory.ddr"],
+          "state": "available"
+        },
         "thermal": {
           "id": "thermal",
           "kind": "thermal",
