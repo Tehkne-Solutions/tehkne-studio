@@ -1,4 +1,4 @@
-name: S2.12 3D Invention Workbench Gate
+name: S2.13 Asset-Backed Invention Rendering Gate
 
 on:
   pull_request:
@@ -59,6 +59,8 @@ jobs:
         run: npm run verify:s2.11
       - name: S2.12 3D invention workbench contract
         run: npm run verify:s2.12
+      - name: S2.13 asset-backed invention rendering contract
+        run: npm run verify:s2.13
       - name: Install Chromium runtime
         run: npx playwright install --with-deps chromium
       - name: Alpha and platform browser smoke
@@ -95,7 +97,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: s2-12-browser-failure
+          name: s2-13-browser-failure
           path: test-results
           if-no-files-found: ignore
           retention-days: 7
