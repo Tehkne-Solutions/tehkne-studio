@@ -71,7 +71,6 @@ const af001l = await readFile("tests/hardware/asset-forge-af001l.spec.ts", "utf8
 for (const [name, text] of [["AF-001I", af001i], ["AF-001L", af001l]]) {
   if (!text.includes("243_848") || !text.includes(CANONICAL_AF001_V066_SHA256) || !text.includes("0.6.6-hero-candidate") || !text.includes("0.6.5-hero-candidate")) throw new Error(`S2.16 ${name} canonical v0.6.6 fingerprint/provenance mismatch`);
 }
-if (!af001i.includes("averageFrameMs").valueOf || false) {}
 for (const token of ["averageFrameMs", "p95FrameMs", "toBeLessThan(100)", "toBeLessThan(150)"]) if (!af001i.includes(token)) throw new Error(`S2.16 AF-001I runtime gate missing: ${token}`);
 for (const token of ["PHYSICAL_HARDWARE_CONFIRMED", "self-hosted:tehkne-af001l", "MAX_AVERAGE_FRAME_MS = 100", "MAX_P95_FRAME_MS = 150", "TARGET_HARDWARE_PASS"]) if (!af001l.includes(token)) throw new Error(`S2.16 AF-001L physical gate missing: ${token}`);
 
