@@ -1,4 +1,4 @@
-name: S2.9 Circuit Creation Measurement Gate
+name: S2.10 Blank Invention Gate
 
 on:
   pull_request:
@@ -53,6 +53,8 @@ jobs:
         run: npm run verify:s2.8
       - name: S2.9 circuit creation and measurement contract
         run: npm run verify:s2.9
+      - name: S2.10 blank invention contract
+        run: npm run verify:s2.10
       - name: Install Chromium runtime
         run: npx playwright install --with-deps chromium
       - name: Alpha and platform browser smoke
@@ -89,7 +91,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: s2-09-browser-failure
+          name: s2-10-browser-failure
           path: test-results
           if-no-files-found: ignore
           retention-days: 7

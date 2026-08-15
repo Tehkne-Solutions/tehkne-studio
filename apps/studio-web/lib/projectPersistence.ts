@@ -5,7 +5,7 @@ import {
 } from "../../../packages/persistence-runtime/src/index";
 
 export type PersistedStudioProduct = "desktop" | "arm" | "smartphone" | "notebook" | "tablet" | "tv";
-export type PersistedStudioWorkspace = PersistedStudioProduct | "electronics";
+export type PersistedStudioWorkspace = PersistedStudioProduct | "electronics" | "invention";
 
 const STORAGE_PREFIX = "tehkne-studio:s2.2:project:";
 
