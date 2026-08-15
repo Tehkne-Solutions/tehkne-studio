@@ -1,0 +1,39 @@
+{
+  "asset_id": "TS_ELEC_MOTOR_DC_A",
+  "version": "0.5.1-hero-candidate",
+  "signature": "Tehkné Solutions",
+  "status": "HERO_CANDIDATE",
+  "runtime_integrity_gate": "AF001H_RUNTIME_SMOKE_PASS",
+  "metrics": {
+    "LOD0": { "triangles": 3904, "target": [3000, 4500], "budget_pass": true, "required_nodes_pass": true },
+    "LOD1": { "triangles": 2256, "target": [1500, 2400], "budget_pass": true, "required_nodes_pass": true },
+    "LOD2": { "triangles": 744, "target": [500, 900], "budget_pass": true, "required_nodes_pass": true }
+  },
+  "uv_pass": true,
+  "automated_suite_pass": true,
+  "preserved_contracts": {
+    "runtime_behavior": "UNCHANGED_FROM_AF001B",
+    "socket_types": "UNCHANGED",
+    "educational_semantics": "UNCHANGED"
+  },
+  "visual_improvements": [
+    "multi-step stamped front faceplate",
+    "central bearing dish and layered bearing stack",
+    "integrated mounting recesses",
+    "output shaft flat for coupler logic",
+    "rear terminal island with copper blades and insulating collars",
+    "sparse stamped shell details",
+    "manufactured Tehkné identity badge",
+    "bottom assembly index"
+  ],
+  "promotion": {
+    "to": "GOLDEN_ASSET",
+    "allowed": false,
+    "blocked_by": [
+      "AF001I_LOD0_PBR_RUNTIME_REVIEW",
+      "LOD0_REPRESENTATIVE_WEB_MOBILE_BENCHMARK",
+      "DCC_BLEND_MASTER",
+      "FINAL_HUMAN_CLOSE_APPROVAL"
+    ]
+  }
+}
