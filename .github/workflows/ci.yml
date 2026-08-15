@@ -1,4 +1,4 @@
-name: S2.15 Direct Socket Wiring Gate
+name: S2.16 Mechanical Assembly Constraints Gate
 
 on:
   pull_request:
@@ -65,12 +65,16 @@ jobs:
         run: npm run verify:s2.14
       - name: S2.15 direct socket wiring contract
         run: npm run verify:s2.15
+      - name: S2.16 mechanical assembly constraints contract
+        run: npm run verify:s2.16
       - name: Install Chromium runtime
         run: npx playwright install --with-deps chromium
       - name: S2.14 socket-aware browser contract
         run: npx playwright test tests/browser/socket-aware-invention.spec.ts --config=playwright.config.ts
       - name: S2.15 direct socket wiring browser contract
         run: npx playwright test tests/browser/direct-socket-wiring.spec.ts --config=playwright.config.ts
+      - name: S2.16 mechanical assembly browser contract
+        run: npx playwright test tests/browser/mechanical-assembly-invention.spec.ts --config=playwright.config.ts
       - name: Alpha and platform browser smoke
         run: |
           set -o pipefail
@@ -105,7 +109,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: s2-15-browser-failure
+          name: s2-16-browser-failure
           path: test-results
           if-no-files-found: ignore
           retention-days: 7
