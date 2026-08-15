@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  AF001_OUTPUT_DIR: build/asset-forge/af001g-v06
+  AF001_OUTPUT_DIR: ${{ github.workspace }}/build/asset-forge/af001g-v06
 
 jobs:
   golden-motor-dcc:
@@ -35,7 +35,13 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
           MESA_LOADER_DRIVER_OVERRIDE: "llvmpipe"
           LD_LIBRARY_PATH: "/usr/lib/x86_64-linux-gnu"
-        run: xvfb-run -a -s "-screen 0 1280x1024x24" blender --background --python tools/asset_forge/af001_v06/build_golden_motor_v064.py
+        run: |
+          mkdir -p "$AF001_OUTPUT_DIR"
+          xvfb-run -a -s "-screen 0 1280x1024x24" blender --background --python tools/asset_forge/af001_v06/build_golden_motor_v064.py
+          test -f "$AF001_OUTPUT_DIR/AF001G_V06_DCC_QA.json"
+          test -f "$AF001_OUTPUT_DIR/TS_ELEC_MOTOR_DC_A_LOD0.glb"
+          test -f "$AF001_OUTPUT_DIR/TS_ELEC_MOTOR_DC_A_MASTER_CANDIDATE_v06.blend"
+          echo "AF001_BUILD_OUTPUT_OK $AF001_OUTPUT_DIR"
 
       - name: Inspect generated DCC evidence
         if: always()
@@ -54,48 +60,37 @@ jobs:
         if: always()
         run: |
           python - <<'PY'
-          import json
+          import json, os
           from pathlib import Path
 
           failures = []
-
           def check(name, condition, actual=None):
               status = "PASS" if condition else "FAIL"
               print(f"AF001_DCC_CHECK {name} {status} actual={actual!r}")
-              if not condition:
-                  failures.append(name)
+              if not condition: failures.append(name)
 
-          qa_path = Path("build/asset-forge/af001g-v06/AF001G_V06_DCC_QA.json")
+          output = Path(os.environ["AF001_OUTPUT_DIR"])
+          qa_path = output / "AF001G_V06_DCC_QA.json"
           check("qa_json_exists", qa_path.exists(), str(qa_path))
-
           if qa_path.exists():
               qa = json.loads(qa_path.read_text())
               print("AF001_DCC_QA_BEGIN")
               print(json.dumps(qa, indent=2))
               print("AF001_DCC_QA_END")
-
               check("signature", qa.get("signature") == "Tehkné Solutions", qa.get("signature"))
               check("automated_pass", qa.get("automated_pass") is True, qa.get("automated_pass"))
               check("visual_status", qa.get("visual_status") == "DCC_CANDIDATE_NOT_GOLDEN", qa.get("visual_status"))
-              check(
-                  "surface_textures",
-                  qa.get("surface_textures") == ["TS_MOTOR_STAMPED_STEEL_ROUGHNESS.png"],
-                  qa.get("surface_textures"),
-              )
-
+              check("surface_textures", qa.get("surface_textures") == ["TS_MOTOR_STAMPED_STEEL_ROUGHNESS.png"], qa.get("surface_textures"))
               lods = qa.get("lods", {})
               for lod in ("LOD0", "LOD1", "LOD2"):
                   entry = lods.get(lod, {})
                   check(f"{lod}_budget", entry.get("budget_pass") is True, entry)
                   check(f"{lod}_sockets", entry.get("socket_pass") is True, entry.get("sockets"))
-
               renders = qa.get("renders", [])
               check("six_renders", len(renders) == 6, renders)
-
               overlay = qa.get("manufacturing_overlay", {})
               check("roughness_metadata", "stamped_steel_roughness" in overlay, overlay)
               check("vent_metadata", "vent_recesses" in overlay, overlay)
-
           if failures:
               raise SystemExit("AF001 DCC QA failed: " + ", ".join(failures))
           PY
@@ -105,6 +100,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: af001g-v06-dcc-evidence
-          path: build/asset-forge/af001g-v06
+          path: ${{ github.workspace }}/build/asset-forge/af001g-v06
           if-no-files-found: error
           retention-days: 30
