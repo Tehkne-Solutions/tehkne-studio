@@ -1,0 +1,41 @@
+{
+  "gate": "AF-001H",
+  "asset_id": "TS_ELEC_MOTOR_DC_A",
+  "signature": "Tehkné Solutions",
+  "status": "RUNTIME_SMOKE_PASS",
+  "preview": {
+    "lod": "LOD2",
+    "triangles": 824,
+    "bytes": 21452,
+    "sha256": "0a74f27df8a67b61e5ac10b87c0b6fa3736531fac15044bb360a641da6228e69",
+    "transport": "integrity-checked API payload",
+    "runtime_loader": "GLTFLoader / React Three Fiber"
+  },
+  "browser_smoke": {
+    "samples": 120,
+    "average_frame_ms_max": 100,
+    "p95_frame_ms_max": 150,
+    "page_errors_required": 0,
+    "console_errors_required": 0,
+    "ci_run_id": 31853672748,
+    "ci_run_number": 75,
+    "pass": true
+  },
+  "regression": {
+    "dependency_audit": "PASS",
+    "alpha_01": "PASS",
+    "s2_1": "PASS",
+    "s2_2": "PASS",
+    "s2_3": "PASS",
+    "s2_4": "PASS"
+  },
+  "golden_asset_promotion": {
+    "allowed": false,
+    "blocked_by": [
+      "lod0_engine_pbr_review",
+      "lod0_web_mobile_benchmark",
+      "dcc_blend_master",
+      "final_visual_approval"
+    ]
+  }
+}
