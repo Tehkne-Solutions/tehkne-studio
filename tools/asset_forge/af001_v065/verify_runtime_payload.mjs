@@ -9,20 +9,25 @@ const EXPECTED_COMPRESSED_BYTES = 25_162;
 const EXPECTED_COMPRESSED_SHA256 = "f6b1062238c941f81bbd5c38e154add9bb4ab56b81c06f9c45989c9604dd90c8";
 const EXPECTED_GLB_BYTES = 243_672;
 const EXPECTED_GLB_SHA256 = "ad73d83d0dcd8485a8c2a7a680f83090a98d637cea455dde4915f0d771cd6552";
-const REQUIRED_NODES = [
-  "PIVOT_MAIN",
-  "PIVOT_SHAFT",
+
+// v0.6 replaced the v0.5 helper-pivot convention with an explicit engineering
+// interface contract: physical shaft geometry + four authored sockets. These
+// names are created and QA-checked by tools/asset_forge/af001_v06/build_golden_motor_v06.py.
+const REQUIRED_PHYSICAL_NODES = [
   "BODY_CAN",
   "FRONT_CAP",
   "REAR_CAP",
   "SHAFT",
   "TERMINAL_POS",
-  "TERMINAL_NEG",
+  "TERMINAL_NEG"
+];
+const REQUIRED_SOCKETS = [
   "SOCKET_MECH_AXIS_OUT",
   "SOCKET_MECH_MOUNT_FRONT",
   "SOCKET_ELEC_POWER_POS",
   "SOCKET_ELEC_POWER_NEG"
 ];
+const REQUIRED_NODES = [...REQUIRED_PHYSICAL_NODES, ...REQUIRED_SOCKETS];
 
 function sha256(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
@@ -81,11 +86,12 @@ if (glbHash !== EXPECTED_GLB_SHA256) fail(`GLB SHA-256 ${glbHash} != ${EXPECTED_
 const document = parseGlbJson(glb);
 const nodeNames = new Set((document.nodes ?? []).map((node) => node.name).filter(Boolean));
 const missingNodes = REQUIRED_NODES.filter((name) => !nodeNames.has(name));
-if (missingNodes.length) fail(`required nodes missing: ${missingNodes.join(", ")}`);
+if (missingNodes.length) fail(`required v0.6 nodes missing: ${missingNodes.join(", ")}`);
 
 console.log(
   `AF001I_V065_CONTRACT PASS chunks=6 brotli_bytes=${compressed.length} glb_bytes=${glb.length} ` +
-  `nodes=${document.nodes?.length ?? 0} meshes=${document.meshes?.length ?? 0} materials=${document.materials?.length ?? 0}`
+  `nodes=${document.nodes?.length ?? 0} meshes=${document.meshes?.length ?? 0} materials=${document.materials?.length ?? 0} ` +
+  `physical_nodes=${REQUIRED_PHYSICAL_NODES.length} sockets=${REQUIRED_SOCKETS.length}`
 );
 console.log(`AF001I_V065_TRANSPORT_SHA256 ${compressedHash}`);
 console.log(`AF001I_V065_GLB_SHA256 ${glbHash}`);
