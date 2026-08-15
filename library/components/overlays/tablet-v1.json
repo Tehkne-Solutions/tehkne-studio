@@ -1,0 +1,11 @@
+{
+  "overlayId": "tablet-v1",
+  "overlayVersion": "1",
+  "signature": "Tehkné Solutions",
+  "mutations": [
+    {
+      "definitionId": "control.mcu.general-v1",
+      "addProductFamilies": ["tablet"]
+    }
+  ]
+}
