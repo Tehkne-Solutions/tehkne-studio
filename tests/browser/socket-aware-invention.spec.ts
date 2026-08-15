@@ -45,7 +45,7 @@ test("S2.14 attaches invention wiring to real Asset Forge socket nodes and follo
 
   await workspace.getByLabel("Origem 3D").selectOption({ label: "Lithium-Ion Battery Pack · dc-output" });
   await workspace.getByLabel("Destino 3D").selectOption({ label: "Brushed DC Motor · power-pos" });
-  await workspace.getByRole("button", { name: "Conectar no 3D" }).click();
+  await workspace.getByRole("button", { name: "Conectar / Montar" }).click();
 
   const wire = page.getByTestId("invention-3d-wire-invention-connection-1");
   await expect(wire).toHaveAttribute("data-source-port", "dc-output");
