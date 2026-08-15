@@ -1,0 +1,133 @@
+{
+  "extensionId": "display-system-v1",
+  "extensionVersion": "1",
+  "signature": "Tehkné Solutions",
+  "components": [
+    {
+      "definitionId": "compute.media-soc.display-v1",
+      "version": "1",
+      "name": "Display Media System-on-Chip",
+      "type": "MediaSystemOnChip",
+      "domain": "compute",
+      "productFamilies": ["display-system"],
+      "tags": ["media-soc", "display", "video", "compute"],
+      "defaultState": "ready",
+      "properties": {
+        "cpuCores": { "id": "cpuCores", "value": 4, "source": "studio", "confidence": 0.8, "min": 1, "max": 32 },
+        "nominalPowerW": { "id": "nominalPowerW", "value": 18, "unit": "W", "source": "studio", "confidence": 0.75, "min": 1, "max": 120 },
+        "videoDecode": { "id": "videoDecode", "value": "4K HDR", "source": "studio", "confidence": 0.75 }
+      },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "storage": { "id": "storage", "kind": "data", "direction": "bidirectional", "compatibility": ["storage.solid-state"], "state": "available" },
+        "display-out": { "id": "display-out", "kind": "data", "direction": "out", "compatibility": ["display.internal-video"], "state": "available" },
+        "wireless-bus": { "id": "wireless-bus", "kind": "data", "direction": "bidirectional", "compatibility": ["bus.sdio-pcie"], "state": "available" },
+        "control-bus": { "id": "control-bus", "kind": "data", "direction": "bidirectional", "compatibility": ["bus.i2c-spi"], "state": "available" },
+        "hdmi-in": { "id": "hdmi-in", "kind": "data", "direction": "in", "compatibility": ["video.hdmi"], "state": "available" },
+        "audio-out": { "id": "audio-out", "kind": "signal", "direction": "out", "compatibility": ["audio.line-level"], "state": "available" },
+        "usb-host": { "id": "usb-host", "kind": "data", "direction": "bidirectional", "compatibility": ["usb.usb-c"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O Media SoC decodifica vídeo, executa o sistema da TV e coordena interfaces, áudio e conectividade.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "power.supply.ac-dc-v1",
+      "version": "1",
+      "name": "AC/DC Power Supply",
+      "type": "PowerSupply",
+      "domain": "power",
+      "productFamilies": ["display-system", "generic"],
+      "tags": ["power", "ac-dc", "mains", "psu"],
+      "defaultState": "ready",
+      "properties": {
+        "ratedPowerW": { "id": "ratedPowerW", "value": 180, "unit": "W", "source": "studio", "confidence": 0.8, "min": 10, "max": 2000 },
+        "efficiencyPercent": { "id": "efficiencyPercent", "value": 92, "unit": "%", "source": "studio", "confidence": 0.75, "min": 50, "max": 100 }
+      },
+      "ports": {
+        "ac-input": { "id": "ac-input", "kind": "electrical", "direction": "in", "compatibility": ["power.ac.mains"], "state": "available" },
+        "dc-output": { "id": "dc-output", "kind": "electrical", "direction": "out", "compatibility": ["power.dc.low-voltage"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }, { "id": "remove", "label": "Remover" }, { "id": "insert", "label": "Inserir" }],
+      "metadata": { "simpleExplanation": "A fonte converte energia da rede elétrica em tensões contínuas adequadas aos circuitos internos.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "interface.ac-inlet-v1",
+      "version": "1",
+      "name": "AC Mains Inlet",
+      "type": "ExternalPowerInterface",
+      "domain": "interface",
+      "productFamilies": ["display-system", "generic"],
+      "tags": ["ac", "mains", "power", "inlet"],
+      "defaultState": "available",
+      "properties": {
+        "nominalVoltageV": { "id": "nominalVoltageV", "value": 220, "unit": "V", "source": "studio", "confidence": 0.75, "min": 100, "max": 250 }
+      },
+      "ports": {
+        "mains-in": { "id": "mains-in", "kind": "electrical", "direction": "in", "compatibility": ["power.ac.mains.external"], "state": "available" },
+        "internal-ac": { "id": "internal-ac", "kind": "electrical", "direction": "out", "compatibility": ["power.ac.mains"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "A entrada AC conecta o equipamento à rede elétrica e entrega energia de rede à fonte interna.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "display.panel.large-v1",
+      "version": "1",
+      "name": "Large Display Panel",
+      "type": "DisplayModule",
+      "domain": "display",
+      "productFamilies": ["display-system"],
+      "tags": ["display", "panel", "tv", "large-screen"],
+      "defaultState": "off",
+      "properties": {
+        "diagonalIn": { "id": "diagonalIn", "value": 55, "unit": "in", "source": "studio", "confidence": 0.8, "min": 15, "max": 120 },
+        "refreshHz": { "id": "refreshHz", "value": 120, "unit": "Hz", "source": "studio", "confidence": 0.75, "min": 24, "max": 480 },
+        "resolution": { "id": "resolution", "value": "3840x2160", "source": "studio", "confidence": 0.8 }
+      },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "video-in": { "id": "video-in", "kind": "data", "direction": "in", "compatibility": ["display.internal-video"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O painel converte o sinal de vídeo processado em imagem visível em uma superfície de grande formato.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "interface.hdmi.port-v1",
+      "version": "1",
+      "name": "HDMI Input Interface",
+      "type": "ExternalInterface",
+      "domain": "interface",
+      "productFamilies": ["display-system", "generic"],
+      "tags": ["hdmi", "video", "interface", "external"],
+      "defaultState": "available",
+      "properties": {
+        "versionLabel": { "id": "versionLabel", "value": "2.1", "source": "studio", "confidence": 0.8 }
+      },
+      "ports": {
+        "external": { "id": "external", "kind": "data", "direction": "in", "compatibility": ["video.hdmi.external"], "state": "available" },
+        "host-video": { "id": "host-video", "kind": "data", "direction": "out", "compatibility": ["video.hdmi"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "A entrada HDMI recebe áudio e vídeo digital de equipamentos externos e encaminha o sinal ao Media SoC.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "audio.speaker.stereo-v1",
+      "version": "1",
+      "name": "Stereo Speaker Assembly",
+      "type": "SpeakerAssembly",
+      "domain": "actuation",
+      "productFamilies": ["display-system", "generic"],
+      "tags": ["audio", "speaker", "stereo", "sound"],
+      "defaultState": "ready",
+      "properties": {
+        "channels": { "id": "channels", "value": 2, "source": "studio", "confidence": 1, "min": 1, "max": 16 },
+        "ratedPowerW": { "id": "ratedPowerW", "value": 20, "unit": "W", "source": "studio", "confidence": 0.75, "min": 1, "max": 500 }
+      },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "audio-in": { "id": "audio-in", "kind": "signal", "direction": "in", "compatibility": ["audio.line-level"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O conjunto estéreo converte o sinal elétrico de áudio em ondas sonoras para o ambiente.", "provenance": "authored-template" }
+    }
+  ]
+}
