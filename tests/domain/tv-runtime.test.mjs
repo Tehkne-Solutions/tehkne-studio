@@ -56,7 +56,7 @@ test("S2.7 TV 01 materializes 8 components and 9 validated engineering connectio
   const result = createTvProject(profile, registry);
   const { project } = result;
 
-  assert.equal(catalog.catalogId, "tehkne-universal-components-v1+display-system-v1+display-system-v1");
+  assert.equal(catalog.catalogId, "tehkne-universal-components-v1+display-system-v1+display-system-compat-v1");
   assert.equal(project.projectId, "tv-01");
   assert.equal(project.rootEntityId, "tv.root");
   assert.equal(project.metadata.productFamily, "display-system");
