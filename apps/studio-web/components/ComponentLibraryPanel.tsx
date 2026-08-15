@@ -7,10 +7,26 @@ import {
   type ComponentDefinition,
   type ProductFamily
 } from "../../../packages/component-library/src/index";
+import {
+  applyComponentCatalogOverlay,
+  type ComponentCatalogOverlay
+} from "../../../packages/component-library/src/overlay";
 import componentCatalog from "../../../library/components/catalog.json";
+import notebookOverlay from "../../../library/components/overlays/notebook-v1.json";
+import tabletOverlay from "../../../library/components/overlays/tablet-v1.json";
 import styles from "./ComponentLibraryPanel.module.css";
 
-const registry = new ComponentRegistry(parseComponentCatalog(componentCatalog));
+const baseCatalog = parseComponentCatalog(componentCatalog);
+const notebookCatalog = applyComponentCatalogOverlay(
+  baseCatalog,
+  notebookOverlay as ComponentCatalogOverlay
+);
+const expandedCatalog = applyComponentCatalogOverlay(
+  notebookCatalog,
+  tabletOverlay as ComponentCatalogOverlay
+);
+const registry = new ComponentRegistry(expandedCatalog);
+
 const productFamilies: readonly (ProductFamily | "all")[] = [
   "all", "smartphone", "tablet", "notebook", "desktop", "robotics", "embedded", "display-system", "generic"
 ];
