@@ -70,8 +70,13 @@ function inspectScene(root: Object3D): AssetInspection {
   root.traverse((object) => {
     if (!(object instanceof Mesh)) return;
     meshCount += 1;
-    object.castShadow = true;
-    object.receiveShadow = true;
+
+    // AF-001I is a static product-review surface. Re-rendering a shadow map on
+    // every browser frame adds no engineering evidence, so the review keeps PBR
+    // material response while remaining explicitly shadow-map free.
+    object.castShadow = false;
+    object.receiveShadow = false;
+
     const source = Array.isArray(object.material) ? object.material : [object.material];
     for (const material of source) {
       if (material instanceof MeshStandardMaterial) {
@@ -133,10 +138,15 @@ export function GoldenMotorPbrReviewGate() {
   const [view, setView] = useState<CameraView>("three-quarter");
   const [inspection, setInspection] = useState<AssetInspection | null>(null);
   const [stats, setStats] = useState<RuntimeStats | null>(null);
+  const [viewportContext, setViewportContext] = useState("pending");
 
   const markReady = useCallback((next: AssetInspection) => setInspection(next), []);
   const runtimeReady = inspection !== null;
   const nodeGatePass = Boolean(inspection && inspection.missingNodes.length === 0);
+
+  useEffect(() => {
+    setViewportContext(`${window.innerWidth}×${window.innerHeight} @ ${window.devicePixelRatio.toFixed(2)}x`);
+  }, []);
 
   useEffect(() => {
     if (!runtimeReady || !nodeGatePass || stats) return;
@@ -153,8 +163,8 @@ export function GoldenMotorPbrReviewGate() {
       const elapsed = now - startedAt;
 
       if (elapsed >= WARMUP_MS && delta > 0 && delta <= MAX_VALID_DELTA_MS) {
-        // Slow frames are evidence. Unlike the old gate, they are not discarded
-        // merely for crossing the performance threshold.
+        // Slow frames remain evidence; optimization changes renderer cost, not
+        // the fail-closed measurement policy or thresholds.
         samples.push(delta);
       }
 
@@ -187,9 +197,6 @@ export function GoldenMotorPbrReviewGate() {
     stats.p95FrameMs < MAX_P95_FRAME_MS
   );
   const runtimePass = Boolean(runtimeReady && nodeGatePass && benchmarkPass);
-  const viewportContext = typeof window === "undefined"
-    ? "server"
-    : `${window.innerWidth}×${window.innerHeight} @ ${window.devicePixelRatio.toFixed(2)}x`;
 
   return (
     <section
@@ -197,6 +204,7 @@ export function GoldenMotorPbrReviewGate() {
       data-runtime-ready={runtimeReady ? "true" : "false"}
       data-benchmark-ready={stats ? "true" : "false"}
       data-node-gate={nodeGatePass ? "pass" : runtimeReady ? "blocked" : "pending"}
+      data-render-policy="static-pbr-key-fill-no-realtime-shadow-map"
       style={{ minHeight: "100dvh", background: "#0b0e11", color: "#edf1f3", padding: 22, display: "grid", gap: 16, gridTemplateRows: "auto auto 1fr auto" }}
     >
       <header style={{ display: "flex", justifyContent: "space-between", gap: 24, alignItems: "end", flexWrap: "wrap" }}>
@@ -204,7 +212,7 @@ export function GoldenMotorPbrReviewGate() {
           <span style={{ color: "#82aeb1", fontWeight: 800, letterSpacing: ".16em", fontSize: 11 }}>TEHKNÉ SOLUTIONS · ASSET FORGE</span>
           <h1 style={{ margin: "8px 0 0", fontSize: "clamp(26px, 4vw, 42px)", letterSpacing: "-.03em" }}>AF-001I · LOD0 PBR Runtime Review</h1>
           <p style={{ color: "#9da7ae", margin: "8px 0 0", maxWidth: 820, lineHeight: 1.55 }}>
-            Golden Motor Hero v0.5.1 · LOD0 real de 3.904 tris · janela fixa de benchmark · frames lentos contam contra o gate.
+            Golden Motor Hero v0.5.1 · LOD0 real de 3.904 tris · PBR estático key+fill · frames lentos contam contra o gate.
           </p>
         </div>
         <div style={{ border: `1px solid ${runtimePass ? "#51765f" : "#62533a"}`, background: runtimePass ? "#142019" : "#201b14", padding: "10px 14px", borderRadius: 12, color: runtimePass ? "#8dc9a0" : stats ? "#e08378" : "#d6ae6c", fontWeight: 900 }}>
@@ -222,16 +230,14 @@ export function GoldenMotorPbrReviewGate() {
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(300px, 360px)", gap: 16, minHeight: 0 }}>
         <div data-testid="pbr-canvas-shell" data-camera-view={view} style={{ minHeight: 600, borderRadius: 18, overflow: "hidden", border: "1px solid #343d43", background: "#151a1e" }}>
-          <Canvas camera={{ position: CAMERA_VIEWS["three-quarter"].position, fov: 30, near: 0.001, far: 5 }} dpr={[1, 1.5]} shadows gl={{ antialias: true, powerPreference: "high-performance" }} onCreated={({ gl }) => { gl.outputColorSpace = SRGBColorSpace; gl.toneMapping = ACESFilmicToneMapping; gl.toneMappingExposure = 1.05; }}>
+          <Canvas camera={{ position: CAMERA_VIEWS["three-quarter"].position, fov: 30, near: 0.001, far: 5 }} dpr={1} gl={{ antialias: true, powerPreference: "high-performance" }} onCreated={({ gl }) => { gl.outputColorSpace = SRGBColorSpace; gl.toneMapping = ACESFilmicToneMapping; gl.toneMappingExposure = 1.05; }}>
             <color attach="background" args={["#14181b"]} />
-            <ambientLight intensity={0.28} />
-            <directionalLight position={[0.075, 0.11, 0.075]} intensity={4.2} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} />
-            <directionalLight position={[-0.065, 0.025, 0.055]} intensity={1.45} />
-            <spotLight position={[0, 0.09, -0.075]} intensity={2.4} angle={0.62} penumbra={0.86} color="#d7e2e5" />
-            <spotLight position={[-0.08, 0.02, -0.015]} intensity={1.0} angle={0.78} penumbra={0.9} color="#9aaeb0" />
+            <ambientLight intensity={0.42} />
+            <directionalLight position={[0.075, 0.11, 0.075]} intensity={4.2} />
+            <directionalLight position={[-0.065, 0.025, 0.055]} intensity={1.65} />
             <CameraRig view={view} />
             <Suspense fallback={<LoadingMotor />}><GoldenMotor onReady={markReady} /></Suspense>
-            <mesh position={[0, -0.018, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow><planeGeometry args={[0.24, 0.24]} /><meshStandardMaterial color="#22272b" metalness={0.06} roughness={0.88} /></mesh>
+            <mesh position={[0, -0.018, 0]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[0.24, 0.24]} /><meshStandardMaterial color="#22272b" metalness={0.06} roughness={0.88} /></mesh>
           </Canvas>
         </div>
 
@@ -257,7 +263,7 @@ export function GoldenMotorPbrReviewGate() {
         </aside>
       </div>
 
-      <footer style={{ display: "flex", justifyContent: "space-between", color: "#78848b", fontSize: 12 }}><span>HERO_CANDIDATE · fail-closed</span><span>Tehkné Solutions</span></footer>
+      <footer style={{ display: "flex", justifyContent: "space-between", color: "#78848b", fontSize: 12 }}><span>HERO_CANDIDATE · static PBR · fail-closed</span><span>Tehkné Solutions</span></footer>
     </section>
   );
 }
