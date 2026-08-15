@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { useEffect, useState, type FormEvent } from "react";
 import type { EngineeringEntity } from "../../../packages/engineering-core/src/index";
 import { ComponentRegistry, parseComponentCatalog } from "../../../packages/component-library/src/index";
+import type { ComponentCatalogExtension } from "../../../packages/component-library/src/extension";
 import type { ComponentCatalogOverlay } from "../../../packages/component-library/src/overlay";
 import type { PrototypeManufacturingProfile, PrototypePackageManifest } from "../../../packages/factory-runtime/src/index";
 import {
@@ -26,6 +27,11 @@ import {
   createTabletRegistry,
   type TabletPresetProfile
 } from "../../../packages/tablet-runtime/src/index";
+import {
+  createTvProject,
+  createTvRegistry,
+  type TvPresetProfile
+} from "../../../packages/tv-runtime/src/index";
 import type { ArmVariantProfile } from "../../../packages/variant-runtime/src/index";
 import {
   EngineeringSession,
@@ -42,6 +48,8 @@ import {
 } from "../../../packages/studio-variants/src/index";
 import { StudioIntelligence } from "../../../packages/studio-intelligence/src/index";
 import componentCatalog from "../../../library/components/catalog.json";
+import displaySystemExtension from "../../../library/components/extensions/display-system-v1.json";
+import displaySystemOverlay from "../../../library/components/overlays/display-system-v1.json";
 import notebookOverlay from "../../../library/components/overlays/notebook-v1.json";
 import tabletOverlay from "../../../library/components/overlays/tablet-v1.json";
 import desktopPreset from "../../../presets/desktop-pc/project.json";
@@ -52,6 +60,7 @@ import highTorqueProfile from "../../../presets/arm-01/variants/high-torque-prof
 import notebookProfile from "../../../presets/notebook-01/profile.json";
 import smartphoneProfile from "../../../presets/smartphone-01/profile.json";
 import tabletProfile from "../../../presets/tablet-01/profile.json";
+import tvProfile from "../../../presets/tv-01/profile.json";
 import {
   browserProjectExists,
   loadBrowserProject,
@@ -66,6 +75,7 @@ import { DesktopPcAssembly } from "./DesktopPcAssembly";
 import { NotebookAssembly } from "./NotebookAssembly";
 import { SmartphoneAssembly } from "./SmartphoneAssembly";
 import { TabletAssembly } from "./TabletAssembly";
+import { TvAssembly } from "./TvAssembly";
 
 interface FeedbackState {
   readonly message: string;
@@ -73,7 +83,7 @@ interface FeedbackState {
   readonly error?: boolean;
 }
 
-type ActiveProduct = "desktop" | "arm" | "smartphone" | "notebook" | "tablet" | null;
+type ActiveProduct = "desktop" | "arm" | "smartphone" | "notebook" | "tablet" | "tv" | null;
 
 interface WorkspacePersistenceState {
   readonly activeProduct: Exclude<ActiveProduct, null>;
@@ -127,6 +137,15 @@ const tabletRegistry = createTabletRegistry(
 const tabletMaterialization = createTabletProject(
   tabletProfile as unknown as TabletPresetProfile,
   tabletRegistry
+);
+const tvRegistry = createTvRegistry(
+  componentCatalog,
+  displaySystemExtension as ComponentCatalogExtension,
+  displaySystemOverlay as ComponentCatalogOverlay
+).registry;
+const tvMaterialization = createTvProject(
+  tvProfile as unknown as TvPresetProfile,
+  tvRegistry
 );
 
 function objectExtension(snapshot: StudioSessionSnapshot | undefined, key: string): Record<string, unknown> {
@@ -208,6 +227,16 @@ function createTabletRuntime(snapshot?: StudioSessionSnapshot): ProductRuntimeBu
   return { session, intelligence: new StudioIntelligence(session) };
 }
 
+function createTvRuntime(snapshot?: StudioSessionSnapshot): ProductRuntimeBundle {
+  if (snapshot && snapshot.project.projectId !== tvMaterialization.project.projectId) {
+    throw new Error(`Snapshot ${snapshot.project.projectId} não pertence à TV 01.`);
+  }
+  const session = snapshot
+    ? restoreSessionSnapshot(snapshot)
+    : new EngineeringSession(tvMaterialization.project);
+  return { session, intelligence: new StudioIntelligence(session) };
+}
+
 function savedSelection(snapshot: StudioSessionSnapshot, session: EngineeringSession): string | null {
   const workspace = objectExtension(snapshot, "workspace") as Partial<WorkspacePersistenceState>;
   const selected = workspace.selectedEntityId;
@@ -225,7 +254,8 @@ function productLabel(product: Exclude<ActiveProduct, null>): string {
   if (product === "arm") return "ARM-01";
   if (product === "smartphone") return "Smartphone 01";
   if (product === "notebook") return "Notebook 01";
-  return "Tablet 01";
+  if (product === "tablet") return "Tablet 01";
+  return "TV 01";
 }
 
 export function SpatialWorkbench() {
@@ -234,6 +264,7 @@ export function SpatialWorkbench() {
   const [smartphoneRuntime, setSmartphoneRuntime] = useState<ProductRuntimeBundle>(() => createSmartphoneRuntime());
   const [notebookRuntime, setNotebookRuntime] = useState<ProductRuntimeBundle>(() => createNotebookRuntime());
   const [tabletRuntime, setTabletRuntime] = useState<ProductRuntimeBundle>(() => createTabletRuntime());
+  const [tvRuntime, setTvRuntime] = useState<ProductRuntimeBundle>(() => createTvRuntime());
   const { session: desktopSession, behavior: desktopBehavior, intelligence: desktopIntelligence } = desktopRuntime;
   const {
     session: armSession,
@@ -246,6 +277,7 @@ export function SpatialWorkbench() {
   const { session: smartphoneSession, intelligence: smartphoneIntelligence } = smartphoneRuntime;
   const { session: notebookSession, intelligence: notebookIntelligence } = notebookRuntime;
   const { session: tabletSession, intelligence: tabletIntelligence } = tabletRuntime;
+  const { session: tvSession, intelligence: tvIntelligence } = tvRuntime;
 
   const [activeProduct, setActiveProduct] = useState<ActiveProduct>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -262,7 +294,8 @@ export function SpatialWorkbench() {
     arm: false,
     smartphone: false,
     notebook: false,
-    tablet: false
+    tablet: false,
+    tv: false
   });
 
   useEffect(() => {
@@ -272,7 +305,8 @@ export function SpatialWorkbench() {
       arm: browserProjectExists("arm"),
       smartphone: browserProjectExists("smartphone"),
       notebook: browserProjectExists("notebook"),
-      tablet: browserProjectExists("tablet")
+      tablet: browserProjectExists("tablet"),
+      tv: browserProjectExists("tv")
     });
   }, []);
 
@@ -284,7 +318,9 @@ export function SpatialWorkbench() {
         ? notebookSession
         : activeProduct === "tablet"
           ? tabletSession
-          : desktopSession;
+          : activeProduct === "tv"
+            ? tvSession
+            : desktopSession;
   const activeIntelligence = activeProduct === "arm"
     ? armIntelligence
     : activeProduct === "smartphone"
@@ -293,7 +329,9 @@ export function SpatialWorkbench() {
         ? notebookIntelligence
         : activeProduct === "tablet"
           ? tabletIntelligence
-          : desktopIntelligence;
+          : activeProduct === "tv"
+            ? tvIntelligence
+            : desktopIntelligence;
   const selected = selectedId ? activeSession.getEntity(selectedId) : null;
   const relationshipSnapshot = activeSession.graph.snapshot().relationships;
   const selectedRelations = selected
@@ -331,6 +369,12 @@ export function SpatialWorkbench() {
   const tabletBootStage = String(tabletBoot.properties.stage?.value ?? "IDLE");
   const tabletComponents = tabletSession.graph.getDependencies(tabletRoot.id, "contains").filter((entity) => entity.type !== "BootProcess");
 
+  const tvRoot = tvSession.getEntity("tv.root");
+  const tvBoot = tvSession.getEntity("tv.boot");
+  const tvPowerState = String(tvRoot.properties.powerState?.value ?? "off");
+  const tvBootStage = String(tvBoot.properties.stage?.value ?? "IDLE");
+  const tvComponents = tvSession.graph.getDependencies(tvRoot.id, "contains").filter((entity) => entity.type !== "BootProcess");
+
   const returnToWorkbench = (message?: string) => {
     setActiveProduct(null);
     setSelectedId(null);
@@ -353,7 +397,9 @@ export function SpatialWorkbench() {
             ? "Notebook 01 materializado pelo Product Composition Runtime. Abra, inspecione, remova RAM/SSD/bateria ou teste o boot causal."
             : product === "tablet"
               ? "Tablet 01 pronto. Abra, inspecione o controlador touch/pen, remova a bateria ou teste o boot causal."
-              : "Desktop PC pronto para inspeção, boot causal e automações."
+              : product === "tv"
+                ? "TV 01 pronta. Abra o painel traseiro, investigue fonte, Media SoC, HDMI, áudio e teste o boot causal."
+                : "Desktop PC pronto para inspeção, boot causal e automações."
     );
   };
 
@@ -380,8 +426,10 @@ export function SpatialWorkbench() {
         saveBrowserProject("smartphone", createSessionSnapshot(smartphoneSession, { extensions: { workspace } }));
       } else if (activeProduct === "notebook") {
         saveBrowserProject("notebook", createSessionSnapshot(notebookSession, { extensions: { workspace } }));
-      } else {
+      } else if (activeProduct === "tablet") {
         saveBrowserProject("tablet", createSessionSnapshot(tabletSession, { extensions: { workspace } }));
+      } else {
+        saveBrowserProject("tv", createSessionSnapshot(tvSession, { extensions: { workspace } }));
       }
       setSavedProjects((current) => ({ ...current, [activeProduct]: true }));
       returnToWorkbench(`${productLabel(activeProduct)} salvo com Engineering Graph, histórico e evidências da sessão.`);
@@ -413,9 +461,13 @@ export function SpatialWorkbench() {
         const restored = createNotebookRuntime(snapshot);
         setNotebookRuntime(restored);
         restoredSession = restored.session;
-      } else {
+      } else if (product === "tablet") {
         const restored = createTabletRuntime(snapshot);
         setTabletRuntime(restored);
+        restoredSession = restored.session;
+      } else {
+        const restored = createTvRuntime(snapshot);
+        setTvRuntime(restored);
         restoredSession = restored.session;
       }
       setSelectedId(savedSelection(snapshot, restoredSession));
@@ -458,6 +510,7 @@ export function SpatialWorkbench() {
     const looksRobotic = /\b(pegue|pegar|apanhe|segure|cubo|arm-01|braco|braço|robo|robô|pick|grab|versao|versão|variante|redesign|levantar|peso|torque)\b/i.test(trimmed);
     const looksNotebook = /\b(notebook|laptop|computador portatil|computador portátil)\b/i.test(trimmed);
     const looksTablet = /\b(tablet|tablete)\b/i.test(trimmed);
+    const looksTv = /\b(tv|televisao|televisão|smart tv)\b/i.test(trimmed);
     const looksSmartphone = /\b(celular|smartphone|telefone|phone)\b/i.test(trimmed);
     const autoProduct: Exclude<ActiveProduct, null> | null = activeProduct === null
       ? looksRobotic
@@ -466,9 +519,11 @@ export function SpatialWorkbench() {
           ? "notebook"
           : looksTablet
             ? "tablet"
-            : looksSmartphone
-              ? "smartphone"
-              : null
+            : looksTv
+              ? "tv"
+              : looksSmartphone
+                ? "smartphone"
+                : null
       : null;
     const intelligence = autoProduct === "arm"
       ? armIntelligence
@@ -476,9 +531,11 @@ export function SpatialWorkbench() {
         ? notebookIntelligence
         : autoProduct === "tablet"
           ? tabletIntelligence
-          : autoProduct === "smartphone"
-            ? smartphoneIntelligence
-            : activeIntelligence;
+          : autoProduct === "tv"
+            ? tvIntelligence
+            : autoProduct === "smartphone"
+              ? smartphoneIntelligence
+              : activeIntelligence;
     if (autoProduct) setActiveProduct(autoProduct);
 
     const execution = await intelligence.executeUtterance(trimmed, {
@@ -493,6 +550,7 @@ export function SpatialWorkbench() {
     if (execution.targetEntityId?.startsWith("phone.")) setActiveProduct("smartphone");
     if (execution.targetEntityId?.startsWith("notebook.")) setActiveProduct("notebook");
     if (execution.targetEntityId?.startsWith("tablet.")) setActiveProduct("tablet");
+    if (execution.targetEntityId?.startsWith("tv.")) setActiveProduct("tv");
     if (execution.targetEntityId) setSelectedId(execution.targetEntityId);
 
     if (execution.result) {
@@ -597,6 +655,7 @@ export function SpatialWorkbench() {
         {activeProduct === "smartphone" ? <SmartphoneAssembly session={smartphoneSession} selectedId={selectedId} onSelect={selectEntity} /> : null}
         {activeProduct === "notebook" ? <NotebookAssembly session={notebookSession} selectedId={selectedId} onSelect={selectEntity} /> : null}
         {activeProduct === "tablet" ? <TabletAssembly session={tabletSession} selectedId={selectedId} onSelect={selectEntity} /> : null}
+        {activeProduct === "tv" ? <TvAssembly session={tvSession} selectedId={selectedId} onSelect={selectEntity} /> : null}
       </Canvas>
 
       {!activeProduct ? (
@@ -609,11 +668,13 @@ export function SpatialWorkbench() {
             <button type="button" onClick={() => switchProduct("smartphone")}>Chamar Smartphone 01</button>
             <button type="button" onClick={() => switchProduct("notebook")}>Chamar Notebook 01</button>
             <button type="button" onClick={() => switchProduct("tablet")}>Chamar Tablet 01</button>
+            <button type="button" onClick={() => switchProduct("tv")}>Chamar TV 01</button>
             {savedProjects.desktop ? <button type="button" onClick={() => restoreProject("desktop")}>Restaurar Desktop salvo</button> : null}
             {savedProjects.arm ? <button type="button" onClick={() => restoreProject("arm")}>Restaurar ARM-01 salvo</button> : null}
             {savedProjects.smartphone ? <button type="button" onClick={() => restoreProject("smartphone")}>Restaurar Smartphone salvo</button> : null}
             {savedProjects.notebook ? <button type="button" onClick={() => restoreProject("notebook")}>Restaurar Notebook salvo</button> : null}
             {savedProjects.tablet ? <button type="button" onClick={() => restoreProject("tablet")}>Restaurar Tablet salvo</button> : null}
+            {savedProjects.tv ? <button type="button" onClick={() => restoreProject("tv")}>Restaurar TV salva</button> : null}
             <button type="button" disabled aria-disabled="true">Projeto vazio · em breve</button>
           </div>
         </div>
@@ -643,10 +704,15 @@ export function SpatialWorkbench() {
               <span>NOTEBOOK-01 · {notebookComponents.length} COMPONENTES · {notebookRoot.state.toUpperCase()}</span>
               <span className={`runtime-state runtime-${notebookPowerState}`}>POWER {notebookPowerState.toUpperCase()} · BOOT {notebookBootStage}</span>
             </>
-          ) : (
+          ) : activeProduct === "tablet" ? (
             <>
               <span>TABLET-01 · {tabletComponents.length} COMPONENTES · {tabletRoot.state.toUpperCase()}</span>
               <span className={`runtime-state runtime-${tabletPowerState}`}>POWER {tabletPowerState.toUpperCase()} · BOOT {tabletBootStage}</span>
+            </>
+          ) : (
+            <>
+              <span>TV-01 · {tvComponents.length} COMPONENTES · {tvRoot.state.toUpperCase()}</span>
+              <span className={`runtime-state runtime-${tvPowerState}`}>POWER {tvPowerState.toUpperCase()} · BOOT {tvBootStage}</span>
             </>
           )}
         </div>
@@ -792,7 +858,9 @@ export function SpatialWorkbench() {
                   ? "Ex.: abra o notebook · tire a RAM · ligue · por que não iniciou?"
                   : activeProduct === "tablet"
                     ? "Ex.: abra o tablet · inspecione a caneta · tire a bateria · ligue"
-                    : "Ex.: abra o computador · tire a RAM · crie uma automação térmica"}
+                    : activeProduct === "tv"
+                      ? "Ex.: abra a TV · inspecione a fonte · remova a fonte · ligue · por que não iniciou?"
+                      : "Ex.: abra o computador · tire a RAM · crie uma automação térmica"}
             aria-label="Comando para o Tehkné Studio"
           />
           <button type="submit">Executar</button>
