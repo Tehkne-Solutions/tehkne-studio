@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { brotliDecompressSync } from "node:zlib";
 
 // Deterministic recovery gate: source-of-truth fingerprints come from the DCC GLB evidence.
+// Every payload chunk is compared by content hash before this gate is considered promotable.
 const ROOT = resolve(process.cwd());
 const PAYLOAD_DIR = resolve(ROOT, "apps/studio-web/app/api/asset-forge/af001/motor/lod0");
 const EXPECTED_COMPRESSED_BYTES = 25_162;
