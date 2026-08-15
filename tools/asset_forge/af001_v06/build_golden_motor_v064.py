@@ -10,7 +10,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0,str(SCRIPT_DIR))
 import build_golden_motor_v06 as base
 
-VERSION='0.6.4-dcc-candidate'
+VERSION='0.6.5-dcc-candidate'
 ROUGHNESS_NAME='TS_MOTOR_STAMPED_STEEL_ROUGHNESS'
 ROUGHNESS_FILE='TS_MOTOR_STAMPED_STEEL_ROUGHNESS.png'
 
@@ -23,10 +23,13 @@ def ensure_roughness_texture():
     if img is not None:
         return img
     size=128
-    rng=np.random.default_rng(604)
     y=np.arange(size,dtype=np.float32)[:,None]
-    grain=0.34 + 0.016*np.sin(y*0.92) + rng.normal(0,0.010,(size,size)).astype(np.float32)
-    grain=np.clip(grain,0.27,0.43)
+    x=np.arange(size,dtype=np.float32)[None,:]
+    # Industrial finish: directional micrograin with very low amplitude.
+    # No random cloud noise; the surface should read as stamped/brushed steel,
+    # not mottled stone or procedural dirt.
+    grain=0.355 + 0.0045*np.sin(y*1.65) + 0.0015*np.sin(x*0.37)
+    grain=np.clip(grain,0.345,0.365)
     rgba=np.ones((size,size,4),dtype=np.float32)
     rgba[:,:,:3]=grain[:,:,None]
     img=bpy.data.images.new(ROUGHNESS_NAME,width=size,height=size,alpha=True,float_buffer=False)
@@ -51,11 +54,23 @@ def bind_stamped_steel_roughness():
     if tex is None:
         tex=nodes.new('ShaderNodeTexImage')
         tex.name='AF001_STEEL_ROUGHNESS'
-        tex.label='AF001 authored stamped-steel roughness'
+        tex.label='AF001 subtle directional stamped-steel roughness'
     tex.image=ensure_roughness_texture()
+    tex.interpolation='Linear'
     for link in list(bsdf.inputs['Roughness'].links):
         links.remove(link)
     links.new(tex.outputs['Color'],bsdf.inputs['Roughness'])
+
+
+def apply_seam_finish(collection):
+    seam=base.mat('TS_MAT_ROLLED_SEAM',(0.13,0.145,0.16,1),.72,.48)
+    for name in ('FRONT_ROLLED_SEAM','REAR_ROLLED_SEAM'):
+        obj=collection.objects.get(name)
+        if obj is None or obj.type!='MESH':
+            continue
+        obj.data.materials.clear()
+        obj.data.materials.append(seam)
+        obj['manufacturing']='rolled_shell_seam_low_contrast'
 
 
 def add_vent_recesses(collection,lod):
@@ -84,6 +99,7 @@ def add_vent_recesses(collection,lod):
 def patched_build(lod):
     collection,_=original_build(lod)
     bind_stamped_steel_roughness()
+    apply_seam_finish(collection)
     add_vent_recesses(collection,lod)
     triangles=sum(len(o.data.polygons) for o in collection.objects if o.type=='MESH')
     return collection,triangles
@@ -99,7 +115,8 @@ def main():
     qa['version']=VERSION
     qa['surface_textures']=[ROUGHNESS_FILE]
     qa['manufacturing_overlay']={
-        'stamped_steel_roughness':'authored 128x128 non-color roughness map',
+        'stamped_steel_roughness':'subtle directional 128x128 non-color roughness; no random cloud noise',
+        'rolled_seams':'dedicated lower-contrast metallic seam material',
         'vent_recesses':'LOD0 two shallow recesses per side; LOD1 one per side; LOD2 omitted'
     }
     qa_path.write_text(json.dumps(qa,indent=2),encoding='utf-8')
