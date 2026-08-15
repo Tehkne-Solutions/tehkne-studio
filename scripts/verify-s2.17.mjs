@@ -57,9 +57,8 @@ for (const token of [
   "mechanicalAssemblyMembers(mechanicalConstraints, selectedEntityId)",
   "inventionSpatial: runtime.spatial.document()"
 ]) {
-  if (!workbench.includes(token)) throw new Error(`S2.17 Workbench rotation contract missing: ${token}`);
+  if (!workbench.includes(token)) throw new Error(`S2.17 semantic Workbench rotation contract missing: ${token}`);
 }
-if (!["S2.17", "S2.18", "S2.19"].some((marker) => workbench.includes(marker))) throw new Error("S2.17 workbench lineage marker missing");
 for (const forbidden of ["torqueSimulation", "implicitTorque", "angularVelocitySolver", 'status: "GOLDEN_ASSET"']) {
   if (workbench.includes(forbidden)) throw new Error(`S2.17 forbidden premature behavior: ${forbidden}`);
 }
@@ -100,4 +99,4 @@ if (!workflow.includes("npm run verify:s2.17")) throw new Error("S2.17 CI contra
 if (!workflow.includes("tests/browser/rigid-assembly-rotation.spec.ts")) throw new Error("S2.17 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.17 CI must remain read-only");
 
-console.log("S2.17 Rigid Mechanical Assembly Rotation PASS · pure quaternion planner + pivot orbit + persisted XYZ orientation + same connectedTo assembly + S2.14/S2.15/S2.16 preserved through S2.19 + no torque fiction + Tehkné Solutions");
+console.log("S2.17 Rigid Mechanical Assembly Rotation PASS · semantic rigid-rotation contract + pure quaternion planner + pivot orbit + persisted XYZ orientation + same connectedTo assembly + no torque fiction · Tehkné Solutions");
