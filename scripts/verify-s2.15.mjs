@@ -58,7 +58,8 @@ for (const token of [
   'source: "asset-socket" | "proxy-anchor" | "center-fallback"',
   'source: "proxy-anchor"',
   'source: "center-fallback"',
-  "transformSocketPosition"
+  "transformSocketPosition",
+  "scene.worldToLocal(node.getWorldPosition(new Vector3()))"
 ]) {
   if (!visual.includes(token)) throw new Error(`S2.15 physical endpoint resolver missing: ${token}`);
 }
@@ -111,6 +112,8 @@ for (const token of [
   "data-mechanical-assemblies",
   "data-driver-endpoint-source",
   "data-follower-endpoint-source",
+  "motorXBefore",
+  "motorYBefore",
   "Z +",
   "pageErrors",
   "consoleErrors"
@@ -127,4 +130,4 @@ if (!workflow.includes("npm run verify:s2.15")) throw new Error("S2.15 CI contra
 if (!workflow.includes("tests/browser/mechanical-assembly-invention.spec.ts")) throw new Error("S2.15 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.15 CI must remain read-only");
 
-console.log("S2.15 Mechanical Assembly Constraints PASS · canonical wheel/bracket proxies + connectedTo-derived coincident constraints + real AF-001 socket/proxy anchors + atomic assembly movement + no parallel graph · Tehkné Solutions");
+console.log("S2.15 Mechanical Assembly Constraints PASS · canonical wheel/bracket proxies + connectedTo-derived coincident constraints + GLB-local real socket/proxy anchors + atomic assembly movement + no parallel graph · Tehkné Solutions");
