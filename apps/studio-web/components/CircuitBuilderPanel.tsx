@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { EngineeringSession } from "../../../packages/engineering-session/src/index";
 import {
   type CircuitBuilder,
@@ -29,6 +29,11 @@ export function CircuitBuilderPanel({ session, builder, revision, onChanged }: C
   const [result, setResult] = useState<CircuitSimulationResult | null>(() => builder.records().at(-1) ?? null);
   const [probe, setProbe] = useState<CircuitVoltageProbeRecord | null>(() => builder.probes().at(-1) ?? null);
   const [resistance, setResistance] = useState("330");
+
+  useEffect(() => {
+    setResult(builder.records().at(-1) ?? null);
+    setProbe(builder.probes().at(-1) ?? null);
+  }, [builder, revision]);
 
   const components = useMemo(() => builder.components(), [builder, revision]);
   const wires = useMemo(() => builder.wires(), [builder, revision]);
