@@ -113,9 +113,9 @@ for (const token of [
   "electronicsBench",
   "sem replay",
   "Comando para a bancada eletrônica",
-  "Feche a chave",
-  "Resistor 100 ohms",
-  "Meça corrente",
+  "bench.setSwitchClosed",
+  "bench.setResistance",
+  'bench.measure("circuit-current")',
   "listenOnce",
   "speakStudioResponse"
 ]) {
