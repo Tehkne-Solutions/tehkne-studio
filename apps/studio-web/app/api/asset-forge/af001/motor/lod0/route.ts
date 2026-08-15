@@ -9,31 +9,55 @@ const COMPRESSED_ASSET_PATH = "/asset-forge/af001/motor-lod0.glb.br";
 
 let cachedMotor: Buffer | null = null;
 
-async function loadMotor(requestUrl: string): Promise<Buffer> {
-  if (cachedMotor) return cachedMotor;
+function digest(buffer: Buffer): string {
+  return createHash("sha256").update(buffer).digest("hex");
+}
 
-  const assetUrl = new URL(COMPRESSED_ASSET_PATH, requestUrl);
-  const compressedResponse = await fetch(assetUrl, { cache: "force-cache" });
-  if (!compressedResponse.ok) {
+function isExpectedMotor(buffer: Buffer): boolean {
+  return buffer.byteLength === EXPECTED_BYTES && digest(buffer) === EXPECTED_SHA256;
+}
+
+function materializeMotor(payload: Buffer): Buffer {
+  // Some HTTP runtimes transparently decode `Content-Encoding: br` before fetch()
+  // exposes the response body. Accept that representation only when it is already
+  // byte-for-byte the expected GLB. Otherwise decode Brotli ourselves and validate.
+  if (isExpectedMotor(payload)) return payload;
+
+  let motor: Buffer;
+  try {
+    motor = brotliDecompressSync(payload);
+  } catch (error) {
     throw new Error(
-      `AF001I compressed LOD0 fetch failed: ${compressedResponse.status} ${compressedResponse.statusText}`
+      `AF001I LOD0 payload is neither the expected GLB nor valid Brotli: ${error instanceof Error ? error.message : String(error)}`
     );
   }
-
-  const compressed = Buffer.from(await compressedResponse.arrayBuffer());
-  const motor = brotliDecompressSync(compressed);
 
   if (motor.byteLength !== EXPECTED_BYTES) {
     throw new Error(`AF001I LOD0 byte-length mismatch: expected ${EXPECTED_BYTES}, received ${motor.byteLength}`);
   }
 
-  const digest = createHash("sha256").update(motor).digest("hex");
-  if (digest !== EXPECTED_SHA256) {
-    throw new Error(`AF001I LOD0 SHA-256 mismatch: expected ${EXPECTED_SHA256}, received ${digest}`);
+  const motorDigest = digest(motor);
+  if (motorDigest !== EXPECTED_SHA256) {
+    throw new Error(`AF001I LOD0 SHA-256 mismatch: expected ${EXPECTED_SHA256}, received ${motorDigest}`);
   }
 
-  cachedMotor = motor;
   return motor;
+}
+
+async function loadMotor(requestUrl: string): Promise<Buffer> {
+  if (cachedMotor) return cachedMotor;
+
+  const assetUrl = new URL(COMPRESSED_ASSET_PATH, requestUrl);
+  const assetResponse = await fetch(assetUrl, { cache: "force-cache" });
+  if (!assetResponse.ok) {
+    throw new Error(
+      `AF001I compressed LOD0 fetch failed: ${assetResponse.status} ${assetResponse.statusText}`
+    );
+  }
+
+  const payload = Buffer.from(await assetResponse.arrayBuffer());
+  cachedMotor = materializeMotor(payload);
+  return cachedMotor;
 }
 
 function toResponseBody(buffer: Buffer): ArrayBuffer {
