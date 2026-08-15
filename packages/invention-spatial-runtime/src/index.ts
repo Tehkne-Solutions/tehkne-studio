@@ -52,12 +52,14 @@ function assertFinitePosition(position: SpatialVector3): void {
 }
 
 function defaultPosition(index: number): SpatialVector3 {
-  const columns = 3;
+  const columns = 6;
+  const rows = 6;
+  if (index >= columns * rows) throw new Error("Invention spatial auto-layout capacity exceeded; place the component explicitly");
   const column = index % columns;
   const row = Math.floor(index / columns);
   const position = {
-    x: -0.28 + column * 0.28,
-    y: 0.18 - row * 0.18,
+    x: -0.4 + column * 0.16,
+    y: 0.25 - row * 0.1,
     z: 0
   };
   assertFinitePosition(position);
