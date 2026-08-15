@@ -3,6 +3,7 @@
 import { Canvas } from "@react-three/fiber";
 import { useEffect, useState, type FormEvent } from "react";
 import type { EngineeringEntity } from "../../../packages/engineering-core/src/index";
+import type { TechnologyPresetRuntimeAdapter } from "../../../packages/technology-preset-registry/src/index";
 import { ComponentRegistry, parseComponentCatalog } from "../../../packages/component-library/src/index";
 import type { ComponentCatalogOverlay } from "../../../packages/component-library/src/overlay";
 import type { PrototypeManufacturingProfile, PrototypePackageManifest } from "../../../packages/factory-runtime/src/index";
@@ -66,6 +67,7 @@ import {
   saveBrowserProject,
   type PersistedStudioProduct
 } from "../lib/projectPersistence";
+import { technologyPresetRegistry } from "../lib/technologyPresetRegistry";
 import { browserSpeechSupported, listenOnce, speakStudioResponse } from "../lib/browserSpeech";
 import { Arm01Assembly } from "./Arm01Assembly";
 import { ArmRuntimePanel } from "./ArmRuntimePanel";
@@ -74,6 +76,7 @@ import { DesktopPcAssembly } from "./DesktopPcAssembly";
 import { NotebookAssembly } from "./NotebookAssembly";
 import { SmartphoneAssembly } from "./SmartphoneAssembly";
 import { TabletAssembly } from "./TabletAssembly";
+import { TechnologyPresetLauncher } from "./TechnologyPresetLauncher";
 import { TvAssembly } from "./TvAssembly";
 
 interface FeedbackState {
@@ -82,7 +85,7 @@ interface FeedbackState {
   readonly error?: boolean;
 }
 
-type ActiveProduct = "desktop" | "arm" | "smartphone" | "notebook" | "tablet" | "tv" | null;
+type ActiveProduct = TechnologyPresetRuntimeAdapter | null;
 
 interface WorkspacePersistenceState {
   readonly activeProduct: Exclude<ActiveProduct, null>;
@@ -249,12 +252,7 @@ function savedSelection(snapshot: StudioSessionSnapshot, session: EngineeringSes
 }
 
 function productLabel(product: Exclude<ActiveProduct, null>): string {
-  if (product === "desktop") return "Desktop PC";
-  if (product === "arm") return "ARM-01";
-  if (product === "smartphone") return "Smartphone 01";
-  if (product === "notebook") return "Notebook 01";
-  if (product === "tablet") return "Tablet 01";
-  return "TV 01";
+  return technologyPresetRegistry.getByAdapter(product).displayName;
 }
 
 export function SpatialWorkbench() {
@@ -507,22 +505,11 @@ export function SpatialWorkbench() {
     setCommandText(trimmed);
 
     const looksRobotic = /\b(pegue|pegar|apanhe|segure|cubo|arm-01|braco|braço|robo|robô|pick|grab|versao|versão|variante|redesign|levantar|peso|torque)\b/i.test(trimmed);
-    const looksNotebook = /\b(notebook|laptop|computador portatil|computador portátil)\b/i.test(trimmed);
-    const looksTablet = /\b(tablet|tablete)\b/i.test(trimmed);
-    const looksTv = /\b(tv|televisao|televisão|televisor)\b/i.test(trimmed);
-    const looksSmartphone = /\b(celular|smartphone|telefone|phone)\b/i.test(trimmed);
+    const registryPreset = technologyPresetRegistry.resolveUtterance(trimmed);
     const autoProduct: Exclude<ActiveProduct, null> | null = activeProduct === null
       ? looksRobotic
         ? "arm"
-        : looksNotebook
-          ? "notebook"
-          : looksTablet
-            ? "tablet"
-            : looksTv
-              ? "tv"
-              : looksSmartphone
-                ? "smartphone"
-                : null
+        : registryPreset?.runtimeAdapter ?? null
       : null;
     const intelligence = autoProduct === "arm"
       ? armIntelligence
@@ -661,21 +648,11 @@ export function SpatialWorkbench() {
         <div className="empty-state">
           <p>THE FIRST WORKBENCH</p>
           <strong>O que você quer construir ou compreender?</strong>
-          <div className="actions">
-            <button type="button" onClick={() => switchProduct("desktop")}>Chamar Desktop PC</button>
-            <button type="button" onClick={() => switchProduct("arm")}>Chamar ARM-01</button>
-            <button type="button" onClick={() => switchProduct("smartphone")}>Chamar Smartphone 01</button>
-            <button type="button" onClick={() => switchProduct("notebook")}>Chamar Notebook 01</button>
-            <button type="button" onClick={() => switchProduct("tablet")}>Chamar Tablet 01</button>
-            <button type="button" onClick={() => switchProduct("tv")}>Chamar TV 01</button>
-            {savedProjects.desktop ? <button type="button" onClick={() => restoreProject("desktop")}>Restaurar Desktop salvo</button> : null}
-            {savedProjects.arm ? <button type="button" onClick={() => restoreProject("arm")}>Restaurar ARM-01 salvo</button> : null}
-            {savedProjects.smartphone ? <button type="button" onClick={() => restoreProject("smartphone")}>Restaurar Smartphone salvo</button> : null}
-            {savedProjects.notebook ? <button type="button" onClick={() => restoreProject("notebook")}>Restaurar Notebook salvo</button> : null}
-            {savedProjects.tablet ? <button type="button" onClick={() => restoreProject("tablet")}>Restaurar Tablet salvo</button> : null}
-            {savedProjects.tv ? <button type="button" onClick={() => restoreProject("tv")}>Restaurar TV salva</button> : null}
-            <button type="button" disabled aria-disabled="true">Projeto vazio · em breve</button>
-          </div>
+          <TechnologyPresetLauncher
+            savedProjects={savedProjects}
+            onLaunch={switchProduct}
+            onRestore={restoreProject}
+          />
         </div>
       ) : null}
 
