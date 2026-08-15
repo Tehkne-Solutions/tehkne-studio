@@ -2,9 +2,10 @@ import { expect, test } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const EXPECTED_BYTES = 74_472;
-const EXPECTED_SHA256 = "2142509d651e5ae1683da383360675b4343cbad83fbbb498326a894cf0c2baae";
+const EXPECTED_BYTES = 76_000;
+const EXPECTED_SHA256 = "b88bdbc842dc4852ff6c0f996259cd7c213653c49d53c9541a9ccc13d77cdb8a";
 const EXPECTED_TRIANGLES = "3904";
+const EXPECTED_VERSION = "0.5.1-hero-candidate-r1";
 const EVIDENCE_DIR = resolve("test-results", "af001i-evidence");
 
 test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", async ({ page }, testInfo) => {
@@ -22,10 +23,11 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
   expect(assetResponse.status()).toBe(200);
   expect(assetResponse.headers()["content-type"]).toContain("model/gltf-binary");
   expect(assetResponse.headers()["x-tehkne-asset-id"]).toBe("TS_ELEC_MOTOR_DC_A");
-  expect(assetResponse.headers()["x-tehkne-asset-version"]).toBe("0.5.1-hero-candidate");
+  expect(assetResponse.headers()["x-tehkne-asset-version"]).toBe(EXPECTED_VERSION);
   expect(assetResponse.headers()["x-tehkne-asset-lod"]).toBe("LOD0");
   expect(assetResponse.headers()["x-tehkne-asset-triangles"]).toBe(EXPECTED_TRIANGLES);
   expect(assetResponse.headers()["x-tehkne-asset-sha256"]).toBe(EXPECTED_SHA256);
+  expect(assetResponse.headers()["x-tehkne-gate"]).toBe("AF001I-R1");
   expect((await assetResponse.body()).byteLength).toBe(EXPECTED_BYTES);
 
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -52,14 +54,7 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
   expect(p95FrameMs).toBeLessThan(150);
 
   const canvasShell = page.getByTestId("pbr-canvas-shell");
-  const cameraViews = [
-    "three-quarter",
-    "front",
-    "side",
-    "rear",
-    "bearing",
-    "terminals"
-  ] as const;
+  const cameraViews = ["three-quarter", "front", "side", "rear", "bearing", "terminals"] as const;
 
   for (const cameraView of cameraViews) {
     await page.getByTestId(`camera-view-${cameraView}`).click();
@@ -68,10 +63,7 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
 
     const screenshotPath = resolve(EVIDENCE_DIR, `af001i-${cameraView}.png`);
     await canvasShell.screenshot({ path: screenshotPath });
-    await testInfo.attach(`AF001I ${cameraView}`, {
-      path: screenshotPath,
-      contentType: "image/png"
-    });
+    await testInfo.attach(`AF001I ${cameraView}`, { path: screenshotPath, contentType: "image/png" });
   }
 
   const runtimeContext = await page.evaluate(() => ({
@@ -85,9 +77,9 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
   }));
 
   const runtimeEvidence = {
-    gate: "AF001I",
+    gate: "AF001I-R1",
     asset: "TS_ELEC_MOTOR_DC_A",
-    version: "0.5.1-hero-candidate",
+    version: EXPECTED_VERSION,
     lod: "LOD0",
     triangles: Number(EXPECTED_TRIANGLES),
     bytes: EXPECTED_BYTES,
@@ -95,18 +87,16 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
     averageFrameMs,
     p95FrameMs,
     samples: 180,
+    reconstruction: true,
     ...runtimeContext
   };
 
   const runtimeEvidencePath = resolve(EVIDENCE_DIR, "af001i-runtime-context.json");
   await writeFile(runtimeEvidencePath, JSON.stringify(runtimeEvidence, null, 2), "utf8");
-  await testInfo.attach("AF001I runtime context", {
-    path: runtimeEvidencePath,
-    contentType: "application/json"
-  });
+  await testInfo.attach("AF001I runtime context", { path: runtimeEvidencePath, contentType: "application/json" });
 
   console.log(
-    `AF001I_METRICS average_frame_ms=${averageFrameMs} p95_frame_ms=${p95FrameMs} samples=180 ` +
+    `AF001I_R1_METRICS average_frame_ms=${averageFrameMs} p95_frame_ms=${p95FrameMs} samples=180 ` +
     `triangles=${EXPECTED_TRIANGLES} bytes=${EXPECTED_BYTES} sha256=${EXPECTED_SHA256}`
   );
 
