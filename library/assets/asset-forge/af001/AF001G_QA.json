@@ -1,0 +1,34 @@
+{
+  "asset_id": "TS_ELEC_MOTOR_DC_A",
+  "version": "0.3",
+  "signature": "Tehkné Solutions",
+  "automated": {
+    "triangle_budgets": {
+      "LOD0": { "actual": 3744, "target": [3000, 4500], "pass": true },
+      "LOD1": { "actual": 2316, "target": [1500, 2400], "pass": true },
+      "LOD2": { "actual": 824, "target": [500, 900], "pass": true }
+    },
+    "required_nodes": {
+      "LOD0": { "missing": [], "pass": true },
+      "LOD1": { "missing": [], "pass": true },
+      "LOD2": { "missing": [], "pass": true }
+    },
+    "uv": { "pass": true },
+    "lod_monotonic": { "pass": true },
+    "suite_pass": true
+  },
+  "visual_review": {
+    "silhouette": "CANDIDATE",
+    "manufacturing_logic": "CANDIDATE",
+    "material_separation": "CANDIDATE",
+    "close_up": "CANDIDATE",
+    "pbr_engine_render": "PENDING",
+    "web_mobile_benchmark": "PENDING",
+    "dcc_blend_master": "PENDING"
+  },
+  "promotion": {
+    "to": "GOLDEN_ASSET",
+    "allowed": false,
+    "reason": "Fail-closed: production structure passes, but engine render/performance, visual approval and DCC master remain pending."
+  }
+}
