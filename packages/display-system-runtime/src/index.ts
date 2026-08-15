@@ -3,10 +3,7 @@ import {
   parseComponentCatalog,
   type ComponentCatalogManifest
 } from "../../component-library/src/index.js";
-import {
-  applyComponentCatalogExtension,
-  type ComponentCatalogExtension
-} from "../../component-library/src/extension.js";
+import { applyComponentCatalogExtension } from "../../component-library/src/extension.js";
 import {
   applyComponentCatalogOverlay,
   type ComponentCatalogOverlay
@@ -38,7 +35,7 @@ export interface DisplaySystemRegistryBundle {
 
 export function createDisplaySystemRegistry(
   baseCatalog: unknown,
-  extension: ComponentCatalogExtension,
+  extension: unknown,
   overlay: ComponentCatalogOverlay
 ): DisplaySystemRegistryBundle {
   const base = parseComponentCatalog(baseCatalog);
