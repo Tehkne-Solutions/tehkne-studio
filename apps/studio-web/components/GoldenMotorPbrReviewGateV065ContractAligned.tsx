@@ -4,8 +4,6 @@ import { Canvas, useLoader, useThree } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ACESFilmicToneMapping,
-  BasicShadowMap,
-  BufferGeometry,
   Mesh,
   MeshStandardMaterial,
   Object3D,
@@ -20,7 +18,6 @@ const MAX_P95_FRAME_MS = 150;
 const WARMUP_MS = 1_500;
 const BENCHMARK_WINDOW_MS = 8_000;
 const MAX_VALID_DELTA_MS = 1_000;
-const MAX_SHADOW_CASTERS = 6;
 
 const REQUIRED_NODES = [
   "BODY_CAN",
@@ -41,7 +38,6 @@ type AssetInspection = {
   readonly missingNodes: readonly string[];
   readonly meshCount: number;
   readonly materialCount: number;
-  readonly shadowCasterCount: number;
 };
 
 const CAMERA_VIEWS: Record<CameraView, { position: [number, number, number]; target: [number, number, number] }> = {
@@ -59,19 +55,16 @@ function percentile(values: readonly number[], ratio: number): number {
   return ordered[Math.min(ordered.length - 1, Math.floor(ordered.length * ratio))] ?? 0;
 }
 
-function triangleCount(geometry: BufferGeometry): number {
-  if (geometry.index) return Math.floor(geometry.index.count / 3);
-  const position = geometry.getAttribute("position");
-  return position ? Math.floor(position.count / 3) : 0;
-}
-
 function inspectAndTune(root: Object3D): AssetInspection {
-  const meshes: Mesh[] = [];
+  let meshCount = 0;
   const materials = new Set<string>();
 
   root.traverse((object) => {
     if (!(object instanceof Mesh)) return;
-    meshes.push(object);
+    meshCount += 1;
+
+    // AF-001I is a static product-review surface. Re-rendering shadow maps on
+    // every browser frame adds GPU cost without adding engineering evidence.
     object.castShadow = false;
     object.receiveShadow = false;
 
@@ -84,16 +77,10 @@ function inspectAndTune(root: Object3D): AssetInspection {
     }
   });
 
-  const shadowCasters = [...meshes]
-    .sort((a, b) => triangleCount(b.geometry) - triangleCount(a.geometry))
-    .slice(0, MAX_SHADOW_CASTERS);
-  for (const mesh of shadowCasters) mesh.castShadow = true;
-
   return {
     missingNodes: REQUIRED_NODES.filter((name) => !root.getObjectByName(name)),
-    meshCount: meshes.length,
-    materialCount: materials.size,
-    shadowCasterCount: shadowCasters.length
+    meshCount,
+    materialCount: materials.size
   };
 }
 
@@ -193,14 +180,14 @@ export function GoldenMotorPbrReviewGateV065ContractAligned() {
       data-runtime-ready={runtimeReady ? "true" : "false"}
       data-benchmark-ready={stats ? "true" : "false"}
       data-node-gate={nodeGatePass ? "pass" : runtimeReady ? "blocked" : "pending"}
-      data-shadow-casters={inspection?.shadowCasterCount ?? 0}
+      data-render-policy="static-pbr-key-fill-no-realtime-shadow-map"
       style={{ minHeight: "100dvh", background: "#0b0e11", color: "#edf1f3", padding: 22, display: "grid", gap: 16, gridTemplateRows: "auto auto 1fr auto" }}
     >
       <header style={{ display: "flex", justifyContent: "space-between", gap: 24, alignItems: "end", flexWrap: "wrap" }}>
         <div>
           <span style={{ color: "#82aeb1", fontWeight: 800, letterSpacing: ".16em", fontSize: 11 }}>TEHKNÉ SOLUTIONS · ASSET FORGE</span>
           <h1 style={{ margin: "8px 0 0", fontSize: "clamp(26px, 4vw, 42px)" }}>AF-001I · HERO v0.6.5 Runtime Review</h1>
-          <p style={{ color: "#9da7ae", margin: "8px 0 0" }}>Golden Motor HERO_CANDIDATE · LOD0 real de 3.292 tris · contrato DCC e sockets oficiais alinhados.</p>
+          <p style={{ color: "#9da7ae", margin: "8px 0 0" }}>Golden Motor HERO_CANDIDATE · LOD0 real de 3.292 tris · PBR estático key+fill · contrato DCC e sockets oficiais alinhados.</p>
         </div>
         <strong style={{ color: stats ? (runtimePass ? "#8dc9a0" : "#e08378") : "#d6ae6c" }}>
           {!stats ? "RUNTIME REVIEW EM EXECUÇÃO" : runtimePass ? "LOD0 RUNTIME PASS" : "LOD0 RUNTIME BLOCKED"}
@@ -227,23 +214,20 @@ export function GoldenMotorPbrReviewGateV065ContractAligned() {
           <Canvas
             camera={{ position: CAMERA_VIEWS["three-quarter"].position, fov: 30, near: 0.001, far: 5 }}
             dpr={1}
-            shadows
             gl={{ antialias: true, powerPreference: "high-performance", alpha: false }}
             onCreated={({ gl }) => {
               gl.outputColorSpace = SRGBColorSpace;
               gl.toneMapping = ACESFilmicToneMapping;
               gl.toneMappingExposure = 1.05;
-              gl.shadowMap.type = BasicShadowMap;
             }}
           >
             <color attach="background" args={["#14181b"]} />
-            <ambientLight intensity={0.28} />
-            <directionalLight position={[0.075, 0.11, 0.075]} intensity={4.2} castShadow shadow-mapSize-width={512} shadow-mapSize-height={512} />
-            <directionalLight position={[-0.065, 0.025, 0.055]} intensity={1.45} />
-            <spotLight position={[0, 0.09, -0.075]} intensity={2.4} angle={0.62} penumbra={0.86} color="#d7e2e5" />
+            <ambientLight intensity={0.42} />
+            <directionalLight position={[0.075, 0.11, 0.075]} intensity={4.2} />
+            <directionalLight position={[-0.065, 0.025, 0.055]} intensity={1.65} />
             <CameraRig view={view} />
             <Suspense fallback={<LoadingMotor />}><Motor onReady={markReady} /></Suspense>
-            <mesh position={[0, -0.018, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+            <mesh position={[0, -0.018, 0]} rotation={[-Math.PI / 2, 0, 0]}>
               <planeGeometry args={[0.24, 0.24]} />
               <meshStandardMaterial color="#22272b" metalness={0.06} roughness={0.88} />
             </mesh>
@@ -270,7 +254,7 @@ export function GoldenMotorPbrReviewGateV065ContractAligned() {
       </div>
 
       <footer style={{ display: "flex", justifyContent: "space-between", color: "#78848b", fontSize: 12 }}>
-        <span>HERO_CANDIDATE · fail-closed</span>
+        <span>HERO_CANDIDATE · static PBR · fail-closed</span>
         <span>Tehkné Solutions</span>
       </footer>
     </section>
