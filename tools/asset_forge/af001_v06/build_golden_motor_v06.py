@@ -2,12 +2,10 @@ import bpy, json, os, math
 from pathlib import Path
 from mathutils import Vector, Matrix
 
-ASSET='TS_ELEC_MOTOR_DC_A'; VERSION='0.6.2-dcc-candidate'; SIGN='Tehkné Solutions'
+ASSET='TS_ELEC_MOTOR_DC_A'; VERSION='0.6.3-dcc-candidate'; SIGN='Tehkné Solutions'
 SOCKETS=('SOCKET_MECH_AXIS_OUT','SOCKET_MECH_MOUNT_FRONT','SOCKET_ELEC_POWER_POS','SOCKET_ELEC_POWER_NEG')
 BUDGET={'LOD0':(3000,4500),'LOD1':(1500,2400),'LOD2':(500,900)}
 OUT=Path(os.environ.get('AF001_OUTPUT_DIR','build/asset-forge/af001g-v06')).resolve(); OUT.mkdir(parents=True,exist_ok=True)
-# Tehkné runtime/glTF coordinates are +Y up / +Z forward. Blender is +Z up.
-# Runtime (x,y,z) -> Blender (x,-z,y); glTF export maps it back to +Y up/+Z forward.
 RUNTIME_TO_BLENDER=Matrix.Rotation(math.radians(90),4,'X')
 
 def reset():
@@ -24,7 +22,7 @@ def mat(name,color,metal,rough):
 def materials():
     return {
       'shell':mat('TS_MAT_STAMPED_STEEL',(0.32,0.35,0.38,1),.82,.34),
-      'dark':mat('TS_MAT_STAMPED_STEEL_DARK',(0.10,0.12,0.14,1),.68,.43),
+      'dark':mat('TS_MAT_STAMPED_STEEL_DARK',(0.075,0.09,0.105,1),.62,.48),
       'steel':mat('TS_MAT_MACHINED_STEEL',(0.50,0.54,0.58,1),.95,.22),
       'poly':mat('TS_MAT_ENGINEERING_POLYMER',(0.025,0.032,0.04,1),.02,.56),
       'copper':mat('TS_MAT_COPPER_TERMINAL',(0.42,0.12,0.035,1),.86,.30),
@@ -63,7 +61,9 @@ def cyl(name,r,depth,loc,ma,verts,c,bev=0):
     if bev:
         m=o.modifiers.new('edge bevel','BEVEL'); m.width=bev; m.segments=1; m.limit_method='ANGLE'
     o.data.materials.append(ma); move(o,c); apply(o)
-    for p in o.data.polygons: p.use_smooth=True
+    # Hard-surface rule: smooth only cylindrical walls. Flat caps remain flat,
+    # avoiding the toy-like spherical/domed look seen in v0.6.2.
+    for p in o.data.polygons: p.use_smooth=abs(p.normal.z) < 0.55
     return o
 
 def socket(name,loc,c):
@@ -85,34 +85,39 @@ def triangulate(c):
 
 def build(lod):
     reset(); m=materials(); c=collection(f'{ASSET}_{lod}'); level=int(lod[-1])
-    # v0.6.2: LOD0 gets just enough radial density to recover the 3k floor;
-    # LOD2 drops one radial step to stay below the 900-triangle ceiling.
     seg={0:3,1:2,2:1}[level]; radial={0:36,1:20,2:7}[level]
     body=cube('BODY_CAN',(.024,.018,.028),(0,0,0),m['shell'],{0:.00145,1:.00115,2:.00085}[level],seg,c); body['manufacturing']='stamped_steel_can'
     for z,n in ((.01415,'FRONT_ROLLED_SEAM'),(-.01415,'REAR_ROLLED_SEAM')): cube(n,(.0234,.0174,.00072),(0,0,z),m['dark'],.00036,max(1,seg-1),c)
     cube('FRONT_CAP',(.0224,.0164,.0024),(0,0,.01535),m['shell'],.00105,seg,c)
-    cyl('FRONT_DISH',.0048,.00065,(0,0,.0169),m['dark'],radial,c,.00012)
-    cyl('BEARING_BOSS',.00355,.0021,(0,0,.01825),m['steel'],radial,c,.00012)
-    cyl('SHAFT_COLLAR',.00230,.00125,(0,0,.01995),m['steel'],radial,c,.00009)
-    shaft=cyl('SHAFT',.001,.012,(0,0,.0260),m['steel'],radial,c,.00006); shaft['rotation_axis']='+Z'
+    # Front hardware is deliberately compact: pressed dish + bearing + collar.
+    cyl('FRONT_DISH',.00385,.00048,(0,0,.01682),m['dark'],radial,c,.00008)
+    cyl('BEARING_BOSS',.00285,.00172,(0,0,.01800),m['steel'],radial,c,.00009)
+    cyl('SHAFT_COLLAR',.00182,.00102,(0,0,.01938),m['steel'],radial,c,.00006)
+    shaft=cyl('SHAFT',.001,.012,(0,0,.02585),m['steel'],radial,c,.00005); shaft['rotation_axis']='+Z'
     if level<2:
         for x,s in ((-.0076,'L'),(.0076,'R')):
             rv=max(12,radial//2)
-            cyl(f'MOUNT_RECESS_{s}',.00145,.00048,(x,0,.01682),m['poly'],rv,c,.00005)
-            cyl(f'MOUNT_LIP_{s}',.00168,.00014,(x,0,.01714),m['steel'],rv,c)
+            # Flat dark recess plus very thin machined rim; caps stay flat.
+            cyl(f'MOUNT_RECESS_{s}',.00102,.00018,(x,0,.01662),m['poly'],rv,c,0)
+            cyl(f'MOUNT_LIP_{s}',.00125,.00010,(x,0,.01678),m['steel'],rv,c,0)
     cube('REAR_CAP',(.0217,.0157,.0027),(0,0,-.01545),m['poly'],.0010,seg,c)
     cube('TERMINAL_ISLAND',(.0142,.0083,.00155),(0,-.001,-.01755),m['poly'],.00052,max(1,seg-1),c)
     for x,n,ins in ((-.0047,'TERMINAL_POS',m['pos']),(.0047,'TERMINAL_NEG',m['neg'])):
-        cube(n,(.0025,.0052,.0007),(x,-.001,-.019),m['copper'],.00013,1,c)
-        cyl(n+'_INSULATOR',.00115,.00058,(x,.0025,-.01855),ins,max(8,radial//2),c,.00005)
+        # Physical stack: conductive rivet/washer -> narrow neck -> blade tab.
+        if level<2:
+            cyl(n+'_RIVET',.00105,.00022,(x,.00235,-.01842),m['copper'],max(12,radial//2),c,0)
+            cyl(n+'_WASHER',.00122,.00010,(x,.00235,-.01830),ins,max(12,radial//2),c,0)
+        cube(n+'_NECK',(.00165,.00125,.00038),(x,.00155,-.01878),m['copper'],.00008,1,c)
+        cube(n,(.00215,.00365,.00048),(x,-.00085,-.01912),m['copper'],.00010,1,c)
     if level<2:
         zs=(-.006,0,.006) if level==0 else (-.0045,.0045)
         for side in (-1,1):
-            for i,z in enumerate(zs): cube(f"SHELL_STAMP_{'L' if side<0 else 'R'}_{i}",(.00034,.0031,.0009),(side*.0120,0,z),m['dark'],.00008,1,c)
-        # Flush identity inlay; never a protruding cyan fin.
-        cube('IDENTITY_INLAY',(.0046,.00012,.00072),(0,.0090,.0035),m['id'],.00005,1,c)
-    socket('SOCKET_MECH_AXIS_OUT',(0,0,.0320),c); socket('SOCKET_MECH_MOUNT_FRONT',(0,0,.0166),c)
-    socket('SOCKET_ELEC_POWER_POS',(-.0047,-.001,-.01935),c); socket('SOCKET_ELEC_POWER_NEG',(.0047,-.001,-.01935),c)
+            for i,z in enumerate(zs):
+                # Near-flush dark stamping marks: 80 μm depth, not applied bars.
+                cube(f"SHELL_STAMP_{'L' if side<0 else 'R'}_{i}",(.00008,.00255,.00125),(side*.01194,0,z),m['dark'],0,1,c)
+        cube('IDENTITY_INLAY',(.0046,.00010,.00068),(0,.00896,.0035),m['id'],.00004,1,c)
+    socket('SOCKET_MECH_AXIS_OUT',(0,0,.03185),c); socket('SOCKET_MECH_MOUNT_FRONT',(0,0,.01655),c)
+    socket('SOCKET_ELEC_POWER_POS',(-.0047,-.00085,-.01936),c); socket('SOCKET_ELEC_POWER_NEG',(.0047,-.00085,-.01936),c)
     orient_runtime_to_blender(c)
     for o in c.objects: o['asset_id']=ASSET; o['version']=VERSION; o['signature']=SIGN; o['lod']=lod
     return c,triangulate(c)
@@ -132,8 +137,6 @@ def point(cam,pos,target):
 def studio(c):
     floor=mat('TS_MAT_STUDIO_FLOOR',(0.035,.042,.048,1),.02,.84)
     floor_obj=cube('STUDIO_FLOOR',(.18,.12,.003),(0,0,-.011),floor,.0008,2,c)
-    # Calibrated for a 24 mm product. Sub-watt area lights preserve metal response
-    # without clipping every material to white in Eevee/llvmpipe.
     for name,runtime_loc,energy,size in (('KEY',(.09,.11,.10),1.20,.060),('FILL',(-.08,.035,.06),.35,.050),('RIM',(.025,.075,-.10),.65,.045)):
         loc=runtime_to_blender(runtime_loc); d=bpy.data.lights.new('AF001_'+name,'AREA'); d.energy=energy; d.shape='DISK'; d.size=size
         o=bpy.data.objects.new(d.name,d); o.location=loc; c.objects.link(o); point(o,loc,runtime_to_blender((0,0,0)))
@@ -161,8 +164,8 @@ def renders(c):
       'front':((0,.002,.12),(0,0,.014),'ortho',.064),
       'side':((.12,.002,0),(0,0,0),'ortho',.066),
       'rear':((0,.002,-.12),(0,0,-.014),'ortho',.064),
-      'bearing':((.020,.010,.085),(0,0,.019),'ortho',.038),
-      'terminals':((.020,-.003,-.085),(0,-.001,-.018),'ortho',.042),
+      'bearing':((.020,.010,.085),(0,0,.018),'ortho',.038),
+      'terminals':((.020,-.003,-.085),(0,-.001,-.0185),'ortho',.042),
     }
     out=[]
     for n,(pos,tgt,projection,scale) in views.items(): out.append(render_view(sc,cam,n,pos,tgt,projection,scale,floor))
