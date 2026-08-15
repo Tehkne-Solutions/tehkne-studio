@@ -45,7 +45,6 @@ for (const token of [
 
 const workbench = await readFile("apps/studio-web/components/Invention3DWorkbench.tsx", "utf8");
 for (const token of [
-  "S2.15",
   "Direct Socket Wiring",
   "const selectSocket = (entityId: string, portId: string): void =>",
   "runtime.builder.compatibleTargets(from)",
@@ -63,6 +62,9 @@ for (const token of [
   "runtime.builder.disconnect"
 ]) {
   if (!workbench.includes(token)) throw new Error(`S2.15 workbench contract missing: ${token}`);
+}
+if (!workbench.includes("S2.15") && !workbench.includes("S2.16")) {
+  throw new Error("S2.15 workbench lineage marker missing");
 }
 
 for (const forbidden of [
@@ -102,4 +104,4 @@ if (!workflow.includes("npm run verify:s2.15")) throw new Error("S2.15 CI contra
 if (!workflow.includes("tests/browser/direct-socket-wiring.spec.ts")) throw new Error("S2.15 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.15 CI must remain read-only");
 
-console.log("S2.15 Direct Socket Wiring PASS · real Asset Forge sockets are interactive authoring controls · compatibility and connectedTo remain InventionBuilder-owned · accessible rail mirrors the same handler · legacy select wiring preserved as fallback · no parallel graph · Tehkné Solutions");
+console.log("S2.15 Direct Socket Wiring PASS · real Asset Forge sockets remain interactive authoring controls through S2.16 · compatibility and connectedTo remain InventionBuilder-owned · accessible rail mirrors the same handler · legacy select wiring preserved as fallback · no parallel graph · Tehkné Solutions");

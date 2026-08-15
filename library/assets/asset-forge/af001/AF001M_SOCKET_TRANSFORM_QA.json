@@ -1,0 +1,51 @@
+{
+  "gate": "AF-001M",
+  "asset_id": "TS_ELEC_MOTOR_DC_A",
+  "signature": "Tehkné Solutions",
+  "status": "HERO_CANDIDATE",
+  "reason": "AF-001 v0.6.5 preserved required socket node names but Blender GLB export did not serialize Empty translations. S2.16 mechanical assembly requires physical socket coordinates rather than node names alone, so the defect is repaired as a versioned v0.6.6 candidate.",
+  "source": {
+    "version": "0.6.5-hero-candidate",
+    "lod": "LOD0",
+    "triangles": 3292,
+    "bytes": 243672,
+    "sha256": "ad73d83d0dcd8485a8c2a7a680f83090a98d637cea455dde4915f0d771cd6552",
+    "brotli_bytes": 25162,
+    "brotli_sha256": "f6b1062238c941f81bbd5c38e154add9bb4ab56b81c06f9c45989c9604dd90c8"
+  },
+  "candidate": {
+    "version": "0.6.6-hero-candidate",
+    "lod": "LOD0",
+    "triangles": 3292,
+    "bytes": 243812,
+    "sha256": "d19e51fd33c461cf761b7c2c086c1284fc4ddfb38f3274acabd88e33fc5ce487",
+    "geometry_changed": false,
+    "materials_changed": false,
+    "binary_mesh_chunk_changed": false,
+    "glb_json_socket_transforms_changed": true
+  },
+  "socket_translations_m": {
+    "SOCKET_MECH_AXIS_OUT": [0, 0, 0.03185],
+    "SOCKET_MECH_MOUNT_FRONT": [0, 0, 0.01655],
+    "SOCKET_ELEC_POWER_POS": [-0.0047, -0.00085, -0.01936],
+    "SOCKET_ELEC_POWER_NEG": [0.0047, -0.00085, -0.01936]
+  },
+  "runtime_materialization": {
+    "source_transport_preserved": true,
+    "source_fingerprint_validated_before_patch": true,
+    "patch": "glb-json-v1",
+    "candidate_fingerprint_validated_after_patch": true,
+    "fail_closed": true
+  },
+  "dcc_prevention": {
+    "wrapper_version": "0.6.6-dcc-candidate",
+    "helper": "tools/asset_forge/af001_v06/glb_socket_transforms.py",
+    "all_lods_require_four_translations": true
+  },
+  "promotion": {
+    "golden_asset": false,
+    "af001i_required_again": true,
+    "af001l_target_hardware_required_again": true,
+    "physical_hardware_evidence_pending": true
+  }
+}
