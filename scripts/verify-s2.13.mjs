@@ -43,7 +43,8 @@ for (const token of [
   'raw.kind !== "gltf"',
   'runtimeUrl.startsWith("/api/asset-forge/")',
   "GLTFLoader",
-  "gltf.scene.clone(true)",
+  "prepareAssetScene",
+  "source.clone(true)",
   "AssetBackedComponent"
 ]) {
   if (!visualRuntime.includes(token)) throw new Error(`S2.13 visual runtime contract missing: ${token}`);
