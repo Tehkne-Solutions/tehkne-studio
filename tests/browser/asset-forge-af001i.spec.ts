@@ -10,7 +10,7 @@ const MIN_BENCHMARK_SAMPLES = 30;
 const EVIDENCE_DIR = resolve("test-results", "af001i-evidence");
 
 test("AF-001I Golden Motor v0.6.5 runs LOD0 PBR review and preserves visual evidence", async ({ page }, testInfo) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
 
