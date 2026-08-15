@@ -5,7 +5,7 @@ const EXPECTED_BYTES = 74_472;
 const EXPECTED_SHA256 = "2142509d651e5ae1683da383360675b4343cbad83fbbb498326a894cf0c2baae";
 const EXPECTED_TRIANGLES = 3_904;
 const EXPECTED_LOD = "LOD0";
-const COMPRESSED_ASSET_PATH = "/asset-forge/af001/motor-lod0.glb.br";
+const COMPRESSED_ASSET_PATH = "/asset-forge/af001/motor-lod0.brotli.bin";
 
 let cachedMotor: Buffer | null = null;
 
@@ -18,9 +18,10 @@ function isExpectedMotor(buffer: Buffer): boolean {
 }
 
 function materializeMotor(payload: Buffer): Buffer {
-  // Some HTTP runtimes transparently decode `Content-Encoding: br` before fetch()
-  // exposes the response body. Accept that representation only when it is already
-  // byte-for-byte the expected GLB. Otherwise decode Brotli ourselves and validate.
+  // The public payload is intentionally served as an opaque .bin so the web
+  // server cannot reinterpret it as Content-Encoding. The direct-GLB branch is
+  // retained for portability, but either representation must end at the exact
+  // expected byte length and SHA-256.
   if (isExpectedMotor(payload)) return payload;
 
   let motor: Buffer;
