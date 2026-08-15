@@ -17,6 +17,6 @@ test("S2.14 attaches invention wiring to real Asset Forge socket nodes and follo
   const centerBefore = { x: Number(await selected.getAttribute("data-x")), y: Number(await selected.getAttribute("data-y")), z: Number(await selected.getAttribute("data-z")) };
   const endpointBefore = { x: Number(await wire.getAttribute("data-target-x")), y: Number(await wire.getAttribute("data-target-y")), z: Number(await wire.getAttribute("data-target-z")) };
   expect(endpointBefore.x).toBeCloseTo(centerBefore.x - 0.0047, 3); expect(endpointBefore.y).toBeCloseTo(centerBefore.y - 0.00085, 3); expect(endpointBefore.z).toBeCloseTo(centerBefore.z - 0.01936, 3);
-  await workspace.getByRole("button", { name: "Z +" }).click(); await expect(selected).toHaveAttribute("data-z", (centerBefore.z + 0.05).toFixed(3)); await expect.poll(async () => Number(await wire.getAttribute("data-target-z"))).toBeCloseTo(endpointBefore.z + 0.05, 3); await expect(wire).toHaveAttribute("data-target-socket", "SOCKET_ELEC_POWER_POS");
+  await workspace.getByRole("button", { name: "Z +", exact: true }).click(); await expect(selected).toHaveAttribute("data-z", (centerBefore.z + 0.05).toFixed(3)); await expect.poll(async () => Number(await wire.getAttribute("data-target-z"))).toBeCloseTo(endpointBefore.z + 0.05, 3); await expect(wire).toHaveAttribute("data-target-socket", "SOCKET_ELEC_POWER_POS");
   expect(pageErrors, `page errors: ${pageErrors.join(" | ")}`).toEqual([]); expect(consoleErrors, `console errors: ${consoleErrors.join(" | ")}`).toEqual([]);
 });
