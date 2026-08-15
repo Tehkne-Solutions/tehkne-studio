@@ -2,32 +2,50 @@
 
 **Assinatura: Tehkné Solutions**
 
-## Incidente detectado
+## Resultado
+
+`RUNTIME_SMOKE_PASS`
+
+O AF-001H foi validado na CI do Tehkné Studio depois de uma investigação fail-closed de duas falhas reais de transporte binário.
+
+### Evidência estrutural
+
+- asset: `TS_ELEC_MOTOR_DC_A`;
+- preview: LOD2 smoke asset;
+- triângulos: `824`;
+- payload íntegro: `21,452` bytes;
+- SHA256: `0a74f27df8a67b61e5ac10b87c0b6fa3736531fac15044bb360a641da6228e69`;
+- endpoint: `/api/asset-forge/af001/motor`;
+- loader: `GLTFLoader` em React Three Fiber;
+- benchmark: 120 amostras de frame-time;
+- critérios smoke: média `< 100 ms`, P95 `< 150 ms`;
+- erros de página/console: `0` exigido.
+
+### Evidência CI
+
+Workflow run `31853672748` / run number `75`:
+- dependency audit: PASS;
+- Alpha 01 regression gate: PASS;
+- S2.1: PASS;
+- S2.2: PASS;
+- S2.3: PASS;
+- S2.4: PASS;
+- Chromium install: PASS;
+- browser smoke: PASS;
+- failure artifact: skipped porque não houve falha.
+
+## Incidente detectado e corrigido
 
 O primeiro preview LOD2 foi enviado ao repositório como arquivo GLB estático, porém o blob resultante ficou truncado/corrompido.
 
-Evidência do browser smoke:
+Evidência do primeiro browser smoke:
 - arquivo esperado: `21,452` bytes;
-- SHA256 esperado: `0a74f27df8a67b61e5ac10b87c0b6fa3736531fac15044bb360a641da6228e69`;
 - resposta estática observada: ~`7,497` bytes;
-- GLTFLoader: `Invalid typed array length: 8664`.
+- `GLTFLoader`: `Invalid typed array length: 8664`.
 
-A rota Next e os demais gates de domínio estavam saudáveis. A falha era de integridade do payload binário.
+Na primeira tentativa de correção, um gzip embutido em string monolítica também chegou inválido e foi bloqueado por `gunzipSync` com `Z_DATA_ERROR`.
 
-## Correção
-
-O AF-001H passa a servir o payload de smoke por um endpoint Node dedicado:
-
-`/api/asset-forge/af001/motor`
-
-Antes de responder, o endpoint:
-1. descompacta o payload GLB conhecido;
-2. valida byte length exato;
-3. valida SHA256 exato;
-4. falha com `AF001H_ASSET_INTEGRITY_FAILURE` se houver divergência;
-5. somente então responde `model/gltf-binary`.
-
-O Playwright verifica a mesma integridade antes de abrir o preview 3D.
+A solução final segmenta o payload codificado em blocos pequenos, remonta-o no servidor, descompacta, valida byte length e SHA256 e só então responde `model/gltf-binary`.
 
 ## Regra permanente
 
@@ -40,10 +58,12 @@ O gate de materialização deve validar, no mínimo:
 - import/reload pelo runtime;
 - ausência de erro do loader.
 
-## Estado
+## Limite desta promoção
 
-`AF-001H_RUNTIME_INTEGRITY_CANDIDATE`
+AF-001H passa para `RUNTIME_SMOKE_PASS`, mas `TS_ELEC_MOTOR_DC_A` continua em `GOLDEN_ASSET_CANDIDATE`.
 
-A promoção para `RUNTIME_SMOKE_PASS` depende da CI/Playwright verde nesta revisão.
-
-Isso não promove `TS_ELEC_MOTOR_DC_A` para `GOLDEN_ASSET`; os gates visual, LOD0 benchmark e master DCC continuam independentes e fail-closed.
+Continuam bloqueados de forma independente:
+- render PBR final do LOD0;
+- benchmark representativo Web/mobile do LOD0;
+- master DCC `.blend`;
+- aprovação visual final em close.
