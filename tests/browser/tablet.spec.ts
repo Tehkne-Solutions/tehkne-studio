@@ -27,7 +27,7 @@ test("S2.6 Tablet 01 runs battery causal teardown, touch-controller inspection a
 
   await command(page, "Inspecione a caneta");
   await expect(page.getByText("Touch & Pen Controller", { exact: true })).toBeVisible();
-  await expect(page.getByText(/tablet.input · connected/)).toBeVisible();
+  await expect(page.getByText(/tablet.input · ready/)).toBeVisible();
   await expect(page.getByText(/clockMHz/)).toBeVisible();
 
   await command(page, "Tire a bateria");
