@@ -44,6 +44,7 @@ for (const token of [
   "AssetSocketEvidence",
   "useSyncExternalStore",
   "useAssetSocketEndpoint",
+  "useSpatialPortEndpoint",
   "transformSocketPosition",
   "scene.getObjectByName(socketName)",
   "missing required socket node",
@@ -54,17 +55,17 @@ for (const token of [
 }
 
 const workbench = await readFile("apps/studio-web/components/Invention3DWorkbench.tsx", "utf8");
+if (!["S2.14", "S2.15"].some((marker) => workbench.includes(marker))) {
+  throw new Error("S2.14 workbench lineage marker missing");
+}
 for (const token of [
-  "S2.14",
-  "Socket-Aware 3D Invention Workbench",
-  "useAssetSocketEndpoint",
+  "useSpatialPortEndpoint",
   "sourcePortId",
   "targetPortId",
   'data-source-socket={sourceEndpoint.socketName}',
   'data-target-socket={targetEndpoint.socketName}',
   'data-socket-aware={socketAware ? "true" : "false"}',
   "data-socket-aware-wires={socketAwareWireCount}",
-  "SOCKET-AWARE WIRES",
   "runtime.spatial.connectionSegments(connections)",
   "runtime.builder.connect",
   "runtime.builder.disconnect"
@@ -104,4 +105,4 @@ if (!workflow.includes("npm run verify:s2.14")) throw new Error("S2.14 CI contra
 if (!workflow.includes("tests/browser/socket-aware-invention.spec.ts")) throw new Error("S2.14 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.14 CI must remain read-only");
 
-console.log("S2.14 Socket-Aware Wiring PASS · graph port identity + fail-closed GLB socket resolution + socket endpoints follow spatial transforms + proxy center fallback only when no Asset Forge socket exists · Tehkné Solutions");
+console.log("S2.14 Socket-Aware Wiring PASS · graph port identity + fail-closed GLB socket resolution + socket endpoints follow spatial transforms + successor endpoint projection preserves S2.14 evidence · Tehkné Solutions");
