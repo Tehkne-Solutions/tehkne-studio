@@ -1,4 +1,4 @@
-name: S2.6 Tablet Technology Preset Gate
+name: S2.7 Display System Technology Preset Gate
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ env:
   NEXT_TELEMETRY_DISABLED: "1"
 
 jobs:
-  tablet-preset:
+  display-system-preset:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -36,6 +36,8 @@ jobs:
         run: npm run verify:s2.5
       - name: S2.6 tablet product contract
         run: npm run verify:s2.6
+      - name: S2.7 display-system product contract
+        run: npm run verify:s2.7
       - name: Install Chromium runtime
         run: npx playwright install --with-deps chromium
       - name: Alpha and platform browser smoke
@@ -44,7 +46,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: s2-06-browser-failure
+          name: s2-07-browser-failure
           path: test-results
           if-no-files-found: ignore
           retention-days: 7
