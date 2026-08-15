@@ -4,12 +4,17 @@ import { Canvas, useLoader, useThree } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ACESFilmicToneMapping,
+  BufferGeometry,
+  Group,
+  Material,
+  Matrix4,
   Mesh,
   MeshStandardMaterial,
   Object3D,
   SRGBColorSpace
 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 const MOTOR_URL = "/api/asset-forge/af001/motor/lod0";
 const MAX_AVERAGE_FRAME_MS = 100;
@@ -19,9 +24,9 @@ const BENCHMARK_WINDOW_MS = 8_000;
 const MAX_VALID_DELTA_MS = 1_000;
 const MIN_BENCHMARK_SAMPLES = 30;
 
+// AF-001 v0.6 replaced the v0.5 helper-pivot convention with explicit
+// engineering sockets authored and QA-checked by the Blender DCC source.
 const REQUIRED_NODES = [
-  "PIVOT_MAIN",
-  "PIVOT_SHAFT",
   "BODY_CAN",
   "FRONT_CAP",
   "REAR_CAP",
@@ -44,8 +49,15 @@ type RuntimeStats = {
 
 type AssetInspection = {
   readonly missingNodes: readonly string[];
-  readonly meshCount: number;
+  readonly sourceMeshCount: number;
+  readonly renderMeshCount: number;
   readonly materialCount: number;
+};
+
+type MergeBucket = {
+  readonly material: Material;
+  readonly meshes: Mesh[];
+  readonly geometries: BufferGeometry[];
 };
 
 const CAMERA_VIEWS: Record<CameraView, { position: [number, number, number]; target: [number, number, number] }> = {
@@ -63,33 +75,97 @@ function percentile(values: readonly number[], ratio: number): number {
   return ordered[Math.min(ordered.length - 1, Math.floor(ordered.length * ratio))] ?? 0;
 }
 
-function inspectScene(root: Object3D): AssetInspection {
-  let meshCount = 0;
+function geometrySignature(geometry: BufferGeometry): string {
+  const attributes = Object.entries(geometry.attributes)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, attribute]) => `${name}:${attribute.itemSize}:${attribute.normalized ? 1 : 0}`)
+    .join("|");
+  return `${geometry.index ? "indexed" : "non-indexed"}::${attributes}`;
+}
+
+function tuneMaterial(material: Material): void {
+  if (!(material instanceof MeshStandardMaterial)) return;
+  material.envMapIntensity = 0.75;
+  material.needsUpdate = true;
+}
+
+function batchStaticMeshes(root: Object3D): AssetInspection {
+  root.updateMatrixWorld(true);
+  const rootInverse = new Matrix4().copy(root.matrixWorld).invert();
+  const sourceMeshes: Mesh[] = [];
   const materials = new Set<string>();
+  const buckets = new Map<string, MergeBucket>();
+  const unbatchable: Mesh[] = [];
 
   root.traverse((object) => {
     if (!(object instanceof Mesh)) return;
-    meshCount += 1;
-
-    // AF-001I is a static product-review surface. Re-rendering a shadow map on
-    // every browser frame adds no engineering evidence, so the review keeps PBR
-    // material response while remaining explicitly shadow-map free.
+    sourceMeshes.push(object);
     object.castShadow = false;
     object.receiveShadow = false;
 
-    const source = Array.isArray(object.material) ? object.material : [object.material];
-    for (const material of source) {
-      if (material instanceof MeshStandardMaterial) {
-        material.envMapIntensity = 0.75;
-        material.needsUpdate = true;
+    if (Array.isArray(object.material)) {
+      unbatchable.push(object);
+      for (const material of object.material) {
+        tuneMaterial(material);
         materials.add(material.name || material.uuid);
       }
+      return;
+    }
+
+    tuneMaterial(object.material);
+    materials.add(object.material.name || object.material.uuid);
+
+    const geometry = object.geometry.clone();
+    const relativeMatrix = new Matrix4().multiplyMatrices(rootInverse, object.matrixWorld);
+    geometry.applyMatrix4(relativeMatrix);
+    const key = `${object.material.uuid}::${geometrySignature(geometry)}`;
+    const bucket = buckets.get(key);
+    if (bucket) {
+      bucket.meshes.push(object);
+      bucket.geometries.push(geometry);
+    } else {
+      buckets.set(key, { material: object.material, meshes: [object], geometries: [geometry] });
     }
   });
 
+  const runtimeGroup = new Group();
+  runtimeGroup.name = "AF001_RUNTIME_MATERIAL_BATCHES";
+  const renderMeshes: Mesh[] = [...unbatchable];
+  let batchIndex = 0;
+
+  for (const bucket of buckets.values()) {
+    if (bucket.geometries.length < 2) {
+      bucket.geometries[0]?.dispose();
+      const source = bucket.meshes[0];
+      if (source) renderMeshes.push(source);
+      continue;
+    }
+
+    const merged = mergeGeometries(bucket.geometries, false);
+    for (const geometry of bucket.geometries) geometry.dispose();
+    if (!merged) {
+      renderMeshes.push(...bucket.meshes);
+      continue;
+    }
+
+    for (const source of bucket.meshes) source.visible = false;
+    const batch = new Mesh(merged, bucket.material);
+    batch.name = `AF001_RUNTIME_BATCH_${String(batchIndex).padStart(2, "0")}`;
+    batch.castShadow = false;
+    batch.receiveShadow = false;
+    batch.frustumCulled = true;
+    runtimeGroup.add(batch);
+    renderMeshes.push(batch);
+    batchIndex += 1;
+  }
+
+  root.add(runtimeGroup);
+  root.updateMatrixWorld(true);
+
   return {
     missingNodes: REQUIRED_NODES.filter((name) => !root.getObjectByName(name)),
-    meshCount,
+    sourceMeshCount: sourceMeshes.length,
+    renderMeshCount: renderMeshes.filter((mesh) => mesh.visible).length,
     materialCount: materials.size
   };
 }
@@ -110,7 +186,7 @@ function GoldenMotor({ onReady }: { readonly onReady: (inspection: AssetInspecti
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
 
   useEffect(() => {
-    onReady(inspectScene(scene));
+    onReady(batchStaticMeshes(scene));
   }, [onReady, scene]);
 
   return <primitive object={scene} />;
@@ -163,8 +239,8 @@ export function GoldenMotorPbrReviewGate() {
       const elapsed = now - startedAt;
 
       if (elapsed >= WARMUP_MS && delta > 0 && delta <= MAX_VALID_DELTA_MS) {
-        // Slow frames remain evidence; optimization changes renderer cost, not
-        // the fail-closed measurement policy or thresholds.
+        // Slow frames remain evidence. Runtime batching reduces draw calls while
+        // the benchmark policy and thresholds remain unchanged.
         samples.push(delta);
       }
 
@@ -204,7 +280,9 @@ export function GoldenMotorPbrReviewGate() {
       data-runtime-ready={runtimeReady ? "true" : "false"}
       data-benchmark-ready={stats ? "true" : "false"}
       data-node-gate={nodeGatePass ? "pass" : runtimeReady ? "blocked" : "pending"}
-      data-render-policy="static-pbr-key-fill-no-realtime-shadow-map"
+      data-source-meshes={inspection?.sourceMeshCount ?? 0}
+      data-render-meshes={inspection?.renderMeshCount ?? 0}
+      data-render-policy="static-pbr-material-batched-no-realtime-shadow-map"
       style={{ minHeight: "100dvh", background: "#0b0e11", color: "#edf1f3", padding: 22, display: "grid", gap: 16, gridTemplateRows: "auto auto 1fr auto" }}
     >
       <header style={{ display: "flex", justifyContent: "space-between", gap: 24, alignItems: "end", flexWrap: "wrap" }}>
@@ -212,7 +290,7 @@ export function GoldenMotorPbrReviewGate() {
           <span style={{ color: "#82aeb1", fontWeight: 800, letterSpacing: ".16em", fontSize: 11 }}>TEHKNÉ SOLUTIONS · ASSET FORGE</span>
           <h1 style={{ margin: "8px 0 0", fontSize: "clamp(26px, 4vw, 42px)", letterSpacing: "-.03em" }}>AF-001I · LOD0 PBR Runtime Review</h1>
           <p style={{ color: "#9da7ae", margin: "8px 0 0", maxWidth: 820, lineHeight: 1.55 }}>
-            Golden Motor Hero v0.5.1 · LOD0 real de 3.904 tris · PBR estático key+fill · frames lentos contam contra o gate.
+            Golden Motor Hero v0.6.5 · LOD0 real de 3.292 tris · batching runtime por material · PBR/UVs preservados · benchmark fail-closed.
           </p>
         </div>
         <div style={{ border: `1px solid ${runtimePass ? "#51765f" : "#62533a"}`, background: runtimePass ? "#142019" : "#201b14", padding: "10px 14px", borderRadius: 12, color: runtimePass ? "#8dc9a0" : stats ? "#e08378" : "#d6ae6c", fontWeight: 900 }}>
@@ -230,7 +308,7 @@ export function GoldenMotorPbrReviewGate() {
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(300px, 360px)", gap: 16, minHeight: 0 }}>
         <div data-testid="pbr-canvas-shell" data-camera-view={view} style={{ minHeight: 600, borderRadius: 18, overflow: "hidden", border: "1px solid #343d43", background: "#151a1e" }}>
-          <Canvas camera={{ position: CAMERA_VIEWS["three-quarter"].position, fov: 30, near: 0.001, far: 5 }} dpr={1} gl={{ antialias: true, powerPreference: "high-performance" }} onCreated={({ gl }) => { gl.outputColorSpace = SRGBColorSpace; gl.toneMapping = ACESFilmicToneMapping; gl.toneMappingExposure = 1.05; }}>
+          <Canvas camera={{ position: CAMERA_VIEWS["three-quarter"].position, fov: 30, near: 0.001, far: 5 }} dpr={1} gl={{ antialias: true, powerPreference: "high-performance", alpha: false }} onCreated={({ gl }) => { gl.outputColorSpace = SRGBColorSpace; gl.toneMapping = ACESFilmicToneMapping; gl.toneMappingExposure = 1.05; }}>
             <color attach="background" args={["#14181b"]} />
             <ambientLight intensity={0.42} />
             <directionalLight position={[0.075, 0.11, 0.075]} intensity={4.2} />
@@ -245,8 +323,9 @@ export function GoldenMotorPbrReviewGate() {
           <h2 style={{ margin: "0 0 16px", fontSize: 18 }}>Gate técnico</h2>
           <dl style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "10px 16px", margin: 0 }}>
             <dt>Asset</dt><dd style={{ margin: 0, fontWeight: 800 }}>TS_ELEC_MOTOR_DC_A</dd>
-            <dt>LOD / tris</dt><dd style={{ margin: 0, fontWeight: 800 }}>LOD0 · 3.904</dd>
-            <dt>Meshes</dt><dd data-testid="mesh-count" style={{ margin: 0, fontWeight: 800 }}>{inspection?.meshCount ?? "—"}</dd>
+            <dt>LOD / tris</dt><dd style={{ margin: 0, fontWeight: 800 }}>LOD0 · 3.292</dd>
+            <dt>Meshes fonte</dt><dd data-testid="mesh-count" style={{ margin: 0, fontWeight: 800 }}>{inspection?.sourceMeshCount ?? "—"}</dd>
+            <dt>Meshes runtime</dt><dd data-testid="render-mesh-count" style={{ margin: 0, fontWeight: 800 }}>{inspection?.renderMeshCount ?? "—"}</dd>
             <dt>Materiais</dt><dd data-testid="material-count" style={{ margin: 0, fontWeight: 800 }}>{inspection?.materialCount ?? "—"}</dd>
             <dt>Nodes</dt><dd data-testid="node-gate-verdict" style={{ margin: 0, fontWeight: 900, color: nodeGatePass ? "#8dc9a0" : "#e08378" }}>{nodeGatePass ? "PASS" : runtimeReady ? "BLOCKED" : "WAIT"}</dd>
             <dt>Frames</dt><dd data-testid="benchmark-samples-i" style={{ margin: 0, fontWeight: 800 }}>{stats?.samples ?? "—"}</dd>
@@ -258,12 +337,12 @@ export function GoldenMotorPbrReviewGate() {
             {!stats ? "BENCHMARKING" : runtimePass ? "LOD0 PBR RUNTIME PASS" : "LOD0 PBR RUNTIME BLOCKED"}
           </div>
           <p style={{ color: "#7f8a92", fontSize: 12, lineHeight: 1.55 }}>
-            Benchmark pronto significa coleta encerrada. PASS exige ≥{MIN_BENCHMARK_SAMPLES} frames válidos, média &lt; {MAX_AVERAGE_FRAME_MS} ms e P95 &lt; {MAX_P95_FRAME_MS} ms. A promoção artística continua separada.
+            PASS exige ≥{MIN_BENCHMARK_SAMPLES} frames válidos, média &lt; {MAX_AVERAGE_FRAME_MS} ms e P95 &lt; {MAX_P95_FRAME_MS} ms. Batching é apenas otimização de draw calls; o GLB autorado e a promoção artística continuam separados.
           </p>
         </aside>
       </div>
 
-      <footer style={{ display: "flex", justifyContent: "space-between", color: "#78848b", fontSize: 12 }}><span>HERO_CANDIDATE · static PBR · fail-closed</span><span>Tehkné Solutions</span></footer>
+      <footer style={{ display: "flex", justifyContent: "space-between", color: "#78848b", fontSize: 12 }}><span>HERO_CANDIDATE · material-batched static PBR · fail-closed</span><span>Tehkné Solutions</span></footer>
     </section>
   );
 }
