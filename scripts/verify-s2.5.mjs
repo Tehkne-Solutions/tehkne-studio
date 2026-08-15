@@ -123,7 +123,7 @@ const domain = await readFile("tests/domain/notebook-runtime.test.mjs", "utf8");
 for (const token of [
   "extends the catalog without mutating the S2.3 base",
   "materializes 12 reusable components with 17 validated connections",
-  "DDR teardown produces causal POST failure",
+  "DDR teardown produces causal MEMORY_CHECK failure",
   "battery remains a second independent causal teardown point",
   "cannot materialize against the unextended S2.3 catalog",
   "tuning remains bounded by Engineering Property constraints"
@@ -153,7 +153,7 @@ for (const token of [
   "Ligue o notebook",
   "Por que não iniciou?",
   "Reinstale a RAM",
-  "POWER FAULT · BOOT POST",
+  "POWER FAULT · BOOT MEMORY_CHECK",
   "POWER ON · BOOT RUNNING",
   "Restaurar Notebook salvo",
   "page.reload",
