@@ -25,6 +25,7 @@
     "packages/circuit-runtime/src/**/*.ts",
     "packages/invention-runtime/src/**/*.ts",
     "packages/invention-spatial-runtime/src/**/*.ts",
+    "packages/invention-assembly-runtime/src/**/*.ts",
     "packages/behavior-runtime/src/**/*.ts",
     "packages/project-format/src/**/*.ts",
     "packages/persistence-runtime/src/**/*.ts",
