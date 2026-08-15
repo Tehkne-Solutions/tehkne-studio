@@ -8,102 +8,33 @@ const required = [
   "tests/browser/asset-backed-invention.spec.ts"
 ];
 for (const path of required) await access(resolve(path));
-
 const extension = JSON.parse(await readFile("library/components/extensions/asset-forge-v1.json", "utf8"));
-if (extension.extensionId !== "asset-forge-v1") throw new Error("S2.13 Asset Forge extension identity mismatch");
-if (extension.extensionVersion !== "1") throw new Error("S2.13 Asset Forge extension version mismatch");
-if (extension.signature !== "Tehkné Solutions") throw new Error("S2.13 Asset Forge extension signature missing");
-if (!Array.isArray(extension.components) || extension.components.length < 1) throw new Error("S2.13 Asset Forge extension cannot be empty");
-
-const motor = extension.components.find((definition) => definition.definitionId === "actuation.motor.dc-brushed-v1");
-if (!motor) throw new Error("S2.13 canonical brushed DC motor definition missing");
-if (motor.domain !== "actuation") throw new Error("S2.13 DC motor domain mismatch");
-if (motor.metadata?.provenance !== "authored-template") throw new Error("S2.13 DC motor provenance missing");
+if (extension.extensionId !== "asset-forge-v1" || extension.extensionVersion !== "1" || extension.signature !== "Tehkné Solutions") throw new Error("S2.13 Asset Forge extension identity/signature mismatch");
+const motor = extension.components?.find((definition) => definition.definitionId === "actuation.motor.dc-brushed-v1");
+if (!motor || motor.domain !== "actuation" || motor.metadata?.provenance !== "authored-template") throw new Error("S2.13 canonical DC motor definition mismatch");
 const visual = motor.metadata?.visualAsset;
-if (visual?.kind !== "gltf") throw new Error("S2.13 motor visual asset must be GLTF");
-if (visual?.assetId !== "TS_ELEC_MOTOR_DC_A") throw new Error("S2.13 motor visual asset identity mismatch");
-if (visual?.version !== "0.6.5-hero-candidate") throw new Error("S2.13 motor visual version mismatch");
-if (visual?.status !== "HERO_CANDIDATE") throw new Error("S2.13 must not promote AF-001 beyond HERO_CANDIDATE");
-if (visual?.lod !== "LOD0" || visual?.triangles !== 3292 || visual?.bytes !== 243672) throw new Error("S2.13 motor LOD0 evidence mismatch");
-if (visual?.sha256 !== "ad73d83d0dcd8485a8c2a7a680f83090a98d637cea455dde4915f0d771cd6552") throw new Error("S2.13 motor GLB SHA mismatch");
+if (visual?.kind !== "gltf" || visual?.assetId !== "TS_ELEC_MOTOR_DC_A") throw new Error("S2.13 motor visual identity mismatch");
+if (visual?.version !== "0.6.6-hero-candidate" || visual?.status !== "HERO_CANDIDATE") throw new Error("S2.13 AF-001 v0.6.6 HERO_CANDIDATE contract mismatch");
+if (visual?.lod !== "LOD0" || visual?.triangles !== 3292 || visual?.bytes !== 243812) throw new Error("S2.13 motor LOD0 evidence mismatch");
+if (visual?.sha256 !== "d19e51fd33c461cf761b7c2c086c1284fc4ddfb38f3274acabd88e33fc5ce487") throw new Error("S2.13 motor GLB SHA mismatch");
 if (visual?.runtimeUrl !== "/api/asset-forge/af001/motor/lod0") throw new Error("S2.13 motor runtime URL mismatch");
-for (const [portId, socket] of Object.entries({
-  "power-pos": "SOCKET_ELEC_POWER_POS",
-  "power-neg": "SOCKET_ELEC_POWER_NEG",
-  "shaft-out": "SOCKET_MECH_AXIS_OUT",
-  "mount-front": "SOCKET_MECH_MOUNT_FRONT"
-})) {
+for (const [portId, socket] of Object.entries({ "power-pos": "SOCKET_ELEC_POWER_POS", "power-neg": "SOCKET_ELEC_POWER_NEG", "shaft-out": "SOCKET_MECH_AXIS_OUT", "mount-front": "SOCKET_MECH_MOUNT_FRONT" })) {
   if (motor.metadata?.portSocketMap?.[portId] !== socket) throw new Error(`S2.13 port/socket mapping mismatch: ${portId}`);
 }
-
 const visualRuntime = await readFile("apps/studio-web/components/InventionAssetVisual.tsx", "utf8");
-for (const token of [
-  "GltfVisualAssetDescriptor",
-  "visualAssetForEntity",
-  'raw.kind !== "gltf"',
-  'runtimeUrl.startsWith("/api/asset-forge/")',
-  "GLTFLoader",
-  "gltf.scene.clone(true)",
-  "AssetBackedComponent"
-]) {
+for (const token of ["GltfVisualAssetDescriptor", "visualAssetForEntity", 'raw.kind !== "gltf"', 'runtimeUrl.startsWith("/api/asset-forge/")', "GLTFLoader", "prepareAssetScene", "source.clone(true)", "AssetBackedComponent"]) {
   if (!visualRuntime.includes(token)) throw new Error(`S2.13 visual runtime contract missing: ${token}`);
 }
-
 const workbench = await readFile("apps/studio-web/components/Invention3DWorkbench.tsx", "utf8");
-for (const token of [
-  "assetForgeExtension",
-  "applyComponentCatalogExtension(tabletCatalog, assetForgeExtension)",
-  "visualAssetForEntity",
-  "AssetBackedComponent",
-  "AssetLoadingPlaceholder",
-  "ComponentProxy",
-  'data-testid="invention-3d-visual-source"',
-  'data-source={selectedVisual ? "asset" : "proxy"}',
-  "PROXY EXPLÍCITO",
-  "REAL ASSET",
-  "frameloop=\"demand\"",
-  "runtime.spatial.connectionSegments(connections)",
-  "runtime.spatial.move",
-  "runtime.builder.connect",
-  "runtime.builder.disconnect",
-  "inventionSpatial: runtime.spatial.document()"
-]) {
+for (const token of ["assetForgeExtension", "applyComponentCatalogExtension(tabletCatalog, assetForgeExtension)", "visualAssetForEntity", "AssetBackedComponent", "AssetLoadingPlaceholder", "ComponentProxy", 'data-testid="invention-3d-visual-source"', 'data-source={selectedVisual ? "asset" : "proxy"}', "PROXY EXPLÍCITO", "REAL ASSET", "frameloop=\"demand\"", "runtime.spatial.connectionSegments(connections)", "runtime.spatial.move", "runtime.builder.connect", "runtime.builder.disconnect", "inventionSpatial: runtime.spatial.document()"] ) {
   if (!workbench.includes(token)) throw new Error(`S2.13 workbench contract missing: ${token}`);
 }
-if (!workbench.includes("S2.13") && !workbench.includes("S2.14") && !workbench.includes("S2.15")) {
-  throw new Error("S2.13 workbench lineage marker missing");
-}
-for (const forbidden of [
-  'status: "GOLDEN_ASSET"',
-  "parallelGraph",
-  "inventionGraph3d",
-  "runFunctionalBoot("
-]) {
-  if (workbench.includes(forbidden)) throw new Error(`S2.13 forbidden workbench behavior: ${forbidden}`);
-}
-
+if (!["S2.13", "S2.14", "S2.15", "S2.16"].some((marker) => workbench.includes(marker))) throw new Error("S2.13 workbench lineage marker missing");
+for (const forbidden of ['status: "GOLDEN_ASSET"', "parallelGraph", "inventionGraph3d", "runFunctionalBoot("]) if (workbench.includes(forbidden)) throw new Error(`S2.13 forbidden workbench behavior: ${forbidden}`);
 const browser = await readFile("tests/browser/asset-backed-invention.spec.ts", "utf8");
-for (const token of [
-  "actuation.motor.dc-brushed-v1",
-  "TS_ELEC_MOTOR_DC_A",
-  "0.6.5-hero-candidate",
-  "data-real-assets",
-  "data-proxies",
-  "PROXY EXPLÍCITO",
-  "Guardar 3D",
-  "Projeto salvo carregado no 3D",
-  "pageErrors",
-  "consoleErrors"
-]) {
-  if (!browser.includes(token)) throw new Error(`S2.13 browser evidence missing: ${token}`);
-}
-
+for (const token of ["actuation.motor.dc-brushed-v1", "TS_ELEC_MOTOR_DC_A", "0.6.6-hero-candidate", "data-real-assets", "data-proxies", "PROXY EXPLÍCITO", "Guardar 3D", "Projeto salvo carregado no 3D", "pageErrors", "consoleErrors"]) if (!browser.includes(token)) throw new Error(`S2.13 browser evidence missing: ${token}`);
 const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
-if (rootPackage.scripts?.["verify:s2.13"] !== "node scripts/verify-s2.13.mjs") {
-  throw new Error("S2.13 package verification script missing");
-}
+if (rootPackage.scripts?.["verify:s2.13"] !== "node scripts/verify-s2.13.mjs") throw new Error("S2.13 package verification script missing");
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
-if (!workflow.includes("npm run verify:s2.13")) throw new Error("S2.13 CI contract missing");
-if (workflow.includes("contents: write")) throw new Error("S2.13 CI must remain read-only");
-
-console.log("S2.13 Asset-Backed Invention Rendering PASS · declarative Asset Forge extension + real GLB materialization + explicit proxy fallback + same Engineering Graph/spatial persistence + HERO_CANDIDATE preserved · Tehkné Solutions");
+if (!workflow.includes("npm run verify:s2.13") || workflow.includes("contents: write")) throw new Error("S2.13 CI contract mismatch");
+console.log("S2.13 Asset-Backed Invention Rendering PASS · AF-001 v0.6.6 physical-socket candidate + explicit proxy fallback + same Engineering Graph/spatial persistence + HERO_CANDIDATE preserved · Tehkné Solutions");
