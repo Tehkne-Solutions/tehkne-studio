@@ -27,15 +27,16 @@ test("S2.13 materializes Asset Forge GLB when declared and keeps proxy explicit 
 
   expect(response.headers()["content-type"]).toContain("model/gltf-binary");
   expect(response.headers()["x-tehkne-asset-id"]).toBe("TS_ELEC_MOTOR_DC_A");
-  expect(response.headers()["x-tehkne-asset-version"]).toBe("0.6.5-hero-candidate");
+  expect(response.headers()["x-tehkne-asset-version"]).toBe("0.6.6-hero-candidate");
   expect(response.headers()["x-tehkne-asset-lod"]).toBe("LOD0");
   expect(response.headers()["x-tehkne-asset-triangles"]).toBe("3292");
+  expect(response.headers()["x-tehkne-asset-socket-transform-patch"]).toBe("glb-json-v1");
 
   await expect(status).toHaveAttribute("data-real-assets", "1");
   await expect(status).toHaveAttribute("data-proxies", "0");
   await expect(visualSource).toHaveAttribute("data-source", "asset");
   await expect(visualSource).toHaveAttribute("data-asset-id", "TS_ELEC_MOTOR_DC_A");
-  await expect(visualSource).toHaveAttribute("data-asset-version", "0.6.5-hero-candidate");
+  await expect(visualSource).toHaveAttribute("data-asset-version", "0.6.6-hero-candidate");
   await expect(visualSource).toHaveAttribute("data-asset-lod", "LOD0");
   await expect(page.getByTestId("invention-3d-feedback")).toContainText("ASSET TS_ELEC_MOTOR_DC_A");
 
@@ -57,6 +58,7 @@ test("S2.13 materializes Asset Forge GLB when declared and keeps proxy explicit 
   await page.getByTestId("invention-3d-trigger").click();
   await workspace.getByRole("button", { name: /Brushed DC Motor/ }).click();
   await expect(page.getByTestId("invention-3d-visual-source")).toHaveAttribute("data-asset-id", "TS_ELEC_MOTOR_DC_A");
+  await expect(page.getByTestId("invention-3d-visual-source")).toHaveAttribute("data-asset-version", "0.6.6-hero-candidate");
   await expect(page.getByTestId("invention-3d-feedback")).toContainText("Projeto salvo carregado no 3D");
 
   expect(pageErrors, `page errors: ${pageErrors.join(" | ")}`).toEqual([]);
