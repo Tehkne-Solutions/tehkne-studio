@@ -165,8 +165,8 @@
 .spatialNode {
   position: absolute;
   z-index: 2;
-  width: min(230px, 31%);
-  min-width: 180px;
+  width: min(190px, 22%);
+  min-width: 150px;
   max-height: 78%;
   overflow: auto;
   transform: translate(-50%, -50%);
@@ -273,5 +273,5 @@
   .body { grid-template-columns: minmax(210px, 260px) minmax(0, 1fr); }
   .connections { grid-column: 1 / -1; border-left: 0; border-top: 1px solid #373933; max-height: 240px; }
   .workspace { grid-template-rows: auto auto minmax(0, 1fr) auto; }
-  .spatialNode { width: min(210px, 42%); min-width: 160px; }
+  .spatialNode { width: min(170px, 30%); min-width: 138px; }
 }
