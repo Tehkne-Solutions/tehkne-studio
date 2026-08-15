@@ -1,0 +1,41 @@
+name: AF-001I v0.6.5 Browser Gate
+
+on:
+  pull_request:
+    paths:
+      - "apps/studio-web/app/api/asset-forge/af001/**"
+      - "apps/studio-web/app/asset-forge/af001/**"
+      - "apps/studio-web/components/GoldenMotorPbrReviewGateV065ContractAligned.tsx"
+      - "tests/browser/asset-forge-af001i.spec.ts"
+      - ".github/workflows/asset-forge-af001i-v065-browser.yml"
+  workflow_dispatch:
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - name: Build Studio Web
+        run: npm run build:web
+      - name: Install Chromium runtime
+        run: npx playwright install --with-deps chromium
+      - name: Run AF-001I browser contract
+        run: npx playwright test tests/browser/asset-forge-af001i.spec.ts --config=playwright.config.ts
+      - name: Preserve AF-001I evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: af001i-v065-browser-${{ github.sha }}
+          path: test-results/af001i-evidence
+          if-no-files-found: ignore
+          retention-days: 14
