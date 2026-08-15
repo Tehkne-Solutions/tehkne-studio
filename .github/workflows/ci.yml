@@ -55,7 +55,17 @@ jobs:
       - name: Install Chromium runtime
         run: npx playwright install --with-deps chromium
       - name: Alpha and platform browser smoke
-        run: npm run smoke:browser
+        run: |
+          mkdir -p .ci-evidence
+          npm run smoke:browser 2>&1 | tee .ci-evidence/browser-smoke.log
+      - name: Preserve browser smoke diagnostic
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-smoke-diagnostic-${{ github.sha }}
+          path: .ci-evidence/browser-smoke.log
+          if-no-files-found: error
+          retention-days: 7
       - name: Preserve AF-001I browser evidence
         if: always()
         uses: actions/upload-artifact@v7
