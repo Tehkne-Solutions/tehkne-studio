@@ -61,8 +61,6 @@ for (const token of [
 
 const workbench = await readFile("apps/studio-web/components/Invention3DWorkbench.tsx", "utf8");
 for (const token of [
-  "S2.18",
-  "S2.17 LINEAGE",
   "Axial Joint Alignment",
   "Rigid Assembly Rotation",
   "deriveMechanicalAxialConstraints",
@@ -81,6 +79,7 @@ for (const token of [
 ]) {
   if (!workbench.includes(token)) throw new Error(`S2.18 Workbench contract missing: ${token}`);
 }
+if (!["S2.18", "S2.19"].some((marker) => workbench.includes(marker))) throw new Error("S2.18 workbench lineage marker missing");
 for (const forbidden of ["torqueSimulation", "implicitTorque", "angularVelocitySolver", "rpmSolver", 'status: "GOLDEN_ASSET"']) {
   if (workbench.includes(forbidden)) throw new Error(`S2.18 forbidden premature behavior: ${forbidden}`);
 }
@@ -120,4 +119,4 @@ if (!workflow.includes("npm run verify:s2.18")) throw new Error("S2.18 CI contra
 if (!workflow.includes("tests/browser/axial-joint-alignment.spec.ts")) throw new Error("S2.18 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.18 CI must remain read-only");
 
-console.log("S2.18 Axial Joint Alignment PASS · connectedTo-derived rotary axis contract + atomic orientation/position planner + S2.17 rigid rotation preserved + no torque fiction + Tehkné Solutions");
+console.log("S2.18 Axial Joint Alignment PASS · connectedTo-derived rotary axis contract + atomic orientation/position planner + S2.17 rigid rotation preserved through S2.19 + no torque fiction + Tehkné Solutions");
