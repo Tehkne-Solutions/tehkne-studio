@@ -11,6 +11,7 @@ import {
 
 export const INVENTION_SPATIAL_VERSION = "1" as const;
 export const INVENTION_SPATIAL_SIGNATURE = "Tehkné Solutions" as const;
+export const INVENTION_SPATIAL_AUTO_LAYOUT_CAPACITY = 24 as const;
 
 export const INVENTION_SPATIAL_BOUNDS = Object.freeze({
   min: { x: -0.5, y: -0.3, z: -0.1 },
@@ -54,7 +55,9 @@ function assertFinitePosition(position: SpatialVector3): void {
 function defaultPosition(index: number): SpatialVector3 {
   const columns = 4;
   const rows = 6;
-  if (index >= columns * rows) throw new Error("Invention spatial auto-layout capacity exceeded; place the component explicitly");
+  if (index < 0 || index >= columns * rows) {
+    throw new Error("Invention spatial auto-layout capacity exceeded; place the component explicitly");
+  }
   const column = index % columns;
   const row = Math.floor(index / columns);
   const position = {
@@ -64,6 +67,10 @@ function defaultPosition(index: number): SpatialVector3 {
   };
   assertFinitePosition(position);
   return position;
+}
+
+function samePosition(left: SpatialVector3, right: SpatialVector3): boolean {
+  return left.x === right.x && left.y === right.y && left.z === right.z;
 }
 
 function parseBinding(value: unknown): SpatialEntityBinding {
@@ -141,7 +148,7 @@ export class InventionSpatialScene {
     if (existing) return clone(existing);
     const entity = this.session.getEntity(entityId);
     if (!isInventionComponent(entity)) throw new Error(`${entityId} is not an invention component`);
-    const nextPosition = position ?? defaultPosition(this.#bindings.size);
+    const nextPosition = position ?? this.#firstFreeDefaultPosition();
     assertFinitePosition(nextPosition);
     const binding = createSpatialBinding(entity, { position: nextPosition });
     this.#bindings.set(entityId, binding);
@@ -189,5 +196,14 @@ export class InventionSpatialScene {
             : []
         };
       });
+  }
+
+  #firstFreeDefaultPosition(): SpatialVector3 {
+    const occupied = [...this.#bindings.values()].map((binding) => binding.position);
+    for (let index = 0; index < INVENTION_SPATIAL_AUTO_LAYOUT_CAPACITY; index += 1) {
+      const candidate = defaultPosition(index);
+      if (!occupied.some((position) => samePosition(position, candidate))) return candidate;
+    }
+    throw new Error("Invention spatial auto-layout capacity exceeded; place the component explicitly");
   }
 }
