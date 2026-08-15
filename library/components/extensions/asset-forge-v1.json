@@ -1,0 +1,56 @@
+{
+  "extensionId": "asset-forge-v1",
+  "extensionVersion": "1",
+  "signature": "Tehkné Solutions",
+  "components": [
+    {
+      "definitionId": "actuation.motor.dc-brushed-v1",
+      "version": "1",
+      "name": "Brushed DC Motor",
+      "type": "DcMotor",
+      "domain": "actuation",
+      "productFamilies": ["robotics", "embedded", "generic"],
+      "tags": ["motor", "dc", "brushed", "actuator", "asset-forge"],
+      "defaultState": "idle",
+      "properties": {
+        "canWidthM": { "id": "canWidthM", "value": 0.024, "unit": "m", "source": "studio", "confidence": 1, "min": 0.024, "max": 0.024 },
+        "canHeightM": { "id": "canHeightM", "value": 0.018, "unit": "m", "source": "studio", "confidence": 1, "min": 0.018, "max": 0.018 },
+        "canBodyLengthM": { "id": "canBodyLengthM", "value": 0.03, "unit": "m", "source": "studio", "confidence": 1, "min": 0.03, "max": 0.03 },
+        "shaftDiameterM": { "id": "shaftDiameterM", "value": 0.002, "unit": "m", "source": "studio", "confidence": 1, "min": 0.002, "max": 0.002 },
+        "shaftExposedM": { "id": "shaftExposedM", "value": 0.012, "unit": "m", "source": "studio", "confidence": 1, "min": 0.012, "max": 0.012 }
+      },
+      "ports": {
+        "power-pos": { "id": "power-pos", "kind": "electrical", "direction": "bidirectional", "compatibility": ["power.dc.source", "power.dc.motor-terminal"], "state": "available" },
+        "power-neg": { "id": "power-neg", "kind": "electrical", "direction": "bidirectional", "compatibility": ["power.dc.source", "power.dc.motor-terminal"], "state": "available" },
+        "shaft-out": { "id": "shaft-out", "kind": "mechanical", "direction": "out", "compatibility": ["mechanical.rotary-shaft"], "state": "available" },
+        "mount-front": { "id": "mount-front", "kind": "mechanical", "direction": "bidirectional", "compatibility": ["mechanical.motor-mount"], "state": "available" }
+      },
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" },
+        { "id": "rotate", "label": "Rotacionar eixo" }
+      ],
+      "metadata": {
+        "simpleExplanation": "Um motor DC com escovas converte energia elétrica contínua em rotação mecânica no eixo.",
+        "provenance": "authored-template",
+        "visualAsset": {
+          "kind": "gltf",
+          "assetId": "TS_ELEC_MOTOR_DC_A",
+          "version": "0.6.5-hero-candidate",
+          "status": "HERO_CANDIDATE",
+          "lod": "LOD0",
+          "runtimeUrl": "/api/asset-forge/af001/motor/lod0",
+          "triangles": 3292,
+          "bytes": 243672,
+          "sha256": "ad73d83d0dcd8485a8c2a7a680f83090a98d637cea455dde4915f0d771cd6552"
+        },
+        "portSocketMap": {
+          "power-pos": "SOCKET_ELEC_POWER_POS",
+          "power-neg": "SOCKET_ELEC_POWER_NEG",
+          "shaft-out": "SOCKET_MECH_AXIS_OUT",
+          "mount-front": "SOCKET_MECH_MOUNT_FRONT"
+        }
+      }
+    }
+  ]
+}
