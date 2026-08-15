@@ -1,0 +1,170 @@
+.launcher {
+  position: fixed;
+  right: 1rem;
+  bottom: 4.9rem;
+  z-index: 18;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.launcher button,
+.topbar button,
+.command button {
+  border: 1px solid #666252;
+  background: #2f312b;
+  color: #e7e0cb;
+  padding: 0.55rem 0.72rem;
+  cursor: pointer;
+}
+
+.host {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #171915;
+}
+
+.canvas {
+  position: absolute !important;
+  inset: 0;
+}
+
+.topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  min-height: 4.6rem;
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid #4c4d44;
+  background: rgba(25, 27, 23, 0.96);
+}
+
+.title span,
+.inspector span,
+.commandState span {
+  display: block;
+  font-size: 0.66rem;
+  letter-spacing: 0.13em;
+  color: #aaa58e;
+  text-transform: uppercase;
+}
+
+.title strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: #ece5cf;
+  font-size: 1rem;
+}
+
+.topActions {
+  display: flex;
+  gap: 0.42rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.inspector {
+  position: absolute;
+  right: 1rem;
+  top: 5.6rem;
+  width: min(22rem, calc(100vw - 2rem));
+  z-index: 9;
+  border: 1px solid #56564c;
+  background: rgba(29, 31, 27, 0.96);
+  padding: 0.8rem;
+  max-height: calc(100% - 11rem);
+  overflow: auto;
+}
+
+.inspector strong {
+  display: block;
+  color: #e9e2cb;
+  margin: 0.25rem 0 0.15rem;
+}
+
+.inspector > small {
+  color: #888678;
+}
+
+.properties {
+  display: grid;
+  gap: 0.38rem;
+  margin-top: 0.7rem;
+}
+
+.property {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  padding: 0.42rem 0;
+  border-top: 1px solid #41423b;
+  font-size: 0.72rem;
+}
+
+.property dt {
+  color: #aaa691;
+}
+
+.property dd {
+  margin: 0;
+  text-align: right;
+  color: #e0d9c3;
+}
+
+.property dd small {
+  display: block;
+  color: #77766d;
+  font-size: 0.58rem;
+}
+
+.command {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(46rem, calc(100vw - 2rem));
+  z-index: 10;
+  border: 1px solid #5a5a50;
+  background: rgba(27, 29, 25, 0.97);
+  padding: 0.65rem;
+}
+
+.commandState p {
+  margin: 0.22rem 0 0.55rem;
+  color: #cfc9b4;
+  font-size: 0.75rem;
+}
+
+.commandRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.4rem;
+}
+
+.command input {
+  min-width: 0;
+  border: 1px solid #55554b;
+  background: #151713;
+  color: #eee7d1;
+  padding: 0.55rem 0.65rem;
+}
+
+@media (max-width: 850px) {
+  .topbar {
+    align-items: flex-start;
+  }
+  .inspector {
+    top: 5.3rem;
+    width: 13.5rem;
+    max-height: 31%;
+  }
+  .command {
+    bottom: 0.6rem;
+  }
+}

@@ -204,7 +204,7 @@ const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
 if (rootPackage.scripts?.["verify:s2.7"] !== "node scripts/verify-s2.7.mjs") throw new Error("S2.7 package verification script missing");
 
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
-for (const token of ["S2.7 Display System Technology Preset Gate", "npm run verify:s2.7", "npm run smoke:browser"]) {
+for (const token of ["npm run verify:s2.7", "npm run smoke:browser", "Assert AF-001I deterministic evidence"]) {
   if (!workflow.includes(token)) throw new Error(`S2.7 accumulated CI contract missing: ${token}`);
 }
 if (workflow.includes("contents: write")) throw new Error("S2.7 final CI must remain read-only");

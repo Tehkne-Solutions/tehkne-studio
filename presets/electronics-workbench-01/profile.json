@@ -1,0 +1,14 @@
+{
+  "electronicsVersion": "1",
+  "profileId": "electronics-workbench-01-v1",
+  "projectId": "electronics-workbench-01",
+  "name": "Electronics Workbench 01",
+  "signature": "Tehkné Solutions",
+  "sourceVoltageV": 5,
+  "sourceCurrentLimitA": 0.5,
+  "resistorOhms": 330,
+  "resistorPowerRatingW": 0.25,
+  "ledForwardVoltageV": 2,
+  "ledMaxCurrentA": 0.02,
+  "switchClosed": false
+}
