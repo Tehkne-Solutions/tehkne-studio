@@ -58,7 +58,10 @@ for (const token of [
 assert.match(workflow, /workflow_dispatch:/);
 assert.match(workflow, /pull_request:/);
 assert.match(workflow, /runs-on:\s*\[self-hosted,\s*tehkne-af001l\]/);
-assert.match(workflow, /AF001L_RUNNER_CONTEXT:\s*self-hosted:tehkne-af001l/);
+assert.match(workflow, /AF001L_RUNNER_CONTEXT:\s*["']?self-hosted:tehkne-af001l["']?/);
+assert.match(workflow, /AF001L_RUNNER_NAME:\s*\$\{\{\s*runner\.name\s*\}\}/);
+assert.match(workflow, /AF001L_RUNNER_OS:\s*\$\{\{\s*runner\.os\s*\}\}/);
+assert.match(workflow, /AF001L_RUNNER_ARCH:\s*\$\{\{\s*runner\.arch\s*\}\}/);
 assert.match(workflow, /npm run verify:af001l:contract/);
 assert.match(workflow, /npm run bench:af001l:hardware/);
 assert.match(workflow, /test-results\/af001l-hardware-evidence/);
