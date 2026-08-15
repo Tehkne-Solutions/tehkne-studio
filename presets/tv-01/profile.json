@@ -1,0 +1,143 @@
+{
+  "compositionVersion": "1",
+  "profileId": "tv-01-v1",
+  "projectId": "tv-01",
+  "name": "TV 01",
+  "signature": "Tehkné Solutions",
+  "productFamily": "display-system",
+  "projectType": "teardown",
+  "root": {
+    "id": "tv.root",
+    "name": "TV 01",
+    "type": "Television",
+    "formFactor": "large-display",
+    "voiceAliases": ["tv", "televisao", "televisão", "televisor", "tv 01"],
+    "simpleExplanation": "Uma televisão digital combina alimentação de rede, processamento de mídia, armazenamento, painel, áudio e interfaces externas em um sistema integrado de exibição."
+  },
+  "boot": {
+    "id": "tv.boot",
+    "name": "TV Boot Process",
+    "voiceAliases": ["boot da tv", "inicializacao da tv", "inicialização da tv"],
+    "simpleExplanation": "O boot da TV valida alimentação, processamento, armazenamento e painel antes de iniciar a experiência audiovisual."
+  },
+  "requiredSlots": ["frame", "acInlet", "psu", "soc", "storage", "panel", "wireless", "input", "hdmi", "speakers", "usbC"],
+  "slots": [
+    {
+      "slotId": "frame",
+      "definitionId": "structural.frame.modular-v1",
+      "entityId": "tv.frame",
+      "name": "TV Structural Chassis",
+      "voiceAliases": ["estrutura", "chassi", "carcaca", "carcaça"],
+      "spatial": { "position": [0, 0, 0], "exploded": [0, 0, -0.8], "size": [4.9, 2.9, 0.18] }
+    },
+    {
+      "slotId": "acInlet",
+      "definitionId": "interface.ac-inlet-v1",
+      "entityId": "tv.ac-inlet",
+      "name": "TV AC Mains Inlet",
+      "voiceAliases": ["entrada ac", "tomada", "entrada de energia", "cabo de força"],
+      "spatial": { "position": [-2.12, -1.12, -0.16], "exploded": [-3.25, -1.5, 0.82], "size": [0.42, 0.28, 0.14] }
+    },
+    {
+      "slotId": "psu",
+      "definitionId": "power.supply.ac-dc-v1",
+      "entityId": "tv.psu",
+      "name": "TV AC/DC Power Supply",
+      "teardown": true,
+      "voiceAliases": ["fonte", "fonte da tv", "psu", "fonte ac dc", "fonte de alimentacao", "fonte de alimentação"],
+      "spatial": { "position": [-1.25, -0.55, -0.16], "exploded": [-2.45, -0.85, 0.92], "size": [1.15, 0.72, 0.12] }
+    },
+    {
+      "slotId": "soc",
+      "definitionId": "compute.media-soc.display-v1",
+      "entityId": "tv.soc",
+      "name": "TV Media SoC",
+      "voiceAliases": ["soc", "media soc", "processador", "chip principal"],
+      "spatial": { "position": [0.05, -0.4, -0.16], "exploded": [0.1, -0.7, 1.02], "size": [0.82, 0.58, 0.09] }
+    },
+    {
+      "slotId": "storage",
+      "definitionId": "storage.solid-state.general-v1",
+      "entityId": "tv.storage",
+      "name": "TV Solid-State Storage",
+      "voiceAliases": ["armazenamento", "storage", "flash", "memoria interna", "memória interna"],
+      "spatial": { "position": [0.9, -0.52, -0.16], "exploded": [1.25, -1.05, 0.96], "size": [0.48, 0.28, 0.06] }
+    },
+    {
+      "slotId": "panel",
+      "definitionId": "display.panel.large-v1",
+      "entityId": "tv.panel",
+      "name": "55-inch Display Panel",
+      "voiceAliases": ["tela", "painel", "display", "painel da tv"],
+      "spatial": { "position": [0, 0, 0.08], "exploded": [0, 0, 1.42], "size": [4.62, 2.62, 0.07] }
+    },
+    {
+      "slotId": "wireless",
+      "definitionId": "communication.wireless.combo-v1",
+      "entityId": "tv.wireless",
+      "name": "TV Wireless Connectivity",
+      "voiceAliases": ["wifi", "wi-fi", "bluetooth", "wireless"],
+      "spatial": { "position": [1.46, -0.82, -0.16], "exploded": [2.25, -1.25, 0.92], "size": [0.38, 0.28, 0.07] }
+    },
+    {
+      "slotId": "input",
+      "definitionId": "control.mcu.general-v1",
+      "entityId": "tv.input",
+      "name": "TV Input Controller",
+      "voiceAliases": ["controlador", "controle remoto", "receptor do controle", "input controller"],
+      "spatial": { "position": [1.7, 0.42, -0.16], "exploded": [2.65, 0.65, 0.86], "size": [0.4, 0.28, 0.07] }
+    },
+    {
+      "slotId": "hdmi",
+      "definitionId": "interface.hdmi.port-v1",
+      "entityId": "tv.hdmi",
+      "name": "TV HDMI Input",
+      "voiceAliases": ["hdmi", "entrada hdmi", "porta hdmi"],
+      "spatial": { "position": [-1.85, 0.62, -0.16], "exploded": [-3.0, 0.85, 0.86], "size": [0.52, 0.22, 0.1] }
+    },
+    {
+      "slotId": "speakers",
+      "definitionId": "audio.speaker.stereo-v1",
+      "entityId": "tv.speakers",
+      "name": "TV Stereo Speakers",
+      "voiceAliases": ["alto falantes", "alto-falantes", "speakers", "audio", "áudio", "som"],
+      "spatial": { "position": [0, 1.16, -0.16], "exploded": [0, 1.88, 0.88], "size": [2.45, 0.3, 0.08] }
+    },
+    {
+      "slotId": "usbC",
+      "definitionId": "interface.usb-c.port-v1",
+      "entityId": "tv.usb-c",
+      "name": "TV USB-C Service Port",
+      "voiceAliases": ["usb-c", "usb c", "porta usb", "porta de servico", "porta de serviço"],
+      "spatial": { "position": [2.08, -0.52, -0.16], "exploded": [3.18, -0.72, 0.86], "size": [0.34, 0.18, 0.1] }
+    }
+  ],
+  "connections": [
+    { "id": "tv-mains-to-psu", "from": ["acInlet", "internal-ac"], "to": ["psu", "ac-input"] },
+    { "id": "tv-power-soc", "from": ["psu", "dc-output"], "to": ["soc", "power-in"] },
+    { "id": "tv-power-panel", "from": ["psu", "dc-output"], "to": ["panel", "power-in"] },
+    { "id": "tv-power-wireless", "from": ["psu", "dc-output"], "to": ["wireless", "power-in"] },
+    { "id": "tv-power-input", "from": ["psu", "dc-output"], "to": ["input", "power-in"] },
+    { "id": "tv-power-speakers", "from": ["psu", "dc-output"], "to": ["speakers", "power-in"] },
+    { "id": "tv-storage", "from": ["soc", "storage"], "to": ["storage", "storage-bus"] },
+    { "id": "tv-panel-video", "from": ["soc", "display-out"], "to": ["panel", "video-in"] },
+    { "id": "tv-wireless-data", "from": ["soc", "wireless-bus"], "to": ["wireless", "host-data"] },
+    { "id": "tv-input-control", "from": ["soc", "control-bus"], "to": ["input", "sensor-bus"] },
+    { "id": "tv-hdmi-video", "from": ["hdmi", "host-video"], "to": ["soc", "hdmi-in"] },
+    { "id": "tv-audio", "from": ["soc", "audio-out"], "to": ["speakers", "audio-in"] },
+    { "id": "tv-usb-service", "from": ["soc", "usb-host"], "to": ["usbC", "external"] }
+  ],
+  "bootDependencies": [
+    { "slotId": "psu", "reason": "converter energia AC em alimentação DC interna" },
+    { "slotId": "soc", "reason": "executar firmware, processamento de mídia e sistema da TV" },
+    { "slotId": "storage", "reason": "fornecer firmware e armazenamento persistente" },
+    { "slotId": "panel", "reason": "inicializar a superfície principal de exibição" }
+  ],
+  "tuning": [
+    { "slotId": "psu", "propertyValues": { "ratedPowerW": 220, "efficiencyPercent": 93 } },
+    { "slotId": "soc", "propertyValues": { "cpuCores": 6, "nominalPowerW": 28, "videoDecode": "4K HDR 120" } },
+    { "slotId": "storage", "propertyValues": { "capacityGB": 32 } },
+    { "slotId": "panel", "propertyValues": { "diagonalIn": 55, "refreshHz": 120, "resolution": "3840x2160" } },
+    { "slotId": "speakers", "propertyValues": { "channels": 2, "ratedPowerW": 30 } }
+  ]
+}
