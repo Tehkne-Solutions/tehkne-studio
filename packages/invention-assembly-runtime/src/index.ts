@@ -58,6 +58,10 @@ function withinBounds(position: SpatialVector3): boolean {
     && position.z >= min.z && position.z <= max.z;
 }
 
+function vectorLabel(value: SpatialVector3): string {
+  return `${value.x.toFixed(6)},${value.y.toFixed(6)},${value.z.toFixed(6)}`;
+}
+
 export function deriveMechanicalAssemblyConstraints(
   session: EngineeringSession,
   relationships: readonly EngineeringRelationship[]
@@ -125,7 +129,12 @@ export function coincidentFollowerPosition(
     y: followerBinding.position.y + driverEndpoint.y - followerEndpoint.y,
     z: followerBinding.position.z + driverEndpoint.z - followerEndpoint.z
   };
-  if (!withinBounds(next)) throw new Error(`Mechanical snap would move ${followerBinding.entityId} outside invention workspace bounds`);
+  if (!withinBounds(next)) {
+    throw new Error(
+      `Mechanical snap would move ${followerBinding.entityId} outside invention workspace bounds; `
+      + `driver=${vectorLabel(driverEndpoint)} follower=${vectorLabel(followerEndpoint)} next=${vectorLabel(next)}`
+    );
+  }
   return next;
 }
 
