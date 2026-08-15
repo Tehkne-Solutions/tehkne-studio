@@ -1,0 +1,191 @@
+import { expect, test } from "@playwright/test";
+import { createHash } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+const EXPECTED_BYTES = 243_672;
+const EXPECTED_SHA256 = "ad73d83d0dcd8485a8c2a7a680f83090a98d637cea455dde4915f0d771cd6552";
+const EXPECTED_TRANSPORT_SHA256 = "f6b1062238c941f81bbd5c38e154add9bb4ab56b81c06f9c45989c9604dd90c8";
+const EXPECTED_TRIANGLES = 3_292;
+const MIN_BENCHMARK_SAMPLES = 30;
+const MAX_AVERAGE_FRAME_MS = 100;
+const MAX_P95_FRAME_MS = 150;
+const EVIDENCE_DIR = resolve("test-results", "af001l-hardware-evidence");
+const SOFTWARE_RENDERER_MARKERS = [
+  "swiftshader",
+  "llvmpipe",
+  "softpipe",
+  "software rasterizer",
+  "software renderer",
+  "basic render driver",
+  "lavapipe",
+  "mesa offscreen"
+] as const;
+
+function requiredEnvironment(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`AF-001L requires ${name}; target-hardware evidence is fail-closed.`);
+  return value;
+}
+
+test("AF-001L validates Golden Motor v0.6.5 on identified physical target hardware", async ({ page }, testInfo) => {
+  test.setTimeout(150_000);
+
+  const hardwareId = requiredEnvironment("AF001L_HARDWARE_ID");
+  const physicalAttestation = requiredEnvironment("AF001L_PHYSICAL_ATTESTATION");
+  const runnerName = requiredEnvironment("AF001L_RUNNER_NAME");
+  const runnerOs = requiredEnvironment("AF001L_RUNNER_OS");
+  const runnerArch = requiredEnvironment("AF001L_RUNNER_ARCH");
+  const runnerContext = requiredEnvironment("AF001L_RUNNER_CONTEXT");
+
+  expect(physicalAttestation).toBe("PHYSICAL_HARDWARE_CONFIRMED");
+  expect(runnerContext).toBe("self-hosted:tehkne-af001l");
+
+  const pageErrors: string[] = [];
+  const consoleErrors: string[] = [];
+  await mkdir(EVIDENCE_DIR, { recursive: true });
+
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+
+  const assetResponse = await page.request.get("/api/asset-forge/af001/motor/lod0");
+  expect(assetResponse.status()).toBe(200);
+  expect(assetResponse.headers()["content-type"]).toContain("model/gltf-binary");
+  expect(assetResponse.headers()["x-tehkne-asset-id"]).toBe("TS_ELEC_MOTOR_DC_A");
+  expect(assetResponse.headers()["x-tehkne-asset-version"]).toBe("0.6.5-hero-candidate");
+  expect(assetResponse.headers()["x-tehkne-asset-lod"]).toBe("LOD0");
+  expect(assetResponse.headers()["x-tehkne-asset-triangles"]).toBe(String(EXPECTED_TRIANGLES));
+  expect(assetResponse.headers()["x-tehkne-asset-sha256"]).toBe(EXPECTED_SHA256);
+  expect(assetResponse.headers()["x-tehkne-asset-transport-sha256"]).toBe(EXPECTED_TRANSPORT_SHA256);
+
+  const assetBody = await assetResponse.body();
+  expect(assetBody.byteLength).toBe(EXPECTED_BYTES);
+  expect(createHash("sha256").update(assetBody).digest("hex")).toBe(EXPECTED_SHA256);
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/asset-forge/af001/pbr", { waitUntil: "networkidle" });
+
+  const gpu = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl2", { powerPreference: "high-performance" })
+      ?? canvas.getContext("webgl", { powerPreference: "high-performance" });
+    if (!gl) return { available: false, vendor: "", renderer: "" };
+
+    const debug = gl.getExtension("WEBGL_debug_renderer_info");
+    const vendor = String(debug
+      ? gl.getParameter(debug.UNMASKED_VENDOR_WEBGL)
+      : gl.getParameter(gl.VENDOR));
+    const renderer = String(debug
+      ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL)
+      : gl.getParameter(gl.RENDERER));
+    return { available: true, vendor, renderer };
+  });
+
+  expect(gpu.available, "AF-001L requires an available WebGL hardware context").toBe(true);
+  expect(gpu.vendor.trim().length, "AF-001L requires a reported GPU vendor").toBeGreaterThan(0);
+  expect(gpu.renderer.trim().length, "AF-001L requires a reported GPU renderer").toBeGreaterThan(0);
+
+  const rendererLower = gpu.renderer.toLowerCase();
+  for (const marker of SOFTWARE_RENDERER_MARKERS) {
+    expect(rendererLower, `AF-001L rejects software renderer marker: ${marker}`).not.toContain(marker);
+  }
+
+  const review = page.getByLabel("AF-001I Golden Motor LOD0 PBR Runtime Review");
+  await expect(review).toBeVisible();
+  await expect(review).toHaveAttribute("data-runtime-ready", "true", { timeout: 20_000 });
+  await expect(review).toHaveAttribute("data-node-gate", "pass", { timeout: 20_000 });
+  await expect(review).toHaveAttribute("data-benchmark-ready", "true", { timeout: 20_000 });
+  await expect(page.getByTestId("node-gate-verdict")).toHaveText("PASS");
+  await expect(page.getByTestId("viewport-context")).not.toHaveText("pending");
+
+  const canvasShell = page.getByTestId("pbr-canvas-shell");
+  const cameraViews = [
+    "three-quarter",
+    "front",
+    "side",
+    "rear",
+    "bearing",
+    "terminals"
+  ] as const;
+
+  for (const cameraView of cameraViews) {
+    await page.getByTestId(`camera-view-${cameraView}`).click();
+    await expect(canvasShell).toHaveAttribute("data-camera-view", cameraView);
+    await page.waitForTimeout(180);
+    const screenshotPath = resolve(EVIDENCE_DIR, `af001l-${cameraView}.png`);
+    await canvasShell.screenshot({ path: screenshotPath });
+    await testInfo.attach(`AF001L ${cameraView}`, { path: screenshotPath, contentType: "image/png" });
+  }
+
+  const samples = Number.parseInt(await page.getByTestId("benchmark-samples-i").innerText(), 10);
+  const averageFrameMs = Number.parseFloat(await page.getByTestId("average-frame-ms-i").innerText());
+  const p95FrameMs = Number.parseFloat(await page.getByTestId("p95-frame-ms-i").innerText());
+
+  expect(Number.isFinite(samples)).toBe(true);
+  expect(samples).toBeGreaterThanOrEqual(MIN_BENCHMARK_SAMPLES);
+  expect(Number.isFinite(averageFrameMs)).toBe(true);
+  expect(Number.isFinite(p95FrameMs)).toBe(true);
+  expect(averageFrameMs).toBeLessThan(MAX_AVERAGE_FRAME_MS);
+  expect(p95FrameMs).toBeLessThan(MAX_P95_FRAME_MS);
+  await expect(page.getByTestId("lod0-pbr-verdict")).toHaveText("LOD0 PBR RUNTIME PASS");
+
+  const browserContext = await page.evaluate(() => ({
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    viewport: {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      devicePixelRatio: window.devicePixelRatio
+    }
+  }));
+
+  const evidence = {
+    gate: "AF001L",
+    verdict: "TARGET_HARDWARE_PASS",
+    promotionEligible: true,
+    hardware: {
+      hardwareId,
+      physicalAttestation,
+      runnerName,
+      runnerOs,
+      runnerArch,
+      runnerContext,
+      gpuVendor: gpu.vendor,
+      gpuRenderer: gpu.renderer
+    },
+    asset: {
+      id: "TS_ELEC_MOTOR_DC_A",
+      version: "0.6.5-hero-candidate",
+      lod: "LOD0",
+      triangles: EXPECTED_TRIANGLES,
+      bytes: EXPECTED_BYTES,
+      sha256: EXPECTED_SHA256,
+      transportSha256: EXPECTED_TRANSPORT_SHA256
+    },
+    benchmark: {
+      minSamples: MIN_BENCHMARK_SAMPLES,
+      maxAverageFrameMs: MAX_AVERAGE_FRAME_MS,
+      maxP95FrameMs: MAX_P95_FRAME_MS,
+      samples,
+      averageFrameMs,
+      p95FrameMs
+    },
+    ...browserContext
+  };
+
+  const evidencePath = resolve(EVIDENCE_DIR, "af001l-target-hardware-context.json");
+  await writeFile(evidencePath, JSON.stringify(evidence, null, 2), "utf8");
+  await testInfo.attach("AF001L target hardware context", { path: evidencePath, contentType: "application/json" });
+
+  console.log(
+    `AF001L_HARDWARE_METRICS hardware_id=${hardwareId} runner=${runnerName} ` +
+    `gpu_renderer=${JSON.stringify(gpu.renderer)} average_frame_ms=${averageFrameMs} ` +
+    `p95_frame_ms=${p95FrameMs} samples=${samples} triangles=${EXPECTED_TRIANGLES} ` +
+    `bytes=${EXPECTED_BYTES} sha256=${EXPECTED_SHA256}`
+  );
+
+  expect(pageErrors, `page errors: ${pageErrors.join(" | ")}`).toEqual([]);
+  expect(consoleErrors, `console errors: ${consoleErrors.join(" | ")}`).toEqual([]);
+});
