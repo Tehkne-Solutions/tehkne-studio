@@ -1,12 +1,21 @@
 import { expect, test } from "@playwright/test";
 
-test("AF-001H Golden Motor loads the real GLB and completes the browser smoke gate", async ({ page }) => {
+const EXPECTED_BYTES = 21_452;
+const EXPECTED_SHA256 = "0a74f27df8a67b61e5ac10b87c0b6fa3736531fac15044bb360a641da6228e69";
+
+test("AF-001H Golden Motor loads the integrity-checked GLB and completes the browser smoke gate", async ({ page }) => {
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
+
+  const assetResponse = await page.request.get("/api/asset-forge/af001/motor");
+  expect(assetResponse.status()).toBe(200);
+  expect(assetResponse.headers()["content-type"]).toContain("model/gltf-binary");
+  expect(assetResponse.headers()["x-tehkne-asset-sha256"]).toBe(EXPECTED_SHA256);
+  expect((await assetResponse.body()).byteLength).toBe(EXPECTED_BYTES);
 
   await page.goto("/asset-forge/af001", { waitUntil: "networkidle" });
 
