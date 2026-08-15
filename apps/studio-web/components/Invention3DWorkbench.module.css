@@ -1,7 +1,7 @@
 .trigger {
   position: fixed;
-  right: 18px;
-  bottom: 86px;
+  left: 18px;
+  bottom: 18px;
   z-index: 32;
   border: 1px solid #65685f;
   background: #22241f;
@@ -362,7 +362,7 @@
   }
 
   .trigger {
-    right: 10px;
-    bottom: 78px;
+    left: 10px;
+    bottom: 10px;
   }
 }
