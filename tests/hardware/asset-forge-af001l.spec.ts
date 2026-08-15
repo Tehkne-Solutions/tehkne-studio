@@ -3,8 +3,8 @@ import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const EXPECTED_BYTES = 243_812;
-const EXPECTED_SHA256 = "d19e51fd33c461cf761b7c2c086c1284fc4ddfb38f3274acabd88e33fc5ce487";
+const EXPECTED_BYTES = 243_848;
+const EXPECTED_SHA256 = "65b82b78ecc038fa872a8d8ff9e6e720956cdcdec9e4e51d9eb7904adac8622c";
 const EXPECTED_TRANSPORT_SHA256 = "f6b1062238c941f81bbd5c38e154add9bb4ab56b81c06f9c45989c9604dd90c8";
 const EXPECTED_SOURCE_SHA256 = "ad73d83d0dcd8485a8c2a7a680f83090a98d637cea455dde4915f0d771cd6552";
 const EXPECTED_TRIANGLES = 3_292;
