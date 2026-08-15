@@ -38,7 +38,7 @@ jobs:
 
   target-hardware:
     name: af001l-physical-target-hardware
-    if: github.event_name == 'workflow_dispatch'
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     needs: contract
     runs-on: [self-hosted, tehkne-af001l]
     timeout-minutes: 25
@@ -46,10 +46,7 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
       AF001L_HARDWARE_ID: ${{ inputs.hardware_id }}
       AF001L_PHYSICAL_ATTESTATION: ${{ inputs.physical_attestation }}
-      AF001L_RUNNER_NAME: ${{ runner.name }}
-      AF001L_RUNNER_OS: ${{ runner.os }}
-      AF001L_RUNNER_ARCH: ${{ runner.arch }}
-      AF001L_RUNNER_CONTEXT: self-hosted:tehkne-af001l
+      AF001L_RUNNER_CONTEXT: "self-hosted:tehkne-af001l"
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -61,7 +58,12 @@ jobs:
       - run: npm run verify:af001l:contract
       - run: npm run build:web
       - run: npx playwright install chromium
-      - run: npm run bench:af001l:hardware
+      - name: Run AF-001L on allocated physical target hardware
+        run: npm run bench:af001l:hardware
+        env:
+          AF001L_RUNNER_NAME: ${{ runner.name }}
+          AF001L_RUNNER_OS: ${{ runner.os }}
+          AF001L_RUNNER_ARCH: ${{ runner.arch }}
       - name: Preserve AF-001L target-hardware evidence
         if: always()
         uses: actions/upload-artifact@v7
