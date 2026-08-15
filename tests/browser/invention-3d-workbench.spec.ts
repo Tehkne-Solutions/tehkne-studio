@@ -35,7 +35,7 @@ test("S2.12 materializes the same invention graph in 3D, moves depth, keeps wiri
   const target = workspace.getByLabel("Destino 3D");
   await source.selectOption({ label: "Lithium-Ion Battery Pack · dc-output" });
   await target.selectOption({ label: "DC Power Regulator · dc-input" });
-  await workspace.getByRole("button", { name: "Conectar no 3D" }).click();
+  await workspace.getByRole("button", { name: "Conectar / Montar" }).click();
 
   const wire = page.getByTestId("invention-3d-wire-invention-connection-1");
   await expect(wire).toContainText("power.dc.source");
