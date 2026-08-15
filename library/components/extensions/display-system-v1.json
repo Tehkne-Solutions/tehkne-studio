@@ -1,0 +1,156 @@
+{
+  "extensionId": "display-system-v1",
+  "extensionVersion": "1",
+  "signature": "Tehkné Solutions",
+  "components": [
+    {
+      "definitionId": "power.supply.ac-dc.display-v1",
+      "version": "1",
+      "name": "Display AC/DC Power Supply",
+      "type": "AcDcPowerSupply",
+      "domain": "power",
+      "productFamilies": ["display-system"],
+      "tags": ["power", "ac-dc", "mains", "display"],
+      "defaultState": "ready",
+      "properties": {
+        "inputRangeVac": { "id": "inputRangeVac", "value": "100-240", "unit": "VAC", "source": "studio", "confidence": 0.8 },
+        "maxOutputW": { "id": "maxOutputW", "value": 180, "unit": "W", "source": "studio", "confidence": 0.75, "min": 20, "max": 1000 },
+        "efficiencyPercent": { "id": "efficiencyPercent", "value": 91, "unit": "%", "source": "studio", "confidence": 0.75, "min": 50, "max": 100 }
+      },
+      "ports": {
+        "ac-input": { "id": "ac-input", "kind": "electrical", "direction": "in", "compatibility": ["power.ac.mains"], "state": "available" },
+        "dc-output": { "id": "dc-output", "kind": "electrical", "direction": "out", "compatibility": ["power.dc.source"], "state": "available" },
+        "panel-output": { "id": "panel-output", "kind": "electrical", "direction": "out", "compatibility": ["power.dc.panel"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "A fonte AC/DC recebe energia da rede elétrica e cria as linhas contínuas usadas pela eletrônica e pelo painel da TV.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "compute.soc.media-v1",
+      "version": "1",
+      "name": "Media Processing SoC",
+      "type": "MediaSoC",
+      "domain": "compute",
+      "productFamilies": ["display-system"],
+      "tags": ["soc", "media", "video", "tv", "compute"],
+      "defaultState": "ready",
+      "properties": {
+        "cpuCores": { "id": "cpuCores", "value": 6, "source": "studio", "confidence": 0.8, "min": 1, "max": 32 },
+        "videoDecode": { "id": "videoDecode", "value": "4K120 HDR", "source": "studio", "confidence": 0.75 },
+        "nominalPowerW": { "id": "nominalPowerW", "value": 18, "unit": "W", "source": "studio", "confidence": 0.75, "min": 1, "max": 120 }
+      },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "memory": { "id": "memory", "kind": "data", "direction": "bidirectional", "compatibility": ["memory.lpddr"], "state": "available" },
+        "storage": { "id": "storage", "kind": "data", "direction": "bidirectional", "compatibility": ["storage.solid-state"], "state": "available" },
+        "display-out": { "id": "display-out", "kind": "data", "direction": "out", "compatibility": ["display.edp-lvds"], "state": "available" },
+        "wireless-bus": { "id": "wireless-bus", "kind": "data", "direction": "bidirectional", "compatibility": ["bus.sdio-pcie"], "state": "available" },
+        "hdmi-in": { "id": "hdmi-in", "kind": "data", "direction": "in", "compatibility": ["video.hdmi"], "state": "available" },
+        "audio-out": { "id": "audio-out", "kind": "signal", "direction": "out", "compatibility": ["audio.digital-pcm"], "state": "available" },
+        "control-bus": { "id": "control-bus", "kind": "data", "direction": "bidirectional", "compatibility": ["bus.i2c-spi"], "state": "available" },
+        "thermal": { "id": "thermal", "kind": "thermal", "direction": "bidirectional", "compatibility": ["thermal.compute-spreader"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O Media SoC executa o sistema da TV, decodifica vídeo, processa imagem e coordena áudio, interfaces e conectividade.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "display.panel.4k-v1",
+      "version": "1",
+      "name": "4K Display Panel",
+      "type": "DisplayPanel",
+      "domain": "display",
+      "productFamilies": ["display-system"],
+      "tags": ["display", "panel", "4k", "hdr", "tv"],
+      "defaultState": "off",
+      "properties": {
+        "diagonalIn": { "id": "diagonalIn", "value": 55, "unit": "in", "source": "studio", "confidence": 0.75, "min": 20, "max": 120 },
+        "resolution": { "id": "resolution", "value": "3840x2160", "source": "studio", "confidence": 0.9 },
+        "refreshHz": { "id": "refreshHz", "value": 120, "unit": "Hz", "source": "studio", "confidence": 0.8, "min": 24, "max": 480 }
+      },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.panel"], "state": "available" },
+        "display-in": { "id": "display-in", "kind": "data", "direction": "in", "compatibility": ["display.edp-lvds"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O painel transforma os dados processados pelo Media SoC em luz e imagem visível.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "interface.hdmi.input-v1",
+      "version": "1",
+      "name": "HDMI Input Interface",
+      "type": "HdmiInput",
+      "domain": "interface",
+      "productFamilies": ["display-system"],
+      "tags": ["hdmi", "video", "input", "interface"],
+      "defaultState": "available",
+      "properties": {
+        "maxDataRateGbps": { "id": "maxDataRateGbps", "value": 48, "unit": "Gbps", "source": "studio", "confidence": 0.75, "min": 1, "max": 96 }
+      },
+      "ports": {
+        "external": { "id": "external", "kind": "data", "direction": "in", "compatibility": ["video.hdmi"], "state": "available" },
+        "internal": { "id": "internal", "kind": "data", "direction": "out", "compatibility": ["video.hdmi"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "A interface HDMI recebe áudio e vídeo digital de consoles, computadores e outros equipamentos externos.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "audio.amplifier.stereo-v1",
+      "version": "1",
+      "name": "Stereo Audio Amplifier",
+      "type": "AudioAmplifier",
+      "domain": "audio",
+      "productFamilies": ["display-system"],
+      "tags": ["audio", "amplifier", "stereo", "speaker"],
+      "defaultState": "ready",
+      "properties": {
+        "channels": { "id": "channels", "value": 2, "source": "studio", "confidence": 1, "min": 1, "max": 16 },
+        "outputPowerW": { "id": "outputPowerW", "value": 30, "unit": "W", "source": "studio", "confidence": 0.75, "min": 1, "max": 500 }
+      },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "audio-in": { "id": "audio-in", "kind": "signal", "direction": "in", "compatibility": ["audio.digital-pcm"], "state": "available" },
+        "speaker-out": { "id": "speaker-out", "kind": "signal", "direction": "out", "compatibility": ["audio.speaker-level"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O amplificador recebe áudio digital processado e fornece potência suficiente para movimentar os alto-falantes.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "audio.speaker.stereo-v1",
+      "version": "1",
+      "name": "Stereo Speaker Pair",
+      "type": "SpeakerSystem",
+      "domain": "audio",
+      "productFamilies": ["display-system"],
+      "tags": ["audio", "speaker", "sound", "stereo"],
+      "defaultState": "ready",
+      "properties": {
+        "channels": { "id": "channels", "value": 2, "source": "studio", "confidence": 1, "min": 1, "max": 16 },
+        "ratedPowerW": { "id": "ratedPowerW", "value": 20, "unit": "W", "source": "studio", "confidence": 0.75, "min": 1, "max": 500 }
+      },
+      "ports": {
+        "audio-in": { "id": "audio-in", "kind": "signal", "direction": "in", "compatibility": ["audio.speaker-level"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "Os alto-falantes convertem o sinal elétrico amplificado em vibração mecânica e som no ar.", "provenance": "authored-template" }
+    },
+    {
+      "definitionId": "sensing.ir.receiver-v1",
+      "version": "1",
+      "name": "Infrared Remote Receiver",
+      "type": "InfraredReceiver",
+      "domain": "sensing",
+      "productFamilies": ["display-system", "embedded"],
+      "tags": ["infrared", "ir", "remote", "sensor"],
+      "defaultState": "ready",
+      "properties": {
+        "carrierKHz": { "id": "carrierKHz", "value": 38, "unit": "kHz", "source": "studio", "confidence": 0.85, "min": 20, "max": 100 }
+      },
+      "ports": {
+        "power-in": { "id": "power-in", "kind": "electrical", "direction": "in", "compatibility": ["power.dc.low-voltage"], "state": "available" },
+        "control-out": { "id": "control-out", "kind": "data", "direction": "out", "compatibility": ["bus.i2c-spi"], "state": "available" }
+      },
+      "capabilities": [{ "id": "inspect", "label": "Inspecionar" }, { "id": "explain", "label": "Explicar" }],
+      "metadata": { "simpleExplanation": "O receptor infravermelho transforma pulsos do controle remoto em dados que o processador pode interpretar.", "provenance": "authored-template" }
+    }
+  ]
+}
