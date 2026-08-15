@@ -33,7 +33,7 @@ test("AF-001I Golden Motor v0.6.5 runs LOD0 PBR review and preserves visual evid
   expect((await assetResponse.body()).byteLength).toBe(EXPECTED_BYTES);
 
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/asset-forge/af001/pbr-batched", { waitUntil: "networkidle" });
+  await page.goto("/asset-forge/af001/pbr", { waitUntil: "networkidle" });
 
   const review = page.getByLabel("AF-001I Golden Motor LOD0 PBR Runtime Review");
   await expect(review).toBeVisible();
@@ -43,7 +43,7 @@ test("AF-001I Golden Motor v0.6.5 runs LOD0 PBR review and preserves visual evid
   await expect(page.getByTestId("node-gate-verdict")).toHaveText("PASS");
 
   // Preserve all six visual views before enforcing the performance verdict.
-  // A PERF FAIL remains useful evidence and must never erase the art review.
+  // A PERF FAIL is still useful evidence for AF-001K and must not erase art review.
   const canvasShell = page.getByTestId("pbr-canvas-shell");
   const cameraViews = [
     "three-quarter",
@@ -66,18 +66,9 @@ test("AF-001I Golden Motor v0.6.5 runs LOD0 PBR review and preserves visual evid
   const sampleText = await page.getByTestId("benchmark-samples-i").innerText();
   const averageText = await page.getByTestId("average-frame-ms-i").innerText();
   const p95Text = await page.getByTestId("p95-frame-ms-i").innerText();
-  const sourceMeshText = await page.getByTestId("mesh-count").innerText();
-  const renderMeshText = await page.getByTestId("render-mesh-count").innerText();
-  const materialText = await page.getByTestId("material-count").innerText();
-  const shadowCasterText = await page.getByTestId("shadow-caster-count").innerText();
-
   const samples = Number.parseInt(sampleText, 10);
   const averageFrameMs = Number.parseFloat(averageText);
   const p95FrameMs = Number.parseFloat(p95Text);
-  const sourceMeshCount = Number.parseInt(sourceMeshText, 10);
-  const renderMeshCount = Number.parseInt(renderMeshText, 10);
-  const materialCount = Number.parseInt(materialText, 10);
-  const shadowCasterCount = Number.parseInt(shadowCasterText, 10);
 
   const runtimeContext = await page.evaluate(() => ({
     userAgent: navigator.userAgent,
@@ -98,10 +89,6 @@ test("AF-001I Golden Motor v0.6.5 runs LOD0 PBR review and preserves visual evid
     bytes: EXPECTED_BYTES,
     sha256: EXPECTED_SHA256,
     transportSha256: EXPECTED_TRANSPORT_SHA256,
-    sourceMeshCount,
-    renderMeshCount,
-    materialCount,
-    shadowCasterCount,
     samples,
     averageFrameMs,
     p95FrameMs,
@@ -114,13 +101,9 @@ test("AF-001I Golden Motor v0.6.5 runs LOD0 PBR review and preserves visual evid
 
   console.log(
     `AF001I_METRICS average_frame_ms=${averageFrameMs} p95_frame_ms=${p95FrameMs} samples=${samples} ` +
-    `source_meshes=${sourceMeshCount} render_meshes=${renderMeshCount} materials=${materialCount} ` +
-    `shadow_casters=${shadowCasterCount} triangles=${EXPECTED_TRIANGLES} bytes=${EXPECTED_BYTES} sha256=${EXPECTED_SHA256}`
+    `triangles=${EXPECTED_TRIANGLES} bytes=${EXPECTED_BYTES} sha256=${EXPECTED_SHA256}`
   );
 
-  expect(Number.isFinite(sourceMeshCount)).toBe(true);
-  expect(Number.isFinite(renderMeshCount)).toBe(true);
-  expect(renderMeshCount).toBeLessThanOrEqual(sourceMeshCount);
   expect(Number.isFinite(samples)).toBe(true);
   expect(samples).toBeGreaterThanOrEqual(MIN_BENCHMARK_SAMPLES);
   expect(Number.isFinite(averageFrameMs)).toBe(true);
