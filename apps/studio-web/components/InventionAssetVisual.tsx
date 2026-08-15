@@ -173,13 +173,19 @@ export function AssetBackedComponent({
   binding,
   descriptor,
   selected,
-  onSelect
+  socketSourceKey = "",
+  compatibleTargetKeys,
+  onSelect,
+  onSocketSelect
 }: {
   readonly entity: EngineeringEntity;
   readonly binding: SpatialEntityBinding;
   readonly descriptor: GltfVisualAssetDescriptor;
   readonly selected: boolean;
+  readonly socketSourceKey?: string;
+  readonly compatibleTargetKeys?: ReadonlySet<string>;
   readonly onSelect: (entityId: string) => void;
+  readonly onSocketSelect?: (entityId: string, portId: string) => void;
 }) {
   const gltf = useLoader(GLTFLoader, descriptor.runtimeUrl);
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
@@ -217,6 +223,8 @@ export function AssetBackedComponent({
     localSockets
   ]);
 
+  const showSockets = selected || Boolean(socketSourceKey);
+
   return (
     <group
       position={[binding.position.x, binding.position.y, binding.position.z]}
@@ -229,16 +237,33 @@ export function AssetBackedComponent({
       }}
     >
       <primitive object={scene} />
-      {selected ? localSockets.map(({ portId, socketName, position }) => (
-        <mesh
-          key={portId}
-          name={`port-socket-${entity.id}-${portId}-${socketName}`}
-          position={[position.x, position.y, position.z]}
-        >
-          <sphereGeometry args={[0.003, 10, 8]} />
-          <meshStandardMaterial color="#d7d2bd" metalness={0.15} roughness={0.35} />
-        </mesh>
-      )) : null}
+      {showSockets ? localSockets.map(({ portId, socketName, position }) => {
+        const key = socketKey(entity.id, portId);
+        const port = entity.ports[portId];
+        const isSource = key === socketSourceKey;
+        const compatible = socketSourceKey
+          ? Boolean(compatibleTargetKeys?.has(key))
+          : Boolean(port && port.state === "available" && port.direction !== "in");
+        const interactive = Boolean(onSocketSelect && port && port.state === "available" && (isSource || compatible));
+        const color = isSource ? "#d6ae6c" : compatible ? "#9eb8a6" : "#555953";
+        const state = isSource ? "source" : compatible ? "compatible" : "blocked";
+        return (
+          <mesh
+            key={portId}
+            name={`port-socket-${entity.id}-${portId}-${socketName}`}
+            position={[position.x, position.y, position.z]}
+            userData={{ entityId: entity.id, portId, socketName, socketAuthoringState: state }}
+            onClick={interactive ? (event) => {
+              event.stopPropagation();
+              onSelect(entity.id);
+              onSocketSelect?.(entity.id, portId);
+            } : undefined}
+          >
+            <sphereGeometry args={[interactive ? 0.005 : 0.003, 12, 10]} />
+            <meshStandardMaterial color={color} metalness={0.15} roughness={0.35} />
+          </mesh>
+        );
+      }) : null}
       {selected ? (
         <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -0.014, 0]}>
           <torusGeometry args={[0.044, 0.0015, 8, 40]} />
