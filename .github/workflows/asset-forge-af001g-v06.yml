@@ -1,0 +1,54 @@
+name: AF-001G v0.6 Blender Hero Art Gate
+
+on:
+  pull_request:
+    paths:
+      - "tools/asset_forge/af001_v06/**"
+      - ".github/workflows/asset-forge-af001g-v06.yml"
+      - "library/assets/asset-forge/af001/AF001K_GOLDEN_VISUAL_VERDICT.md"
+  workflow_dispatch:
+
+env:
+  AF001_OUTPUT_DIR: build/asset-forge/af001g-v06
+
+jobs:
+  golden-motor-dcc:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Blender DCC
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender
+          blender --version
+
+      - name: Build Golden Motor v0.6
+        run: blender --background --python tools/asset_forge/af001_v06/build_golden_motor_v06.py
+
+      - name: Assert DCC QA
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          qa = json.loads(Path("build/asset-forge/af001g-v06/AF001G_V06_DCC_QA.json").read_text())
+          assert qa["signature"] == "Tehkné Solutions"
+          assert qa["automated_pass"] is True
+          assert qa["visual_status"] == "DCC_CANDIDATE_NOT_GOLDEN"
+          for lod in ("LOD0", "LOD1", "LOD2"):
+              assert qa["lods"][lod]["budget_pass"] is True, qa["lods"][lod]
+              assert qa["lods"][lod]["socket_pass"] is True, qa["lods"][lod]
+          assert len(qa["renders"]) == 6
+          print(json.dumps(qa, indent=2))
+          PY
+
+      - name: Preserve AF-001G v0.6 DCC evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: af001g-v06-dcc-evidence
+          path: build/asset-forge/af001g-v06
+          if-no-files-found: error
+          retention-days: 30
