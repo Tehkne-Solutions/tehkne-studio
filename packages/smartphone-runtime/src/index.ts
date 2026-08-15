@@ -64,6 +64,20 @@ export interface SmartphoneMaterializationResult {
   readonly componentCount: number;
 }
 
+const SLOT_VOICE_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  frame: ["estrutura", "chassi", "frame", "midframe"],
+  battery: ["bateria", "battery", "bateria do celular"],
+  regulator: ["energia", "regulador", "pmic", "power management"],
+  soc: ["soc", "processador", "chip", "processador do celular"],
+  memory: ["memoria", "memória", "ram", "lpddr"],
+  storage: ["armazenamento", "storage", "flash"],
+  display: ["tela", "display", "oled", "touch"],
+  imu: ["imu", "sensor de movimento", "acelerometro", "acelerômetro"],
+  camera: ["camera", "câmera", "camera principal", "câmera principal"],
+  wireless: ["wifi", "wi-fi", "bluetooth", "wireless", "radio", "rádio"],
+  usbC: ["usb-c", "usb c", "porta usb", "conector usb"]
+};
+
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -147,6 +161,7 @@ function bootEntity(rootId: EntityId): EngineeringEntity {
       { id: "why", label: "Por quê?" }
     ],
     metadata: {
+      voiceAliases: ["boot do celular", "boot do smartphone", "inicializacao do celular", "inicialização do celular"],
       simpleExplanation: "O processo de boot valida alimentação e os subsistemas essenciais antes de colocar o smartphone em execução.",
       signature: SMARTPHONE_SIGNATURE
     }
@@ -250,7 +265,8 @@ export function createSmartphoneProject(
       metadata: {
         smartphoneSlotId: slot.slotId,
         spatial: clone(slot.spatial),
-        profileId: profile.profileId
+        profileId: profile.profileId,
+        voiceAliases: [...(SLOT_VOICE_ALIASES[slot.slotId] ?? [slot.name])]
       }
     });
     if (slot.teardown) entity = contextualTeardown(entity);
