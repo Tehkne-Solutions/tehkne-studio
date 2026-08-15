@@ -14,12 +14,14 @@ const runtime = await readFile("packages/invention-spatial-runtime/src/index.ts"
 for (const token of [
   'INVENTION_SPATIAL_VERSION = "1"',
   'INVENTION_SPATIAL_SIGNATURE = "Tehkné Solutions"',
+  "INVENTION_SPATIAL_AUTO_LAYOUT_CAPACITY",
   "INVENTION_SPATIAL_BOUNDS",
   "parseInventionSpatialDocument",
   "class InventionSpatialScene",
   "createSpatialBinding",
   "resolveSpatialSelection",
   "ensureComponent",
+  "#firstFreeDefaultPosition",
   "move(entityId",
   "connectionSegments",
   'relationship.type === "connectedTo"',
@@ -36,7 +38,8 @@ for (const token of [
   "move is bounded, finite and preserves entity identity",
   "visual wire segments derive from the authored connectedTo relationships and follow movement",
   "spatial document restores exact layout and rejects tampered or incomplete evidence",
-  "default layout covers the complete canonical base catalog"
+  "default layout covers the complete canonical base catalog",
+  "automatic layout reuses the first free slot after removal without colliding with surviving nodes"
 ]) {
   if (!domain.includes(token)) throw new Error(`S2.11 domain evidence missing: ${token}`);
 }
@@ -46,7 +49,8 @@ for (const token of [
   "InventionSpatialScene",
   "parseInventionSpatialDocument",
   "snapshot.extensions.inventionSpatial",
-  "if (!rawSpatial)",
+  "Object.prototype.hasOwnProperty.call",
+  "if (!hasSpatialEvidence)",
   "spatial.ensureComponent(entity.id)",
   "inventionSpatial: runtime.spatial.document()",
   'data-testid="invention-spatial-canvas"',
@@ -102,4 +106,4 @@ for (const token of [
 }
 if (workflow.includes("contents: write")) throw new Error("S2.11 CI must remain read-only");
 
-console.log("S2.11 Spatial Invention PASS · same Engineering Entities + bounded spatial bindings + authored connectedTo wires + drag/move + backward-compatible S2.10 restore + persisted layout without replay · Tehkné Solutions");
+console.log("S2.11 Spatial Invention PASS · same Engineering Entities + bounded/free-slot spatial bindings + authored connectedTo wires + drag/move + backward-compatible S2.10 restore + malformed spatial evidence fail-closed + persisted layout without replay · Tehkné Solutions");
