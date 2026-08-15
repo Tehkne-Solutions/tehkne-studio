@@ -50,16 +50,8 @@ jobs:
             echo 'QA JSON MISSING'
           fi
 
-      - name: Preserve AF-001G v0.6 DCC evidence
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: af001g-v06-dcc-evidence
-          path: build/asset-forge/af001g-v06/**
-          if-no-files-found: error
-          retention-days: 30
-
       - name: Assert DCC QA
+        if: always()
         run: |
           python - <<'PY'
           import json
@@ -77,3 +69,12 @@ jobs:
               assert qa["lods"][lod]["socket_pass"] is True, qa["lods"][lod]
           assert len(qa["renders"]) == 6, qa["renders"]
           PY
+
+      - name: Preserve AF-001G v0.6 DCC evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: af001g-v06-dcc-evidence
+          path: build/asset-forge/af001g-v06
+          if-no-files-found: error
+          retention-days: 30
