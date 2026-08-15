@@ -1,0 +1,41 @@
+name: S2.7 Workbench Integration Bootstrap
+
+on:
+  push:
+    branches: [feat/s2-07-display-system-preset]
+    paths:
+      - .github/workflows/s2-07-workbench-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-workbench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feat/s2-07-display-system-preset
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Apply fail-closed Workbench transformation
+        run: node tools/s2-07-integrate-workbench.mjs
+      - name: Validate generated diff
+        run: |
+          git diff --check
+          grep -q 'Chamar TV 01' apps/studio-web/components/SpatialWorkbench.tsx
+          grep -q 'createDisplaySystemRuntime\|createTvRuntime' apps/studio-web/components/SpatialWorkbench.tsx
+          grep -q 'TV-01' apps/studio-web/components/SpatialWorkbench.tsx
+      - name: Commit generated Workbench integration
+        run: |
+          if git diff --quiet -- apps/studio-web/components/SpatialWorkbench.tsx; then
+            echo 'Expected Workbench transformation produced no diff' >&2
+            exit 1
+          fi
+          git config user.name 'Tehkné Solutions Automation'
+          git config user.email 'automation@tehkne.solutions'
+          git add apps/studio-web/components/SpatialWorkbench.tsx
+          git commit -m 'S2.7 integrate TV 01 into First Workbench'
+          git push origin HEAD:feat/s2-07-display-system-preset
