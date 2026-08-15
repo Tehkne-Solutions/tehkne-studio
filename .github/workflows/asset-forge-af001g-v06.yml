@@ -56,18 +56,48 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
+
+          failures = []
+
+          def check(name, condition, actual=None):
+              status = "PASS" if condition else "FAIL"
+              print(f"AF001_DCC_CHECK {name} {status} actual={actual!r}")
+              if not condition:
+                  failures.append(name)
+
           qa_path = Path("build/asset-forge/af001g-v06/AF001G_V06_DCC_QA.json")
-          assert qa_path.exists(), f"QA JSON missing: {qa_path}"
-          qa = json.loads(qa_path.read_text())
-          print(json.dumps(qa, indent=2))
-          assert qa["signature"] == "Tehkné Solutions"
-          assert qa["automated_pass"] is True
-          assert qa["visual_status"] == "DCC_CANDIDATE_NOT_GOLDEN"
-          assert qa.get("surface_textures") == ["TS_MOTOR_STAMPED_STEEL_ROUGHNESS.png"], qa.get("surface_textures")
-          for lod in ("LOD0", "LOD1", "LOD2"):
-              assert qa["lods"][lod]["budget_pass"] is True, qa["lods"][lod]
-              assert qa["lods"][lod]["socket_pass"] is True, qa["lods"][lod]
-          assert len(qa["renders"]) == 6, qa["renders"]
+          check("qa_json_exists", qa_path.exists(), str(qa_path))
+
+          if qa_path.exists():
+              qa = json.loads(qa_path.read_text())
+              print("AF001_DCC_QA_BEGIN")
+              print(json.dumps(qa, indent=2))
+              print("AF001_DCC_QA_END")
+
+              check("signature", qa.get("signature") == "Tehkné Solutions", qa.get("signature"))
+              check("automated_pass", qa.get("automated_pass") is True, qa.get("automated_pass"))
+              check("visual_status", qa.get("visual_status") == "DCC_CANDIDATE_NOT_GOLDEN", qa.get("visual_status"))
+              check(
+                  "surface_textures",
+                  qa.get("surface_textures") == ["TS_MOTOR_STAMPED_STEEL_ROUGHNESS.png"],
+                  qa.get("surface_textures"),
+              )
+
+              lods = qa.get("lods", {})
+              for lod in ("LOD0", "LOD1", "LOD2"):
+                  entry = lods.get(lod, {})
+                  check(f"{lod}_budget", entry.get("budget_pass") is True, entry)
+                  check(f"{lod}_sockets", entry.get("socket_pass") is True, entry.get("sockets"))
+
+              renders = qa.get("renders", [])
+              check("six_renders", len(renders) == 6, renders)
+
+              overlay = qa.get("manufacturing_overlay", {})
+              check("roughness_metadata", "stamped_steel_roughness" in overlay, overlay)
+              check("vent_metadata", "vent_recesses" in overlay, overlay)
+
+          if failures:
+              raise SystemExit("AF001 DCC QA failed: " + ", ".join(failures))
           PY
 
       - name: Preserve AF-001G v0.6 DCC evidence
