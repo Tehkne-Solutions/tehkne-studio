@@ -1,11 +1,13 @@
 import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { brotliDecompressSync } from "node:zlib";
 
 const EXPECTED_BYTES = 74_472;
 const EXPECTED_SHA256 = "2142509d651e5ae1683da383360675b4343cbad83fbbb498326a894cf0c2baae";
 const EXPECTED_TRIANGLES = 3_904;
 const EXPECTED_LOD = "LOD0";
-const COMPRESSED_ASSET_PATH = "/asset-forge/af001/motor-lod0.brotli.bin";
+const COMPRESSED_ASSET_RELATIVE_PATH = ["asset-forge", "af001", "motor-lod0.brotli.bin"];
 
 let cachedMotor: Buffer | null = null;
 
@@ -18,10 +20,6 @@ function isExpectedMotor(buffer: Buffer): boolean {
 }
 
 function materializeMotor(payload: Buffer): Buffer {
-  // The public payload is intentionally served as an opaque .bin so the web
-  // server cannot reinterpret it as Content-Encoding. The direct-GLB branch is
-  // retained for portability, but either representation must end at the exact
-  // expected byte length and SHA-256.
   if (isExpectedMotor(payload)) return payload;
 
   let motor: Buffer;
@@ -45,18 +43,31 @@ function materializeMotor(payload: Buffer): Buffer {
   return motor;
 }
 
-async function loadMotor(requestUrl: string): Promise<Buffer> {
-  if (cachedMotor) return cachedMotor;
+async function readCompressedPayload(): Promise<Buffer> {
+  const candidates = [
+    join(process.cwd(), "public", ...COMPRESSED_ASSET_RELATIVE_PATH),
+    join(process.cwd(), "apps", "studio-web", "public", ...COMPRESSED_ASSET_RELATIVE_PATH)
+  ];
 
-  const assetUrl = new URL(COMPRESSED_ASSET_PATH, requestUrl);
-  const assetResponse = await fetch(assetUrl, { cache: "force-cache" });
-  if (!assetResponse.ok) {
-    throw new Error(
-      `AF001I compressed LOD0 fetch failed: ${assetResponse.status} ${assetResponse.statusText}`
-    );
+  const failures: string[] = [];
+  for (const candidate of candidates) {
+    try {
+      return await readFile(candidate);
+    } catch (error) {
+      failures.push(`${candidate}: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
-  const payload = Buffer.from(await assetResponse.arrayBuffer());
+  throw new Error(`AF001I LOD0 filesystem read failed: ${failures.join(" | ")}`);
+}
+
+async function loadMotor(): Promise<Buffer> {
+  if (cachedMotor) return cachedMotor;
+
+  // Read the opaque binary directly from disk. Routing the Brotli payload back
+  // through the app's public HTTP surface can transform binary transport and
+  // invalidates the fail-closed integrity contract before decompression.
+  const payload = await readCompressedPayload();
   cachedMotor = materializeMotor(payload);
   return cachedMotor;
 }
@@ -67,8 +78,8 @@ function toResponseBody(buffer: Buffer): ArrayBuffer {
   return body;
 }
 
-export async function GET(request: Request) {
-  const motor = await loadMotor(request.url);
+export async function GET() {
+  const motor = await loadMotor();
 
   return new Response(toResponseBody(motor), {
     status: 200,
