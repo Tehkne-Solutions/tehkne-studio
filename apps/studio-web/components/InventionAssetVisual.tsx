@@ -280,7 +280,7 @@ export function AssetBackedComponent({
       if (!node) {
         throw new Error(`Asset ${descriptor.assetId} missing required socket node ${socketName} for ${entity.id}:${portId}`);
       }
-      const position = node.getWorldPosition(new Vector3());
+      const position = scene.worldToLocal(node.getWorldPosition(new Vector3()));
       return { portId, socketName, position };
     });
   }, [descriptor.assetId, descriptor.portSocketMap, entity.id, scene]);
