@@ -29,7 +29,7 @@ const workbench = await readFile("apps/studio-web/components/Invention3DWorkbenc
 for (const token of ["assetForgeExtension", "applyComponentCatalogExtension(tabletCatalog, assetForgeExtension)", "visualAssetForEntity", "AssetBackedComponent", "AssetLoadingPlaceholder", "ComponentProxy", 'data-testid="invention-3d-visual-source"', 'data-source={selectedVisual ? "asset" : "proxy"}', "PROXY EXPLÍCITO", "REAL ASSET", "frameloop=\"demand\"", "runtime.spatial.connectionSegments(connections)", "runtime.spatial.move", "runtime.builder.connect", "runtime.builder.disconnect", "inventionSpatial: runtime.spatial.document()"] ) {
   if (!workbench.includes(token)) throw new Error(`S2.13 workbench contract missing: ${token}`);
 }
-if (!["S2.13", "S2.14", "S2.15", "S2.16"].some((marker) => workbench.includes(marker))) throw new Error("S2.13 workbench lineage marker missing");
+if (!["S2.13", "S2.14", "S2.15", "S2.16", "S2.17"].some((marker) => workbench.includes(marker))) throw new Error("S2.13 workbench lineage marker missing");
 for (const forbidden of ['status: "GOLDEN_ASSET"', "parallelGraph", "inventionGraph3d", "runFunctionalBoot("]) if (workbench.includes(forbidden)) throw new Error(`S2.13 forbidden workbench behavior: ${forbidden}`);
 const browser = await readFile("tests/browser/asset-backed-invention.spec.ts", "utf8");
 for (const token of ["actuation.motor.dc-brushed-v1", "TS_ELEC_MOTOR_DC_A", "0.6.6-hero-candidate", "data-real-assets", "data-proxies", "PROXY EXPLÍCITO", "Guardar 3D", "Projeto salvo carregado no 3D", "pageErrors", "consoleErrors"]) if (!browser.includes(token)) throw new Error(`S2.13 browser evidence missing: ${token}`);
@@ -37,4 +37,4 @@ const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
 if (rootPackage.scripts?.["verify:s2.13"] !== "node scripts/verify-s2.13.mjs") throw new Error("S2.13 package verification script missing");
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
 if (!workflow.includes("npm run verify:s2.13") || workflow.includes("contents: write")) throw new Error("S2.13 CI contract mismatch");
-console.log("S2.13 Asset-Backed Invention Rendering PASS · AF-001 v0.6.6 physical-socket candidate + explicit proxy fallback + same Engineering Graph/spatial persistence + HERO_CANDIDATE preserved · Tehkné Solutions");
+console.log("S2.13 Asset-Backed Invention Rendering PASS · AF-001 v0.6.6 physical-socket candidate + explicit proxy fallback + same Engineering Graph/spatial persistence + HERO_CANDIDATE preserved through S2.17 · Tehkné Solutions");
