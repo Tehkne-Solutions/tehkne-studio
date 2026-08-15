@@ -18,6 +18,15 @@ export interface MechanicalAssemblyConstraint {
   readonly derivedFrom: "engineering-graph";
 }
 export interface PlannedAssemblyMove { readonly entityId: EntityId; readonly from: SpatialVector3; readonly to: SpatialVector3; }
+export type MechanicalRotationAxis = "x" | "y" | "z";
+export interface PlannedAssemblyRotation {
+  readonly entityId: EntityId;
+  readonly fromPosition: SpatialVector3;
+  readonly toPosition: SpatialVector3;
+  readonly fromRotation: SpatialVector3;
+  readonly toRotation: SpatialVector3;
+}
+interface Quaternion { readonly x: number; readonly y: number; readonly z: number; readonly w: number; }
 
 function metadataPortId(relationship: EngineeringRelationship, key: "sourcePortId" | "targetPortId"): string {
   const value = relationship.metadata[key];
@@ -40,6 +49,61 @@ function withinBounds(position: SpatialVector3): boolean {
   return position.x >= min.x && position.x <= max.x && position.y >= min.y && position.y <= max.y && position.z >= min.z && position.z <= max.z;
 }
 function vectorLabel(value: SpatialVector3): string { return `${value.x.toFixed(6)},${value.y.toFixed(6)},${value.z.toFixed(6)}`; }
+function clampUnit(value: number): number { return Math.max(-1, Math.min(1, value)); }
+function normalizeQuaternion(value: Quaternion): Quaternion {
+  const length = Math.hypot(value.x, value.y, value.z, value.w);
+  if (!Number.isFinite(length) || length === 0) throw new Error("Mechanical assembly quaternion must be finite and non-zero");
+  return { x: value.x / length, y: value.y / length, z: value.z / length, w: value.w / length };
+}
+function multiplyQuaternion(left: Quaternion, right: Quaternion): Quaternion {
+  return normalizeQuaternion({
+    x: left.w * right.x + left.x * right.w + left.y * right.z - left.z * right.y,
+    y: left.w * right.y - left.x * right.z + left.y * right.w + left.z * right.x,
+    z: left.w * right.z + left.x * right.y - left.y * right.x + left.z * right.w,
+    w: left.w * right.w - left.x * right.x - left.y * right.y - left.z * right.z
+  });
+}
+function eulerXyzToQuaternion(rotation: SpatialVector3): Quaternion {
+  finiteVector(rotation, "Mechanical assembly rotation");
+  const cx = Math.cos(rotation.x / 2); const sx = Math.sin(rotation.x / 2);
+  const cy = Math.cos(rotation.y / 2); const sy = Math.sin(rotation.y / 2);
+  const cz = Math.cos(rotation.z / 2); const sz = Math.sin(rotation.z / 2);
+  return normalizeQuaternion({
+    x: sx * cy * cz + cx * sy * sz,
+    y: cx * sy * cz - sx * cy * sz,
+    z: cx * cy * sz + sx * sy * cz,
+    w: cx * cy * cz - sx * sy * sz
+  });
+}
+function quaternionToEulerXyz(input: Quaternion): SpatialVector3 {
+  const { x, y, z, w } = normalizeQuaternion(input);
+  const m11 = 1 - 2 * (y * y + z * z);
+  const m12 = 2 * (x * y - w * z);
+  const m13 = 2 * (x * z + w * y);
+  const m22 = 1 - 2 * (x * x + z * z);
+  const m23 = 2 * (y * z - w * x);
+  const m32 = 2 * (y * z + w * x);
+  const m33 = 1 - 2 * (x * x + y * y);
+  const ry = Math.asin(clampUnit(m13));
+  if (Math.abs(m13) < 0.9999999) {
+    return { x: Math.atan2(-m23, m33), y: ry, z: Math.atan2(-m12, m11) };
+  }
+  return { x: Math.atan2(m32, m22), y: ry, z: 0 };
+}
+function axisQuaternion(axis: MechanicalRotationAxis, radians: number): Quaternion {
+  if (!Number.isFinite(radians)) throw new Error("Mechanical assembly rotation radians must be finite");
+  const sine = Math.sin(radians / 2); const cosine = Math.cos(radians / 2);
+  if (axis === "x") return { x: sine, y: 0, z: 0, w: cosine };
+  if (axis === "y") return { x: 0, y: sine, z: 0, w: cosine };
+  if (axis === "z") return { x: 0, y: 0, z: sine, w: cosine };
+  throw new Error(`Unsupported mechanical assembly rotation axis: ${String(axis)}`);
+}
+function rotateOffset(offset: SpatialVector3, axis: MechanicalRotationAxis, radians: number): SpatialVector3 {
+  const cosine = Math.cos(radians); const sine = Math.sin(radians);
+  if (axis === "x") return { x: offset.x, y: offset.y * cosine - offset.z * sine, z: offset.y * sine + offset.z * cosine };
+  if (axis === "y") return { x: offset.x * cosine + offset.z * sine, y: offset.y, z: -offset.x * sine + offset.z * cosine };
+  return { x: offset.x * cosine - offset.y * sine, y: offset.x * sine + offset.y * cosine, z: offset.z };
+}
 
 export function deriveMechanicalAssemblyConstraints(session: EngineeringSession, relationships: readonly EngineeringRelationship[]): readonly MechanicalAssemblyConstraint[] {
   return relationships
@@ -103,4 +167,48 @@ export function planMechanicalAssemblyTranslation(bindings: readonly SpatialEnti
     if (!withinBounds(to)) throw new Error(`Mechanical assembly move would place ${entityId} outside invention workspace bounds`);
     return { entityId, from: { ...binding.position }, to };
   });
+}
+
+export function planMechanicalAssemblyRotation(
+  bindings: readonly SpatialEntityBinding[],
+  memberIds: readonly EntityId[],
+  pivotEntityId: EntityId,
+  axis: MechanicalRotationAxis,
+  radians: number
+): readonly PlannedAssemblyRotation[] {
+  if (!Number.isFinite(radians)) throw new Error("Mechanical assembly rotation radians must be finite");
+  const bindingMap = new Map(bindings.map((binding) => [binding.entityId, binding]));
+  const pivotBinding = bindingMap.get(pivotEntityId);
+  if (!pivotBinding) throw new Error(`Mechanical assembly missing pivot spatial binding: ${pivotEntityId}`);
+  if (!memberIds.includes(pivotEntityId)) throw new Error(`Mechanical assembly pivot ${pivotEntityId} is not part of the planned member set`);
+  const deltaQuaternion = axisQuaternion(axis, radians);
+  const plans = memberIds.map((entityId) => {
+    const binding = bindingMap.get(entityId);
+    if (!binding) throw new Error(`Mechanical assembly missing spatial binding: ${entityId}`);
+    finiteVector(binding.position, `Mechanical assembly ${entityId} position`);
+    finiteVector(binding.rotation, `Mechanical assembly ${entityId} rotation`);
+    const offset = {
+      x: binding.position.x - pivotBinding.position.x,
+      y: binding.position.y - pivotBinding.position.y,
+      z: binding.position.z - pivotBinding.position.z
+    };
+    const rotatedOffset = rotateOffset(offset, axis, radians);
+    const toPosition = {
+      x: pivotBinding.position.x + rotatedOffset.x,
+      y: pivotBinding.position.y + rotatedOffset.y,
+      z: pivotBinding.position.z + rotatedOffset.z
+    };
+    if (!withinBounds(toPosition)) throw new Error(`Mechanical assembly rotation would place ${entityId} outside invention workspace bounds`);
+    const currentQuaternion = eulerXyzToQuaternion(binding.rotation);
+    const toRotation = quaternionToEulerXyz(multiplyQuaternion(deltaQuaternion, currentQuaternion));
+    finiteVector(toRotation, `Mechanical assembly ${entityId} planned rotation`);
+    return {
+      entityId,
+      fromPosition: { ...binding.position },
+      toPosition,
+      fromRotation: { ...binding.rotation },
+      toRotation
+    };
+  });
+  return plans;
 }
