@@ -55,8 +55,10 @@ test("S2.9 Circuit Builder creates, wires, simulates, probes, faults and restore
   await expect(builder.getByText(/9\.09 mA/)).toBeVisible();
 
   await builder.getByRole("button", { name: "Probe do resistor" }).click();
-  await expect(builder.getByLabel("Última medição do Circuit Builder")).toContainText("3 V");
-  await expect(page.getByLabel("Componente eletrônico selecionado")).toContainText("VoltageProbe");
+  const probe = builder.getByLabel("Última medição do Circuit Builder");
+  await expect(probe).toContainText("Probe Resistor 1");
+  await expect(probe).toContainText("calculated");
+  await expect(probe).toContainText("3 V");
 
   await builder.getByLabel("Resistência do Circuit Builder").fill("100");
   await builder.getByRole("button", { name: "Aplicar Ω" }).click();
