@@ -2,7 +2,7 @@
 
 import { useLoader } from "@react-three/fiber";
 import { useEffect, useMemo, useSyncExternalStore } from "react";
-import { Euler, Vector3 } from "three";
+import { Euler, Object3D, Vector3 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { EngineeringEntity } from "../../../packages/engineering-core/src/index";
 import type {
@@ -44,6 +44,15 @@ export interface AssetSocketEvidence {
 
 export interface SpatialPortEndpointEvidence extends AssetSocketEvidence {
   readonly source: "asset-socket" | "proxy-anchor" | "center-fallback";
+}
+
+interface PreparedAssetScene {
+  readonly scene: Object3D;
+  readonly localSockets: readonly {
+    readonly portId: string;
+    readonly socketName: string;
+    readonly position: Vector3;
+  }[];
 }
 
 const socketEndpoints = new Map<string, AssetSocketEvidence>();
@@ -160,6 +169,32 @@ function transformSocketPosition(local: Vector3, binding: SpatialEntityBinding):
   return { x: transformed.x, y: transformed.y, z: transformed.z };
 }
 
+function prepareAssetScene(
+  source: Object3D,
+  assetId: string,
+  entityId: string,
+  socketEntries: readonly (readonly [string, string])[]
+): PreparedAssetScene {
+  // Clone and resolve socket coordinates in the same pre-mount operation.
+  // The clone has no external R3F parent yet, so getWorldPosition() produces
+  // asset-local physical coordinates exactly once. Spatial bindings are applied
+  // later by transformSocketPosition().
+  const scene = source.clone(true);
+  scene.updateMatrixWorld(true);
+  const localSockets = socketEntries.map(([portId, socketName]) => {
+    const node = scene.getObjectByName(socketName);
+    if (!node) {
+      throw new Error(`Asset ${assetId} missing required socket node ${socketName} for ${entityId}:${portId}`);
+    }
+    return {
+      portId,
+      socketName,
+      position: node.getWorldPosition(new Vector3())
+    };
+  });
+  return { scene, localSockets };
+}
+
 export function portSocketNameForEntity(entity: EngineeringEntity, portId: string): string | null {
   const visual = visualAssetForEntity(entity);
   return visual?.portSocketMap[portId] ?? null;
@@ -272,18 +307,21 @@ export function AssetBackedComponent({
   readonly onSelect: (entityId: string) => void;
 }) {
   const gltf = useLoader(GLTFLoader, descriptor.runtimeUrl);
-  const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
-  const localSockets = useMemo(() => {
-    scene.updateMatrixWorld(true);
-    return Object.entries(descriptor.portSocketMap).map(([portId, socketName]) => {
-      const node = scene.getObjectByName(socketName);
-      if (!node) {
-        throw new Error(`Asset ${descriptor.assetId} missing required socket node ${socketName} for ${entity.id}:${portId}`);
-      }
-      const position = scene.worldToLocal(node.getWorldPosition(new Vector3()));
-      return { portId, socketName, position };
-    });
-  }, [descriptor.assetId, descriptor.portSocketMap, entity.id, scene]);
+  const portSocketSignature = JSON.stringify(
+    Object.entries(descriptor.portSocketMap).sort(([left], [right]) => left.localeCompare(right))
+  );
+  const { scene, localSockets } = useMemo(() => {
+    const socketEntries = JSON.parse(portSocketSignature) as [string, string][];
+    return prepareAssetScene(gltf.scene, descriptor.assetId, entity.id, socketEntries);
+  }, [
+    descriptor.assetId,
+    descriptor.runtimeUrl,
+    descriptor.sha256,
+    descriptor.version,
+    entity.id,
+    gltf.scene,
+    portSocketSignature
+  ]);
 
   useEffect(() => {
     publishSocketEvidence(localSockets.map(({ portId, socketName, position }) => ({
