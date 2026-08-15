@@ -180,7 +180,7 @@ for (const token of [
   "Ligue o notebook",
   "Por que não iniciou?",
   "Reinstale a RAM",
-  "POWER FAULT · BOOT POST",
+  "POWER FAULT · BOOT MEMORY_CHECK",
   "POWER ON · BOOT RUNNING",
   "Restaurar Notebook salvo",
   "page.reload",
