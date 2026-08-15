@@ -44,9 +44,8 @@ for (const token of [
   'runtimeUrl.startsWith("/api/asset-forge/")',
   "GLTFLoader",
   "gltf.scene.clone(true)",
-  "AssetBackedComponent",
-  "Tehkné"
-].filter((token) => token !== "Tehkné")) {
+  "AssetBackedComponent"
+]) {
   if (!visualRuntime.includes(token)) throw new Error(`S2.13 visual runtime contract missing: ${token}`);
 }
 
@@ -62,7 +61,6 @@ for (const token of [
   'data-source={selectedVisual ? "asset" : "proxy"}',
   "PROXY EXPLÍCITO",
   "REAL ASSET",
-  "S2.13",
   "frameloop=\"demand\"",
   "runtime.spatial.connectionSegments(connections)",
   "runtime.spatial.move",
@@ -71,6 +69,9 @@ for (const token of [
   "inventionSpatial: runtime.spatial.document()"
 ]) {
   if (!workbench.includes(token)) throw new Error(`S2.13 workbench contract missing: ${token}`);
+}
+if (!workbench.includes("S2.13") && !workbench.includes("S2.14")) {
+  throw new Error("S2.13 workbench lineage marker missing");
 }
 for (const forbidden of [
   'status: "GOLDEN_ASSET"',

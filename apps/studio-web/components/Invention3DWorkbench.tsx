@@ -47,6 +47,7 @@ import {
 } from "../lib/projectPersistence";
 import {
   AssetBackedComponent,
+  useAssetSocketEndpoint,
   visualAssetForEntity,
   type GltfVisualAssetDescriptor
 } from "./InventionAssetVisual";
@@ -245,8 +246,16 @@ function ComponentVisual({
 }
 
 function ConnectionTube({ segment }: { readonly segment: InventionSpatialConnectionSegment }) {
-  const start = useMemo(() => new Vector3(segment.source.x, segment.source.y, segment.source.z), [segment]);
-  const end = useMemo(() => new Vector3(segment.target.x, segment.target.y, segment.target.z), [segment]);
+  const sourceEndpoint = useAssetSocketEndpoint(segment.sourceEntityId, segment.sourcePortId, segment.source);
+  const targetEndpoint = useAssetSocketEndpoint(segment.targetEntityId, segment.targetPortId, segment.target);
+  const start = useMemo(
+    () => new Vector3(sourceEndpoint.position.x, sourceEndpoint.position.y, sourceEndpoint.position.z),
+    [sourceEndpoint.position.x, sourceEndpoint.position.y, sourceEndpoint.position.z]
+  );
+  const end = useMemo(
+    () => new Vector3(targetEndpoint.position.x, targetEndpoint.position.y, targetEndpoint.position.z),
+    [targetEndpoint.position.x, targetEndpoint.position.y, targetEndpoint.position.z]
+  );
   const delta = useMemo(() => end.clone().sub(start), [end, start]);
   const length = delta.length();
   const midpoint = useMemo(() => start.clone().add(end).multiplyScalar(0.5), [end, start]);
@@ -256,10 +265,55 @@ function ConnectionTube({ segment }: { readonly segment: InventionSpatialConnect
   }, [delta, length]);
 
   return (
-    <mesh position={midpoint} quaternion={quaternion} name={`wire-${segment.relationshipId}`}>
+    <mesh
+      position={midpoint}
+      quaternion={quaternion}
+      name={`wire-${segment.relationshipId}`}
+      userData={{
+        sourcePortId: segment.sourcePortId,
+        targetPortId: segment.targetPortId,
+        sourceSocket: sourceEndpoint.socketName,
+        targetSocket: targetEndpoint.socketName
+      }}
+    >
       <cylinderGeometry args={[0.005, 0.005, Math.max(length, 0.001), 8]} />
       <meshStandardMaterial color="#aaa58f" metalness={0.2} roughness={0.65} />
     </mesh>
+  );
+}
+
+function SocketAwareWireEvidence({
+  wire,
+  onDisconnect
+}: {
+  readonly wire: InventionSpatialConnectionSegment;
+  readonly onDisconnect: () => void;
+}) {
+  const sourceEndpoint = useAssetSocketEndpoint(wire.sourceEntityId, wire.sourcePortId, wire.source);
+  const targetEndpoint = useAssetSocketEndpoint(wire.targetEntityId, wire.targetPortId, wire.target);
+  const socketAware = Boolean(sourceEndpoint.socketName || targetEndpoint.socketName);
+  return (
+    <div
+      data-testid={`invention-3d-wire-${wire.relationshipId}`}
+      data-source-port={wire.sourcePortId}
+      data-target-port={wire.targetPortId}
+      data-source-socket={sourceEndpoint.socketName}
+      data-target-socket={targetEndpoint.socketName}
+      data-socket-aware={socketAware ? "true" : "false"}
+      data-source-x={format(sourceEndpoint.position.x)}
+      data-source-y={format(sourceEndpoint.position.y)}
+      data-source-z={format(sourceEndpoint.position.z)}
+      data-target-x={format(targetEndpoint.position.x)}
+      data-target-y={format(targetEndpoint.position.y)}
+      data-target-z={format(targetEndpoint.position.z)}
+    >
+      <strong>{wire.sharedInterfaces.join(" · ")}</strong>
+      <small>
+        {wire.relationshipId} · {wire.sourcePortId} → {wire.targetPortId}
+        {socketAware ? ` · SOCKET ${sourceEndpoint.socketName || "CENTER"} → ${targetEndpoint.socketName || "CENTER"}` : " · CENTER FALLBACK"}
+      </small>
+      <button type="button" onClick={onDisconnect}>Desconectar</button>
+    </div>
   );
 }
 
@@ -337,6 +391,14 @@ export function Invention3DWorkbench() {
   const selectedVisual = visualDescriptor(selectedEntity);
   const assetBackedCount = components.reduce((count, entity) => count + (visualAssetForEntity(entity) ? 1 : 0), 0);
   const proxyCount = components.length - assetBackedCount;
+  const componentMap = useMemo(() => new Map(components.map((entity) => [entity.id, entity])), [components]);
+  const socketAwareWireCount = wires.reduce((count, wire) => {
+    const source = componentMap.get(wire.sourceEntityId);
+    const target = componentMap.get(wire.targetEntityId);
+    const sourceSocket = source ? visualAssetForEntity(source)?.portSocketMap[wire.sourcePortId] : undefined;
+    const targetSocket = target ? visualAssetForEntity(target)?.portSocketMap[wire.targetPortId] : undefined;
+    return count + (sourceSocket || targetSocket ? 1 : 0);
+  }, 0);
 
   const sourceOptions = useMemo<readonly PortOption[]>(() => components.flatMap((entity) =>
     Object.values(entity.ports)
@@ -441,7 +503,7 @@ export function Invention3DWorkbench() {
       const connection = runtime.builder.connect(from, to);
       setSourceKey("");
       setTargetKey("");
-      changed(`Wire 3D criado a partir da relação connectedTo · ${connection.sharedInterfaces.join(", ")}.`);
+      changed(`Wire 3D criado a partir da relação connectedTo · ${connection.sharedInterfaces.join(", ")} · endpoints socket-aware quando disponíveis.`);
     } catch (cause) {
       blocked(cause);
     }
@@ -486,8 +548,8 @@ export function Invention3DWorkbench() {
           <div className={styles.shell}>
             <header className={styles.header}>
               <div>
-                <span>TEHKNÉ SOLUTIONS · S2.13</span>
-                <strong>Asset-Backed 3D Invention Workbench</strong>
+                <span>TEHKNÉ SOLUTIONS · S2.14</span>
+                <strong>Socket-Aware 3D Invention Workbench</strong>
               </div>
               <div className={styles.actions}>
                 <button type="button" onClick={newProject}>Novo projeto</button>
@@ -497,10 +559,16 @@ export function Invention3DWorkbench() {
               </div>
             </header>
 
-            <div className={styles.status} data-testid="invention-3d-status" data-real-assets={assetBackedCount} data-proxies={proxyCount}>
+            <div
+              className={styles.status}
+              data-testid="invention-3d-status"
+              data-real-assets={assetBackedCount}
+              data-proxies={proxyCount}
+              data-socket-aware-wires={socketAwareWireCount}
+            >
               <strong>INVENTION 3D · {components.length} COMPONENTES · {connections.length} WIRES</strong>
               <span>MESMO ENGINEERING GRAPH · {bindings.length} BINDINGS · SIMULAÇÃO {document.simulationStatus.toUpperCase()}</span>
-              <span>VISUAL · {assetBackedCount} REAL ASSET · {proxyCount} PROXY</span>
+              <span>VISUAL · {assetBackedCount} REAL ASSET · {proxyCount} PROXY · {socketAwareWireCount} SOCKET-AWARE WIRES</span>
             </div>
 
             <div className={styles.body}>
@@ -591,9 +659,15 @@ export function Invention3DWorkbench() {
                       data-asset-id={selectedVisual?.assetId ?? ""}
                       data-asset-version={selectedVisual?.version ?? ""}
                       data-asset-lod={selectedVisual?.lod ?? ""}
+                      data-socket-count={selectedVisual ? Object.keys(selectedVisual.portSocketMap).length : 0}
+                      data-sockets={selectedVisual ? Object.values(selectedVisual.portSocketMap).join(",") : ""}
                     >
                       <strong>{selectedVisual ? "REAL ASSET" : "PROXY EXPLÍCITO"}</strong>
-                      <small>{selectedVisual ? `${selectedVisual.assetId} · ${selectedVisual.version} · ${selectedVisual.lod}` : "Ainda sem arte Asset Forge cadastrada."}</small>
+                      <small>
+                        {selectedVisual
+                          ? `${selectedVisual.assetId} · ${selectedVisual.version} · ${selectedVisual.lod} · ${Object.keys(selectedVisual.portSocketMap).length} SOCKETS`
+                          : "Ainda sem arte Asset Forge cadastrada."}
+                      </small>
                     </div>
                     <div className={styles.axisGrid}>
                       <button type="button" onClick={() => moveSelected("x", -MOVE_STEP)}>X −</button>
@@ -625,32 +699,18 @@ export function Invention3DWorkbench() {
 
                 <div className={styles.wireEvidence} aria-label="3D wire evidence">
                   {wires.map((wire) => (
-                    <div
+                    <SocketAwareWireEvidence
                       key={wire.relationshipId}
-                      data-testid={`invention-3d-wire-${wire.relationshipId}`}
-                      data-source-x={format(wire.source.x)}
-                      data-source-y={format(wire.source.y)}
-                      data-source-z={format(wire.source.z)}
-                      data-target-x={format(wire.target.x)}
-                      data-target-y={format(wire.target.y)}
-                      data-target-z={format(wire.target.z)}
-                    >
-                      <strong>{wire.sharedInterfaces.join(" · ")}</strong>
-                      <small>{wire.relationshipId}</small>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          try {
-                            runtime.builder.disconnect(wire.relationshipId);
-                            changed(`${wire.relationshipId} desconectado do Engineering Graph e removido da viewport 3D.`);
-                          } catch (cause) {
-                            blocked(cause);
-                          }
-                        }}
-                      >
-                        Desconectar
-                      </button>
-                    </div>
+                      wire={wire}
+                      onDisconnect={() => {
+                        try {
+                          runtime.builder.disconnect(wire.relationshipId);
+                          changed(`${wire.relationshipId} desconectado do Engineering Graph e removido da viewport 3D.`);
+                        } catch (cause) {
+                          blocked(cause);
+                        }
+                      }}
+                    />
                   ))}
                 </div>
               </aside>
