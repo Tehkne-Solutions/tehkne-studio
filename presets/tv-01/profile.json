@@ -1,0 +1,117 @@
+{
+  "compositionVersion": "1",
+  "profileId": "tv-01-v1",
+  "projectId": "tv-01",
+  "name": "TV 01",
+  "signature": "Tehkné Solutions",
+  "productFamily": "display-system",
+  "projectType": "teardown",
+  "root": {
+    "id": "tv.root",
+    "name": "TV 01",
+    "type": "Television",
+    "formFactor": "large-flat-display",
+    "voiceAliases": ["tv", "televisao", "televisão", "smart tv", "televisor", "tv 01"],
+    "simpleExplanation": "Uma TV moderna combina fonte de alimentação, processamento de mídia, armazenamento, conectividade, entradas externas, painel de imagem e sistema de áudio."
+  },
+  "boot": {
+    "id": "tv.boot",
+    "name": "TV Boot Process",
+    "voiceAliases": ["boot da tv", "inicializacao da tv", "inicialização da tv"],
+    "simpleExplanation": "O boot da TV valida energia, processamento, armazenamento e painel antes de iniciar a interface e a reprodução de mídia."
+  },
+  "requiredSlots": ["frame", "psu", "controller", "storage", "wireless", "panel", "hdmi", "speakers"],
+  "slots": [
+    {
+      "slotId": "frame",
+      "definitionId": "structural.frame.modular-v1",
+      "entityId": "tv.frame",
+      "name": "TV Structural Frame",
+      "voiceAliases": ["estrutura", "chassi", "frame"],
+      "spatial": { "position": [0, 0, -0.2], "exploded": [0, 0, -1.35], "size": [5.8, 3.3, 0.18] }
+    },
+    {
+      "slotId": "psu",
+      "definitionId": "power.ac-dc.supply-v1",
+      "entityId": "tv.psu",
+      "name": "TV AC/DC Power Supply",
+      "teardown": true,
+      "voiceAliases": ["fonte", "fonte de alimentacao", "fonte de alimentação", "psu", "energia da tv"],
+      "spatial": { "position": [-1.55, -0.65, 0.02], "exploded": [-3.7, -0.9, 0.65], "size": [1.15, 0.72, 0.14] }
+    },
+    {
+      "slotId": "controller",
+      "definitionId": "compute.media-controller.display-v1",
+      "entityId": "tv.controller",
+      "name": "TV Media Controller",
+      "teardown": true,
+      "voiceAliases": ["processador da tv", "controlador de midia", "controlador de mídia", "mainboard", "placa principal"],
+      "spatial": { "position": [0.5, -0.45, 0.02], "exploded": [0.6, -2.25, 0.75], "size": [1.35, 0.92, 0.14] }
+    },
+    {
+      "slotId": "storage",
+      "definitionId": "storage.solid-state.general-v1",
+      "entityId": "tv.storage",
+      "name": "TV System Storage",
+      "voiceAliases": ["armazenamento", "storage", "memoria interna", "memória interna"],
+      "spatial": { "position": [1.45, -0.55, 0.02], "exploded": [3.35, -1.15, 0.65], "size": [0.42, 0.5, 0.1] }
+    },
+    {
+      "slotId": "wireless",
+      "definitionId": "communication.wireless.combo-v1",
+      "entityId": "tv.wireless",
+      "name": "TV Wireless Module",
+      "voiceAliases": ["wifi", "wi-fi", "bluetooth", "wireless"],
+      "spatial": { "position": [1.9, 0.28, 0.02], "exploded": [3.75, 0.55, 0.65], "size": [0.4, 0.3, 0.1] }
+    },
+    {
+      "slotId": "panel",
+      "definitionId": "display.panel.large-oled-v1",
+      "entityId": "tv.panel",
+      "name": "55-inch OLED Panel",
+      "teardown": true,
+      "voiceAliases": ["painel", "tela", "display", "oled"],
+      "spatial": { "position": [0, 0, 0.22], "exploded": [0, 0, 1.6], "size": [5.55, 3.05, 0.06] }
+    },
+    {
+      "slotId": "hdmi",
+      "definitionId": "interface.hdmi.input-v1",
+      "entityId": "tv.hdmi",
+      "name": "TV HDMI Inputs",
+      "voiceAliases": ["hdmi", "entrada hdmi", "entradas de video", "entradas de vídeo"],
+      "spatial": { "position": [2.35, -0.75, 0.02], "exploded": [4.25, -1.55, 0.65], "size": [0.48, 0.36, 0.12] }
+    },
+    {
+      "slotId": "speakers",
+      "definitionId": "actuation.speaker.stereo-v1",
+      "entityId": "tv.speakers",
+      "name": "TV Stereo Speakers",
+      "voiceAliases": ["alto falantes", "alto-falantes", "speakers", "audio", "som"],
+      "spatial": { "position": [-0.15, -1.28, 0.02], "exploded": [-0.2, -2.75, 0.65], "size": [3.2, 0.32, 0.12] }
+    }
+  ],
+  "connections": [
+    { "id": "tv-power-controller", "from": ["psu", "dc-output"], "to": ["controller", "power-in"] },
+    { "id": "tv-power-panel", "from": ["psu", "dc-output"], "to": ["panel", "power-in"] },
+    { "id": "tv-power-wireless", "from": ["psu", "dc-output"], "to": ["wireless", "power-in"] },
+    { "id": "tv-power-speakers", "from": ["psu", "dc-output"], "to": ["speakers", "power-in"] },
+    { "id": "tv-storage", "from": ["controller", "storage"], "to": ["storage", "storage-bus"] },
+    { "id": "tv-wireless", "from": ["controller", "wireless-bus"], "to": ["wireless", "host-data"] },
+    { "id": "tv-display-data", "from": ["controller", "display-out"], "to": ["panel", "display-in"] },
+    { "id": "tv-audio", "from": ["controller", "audio-out"], "to": ["speakers", "audio-in"] },
+    { "id": "tv-hdmi", "from": ["hdmi", "host-output"], "to": ["controller", "hdmi-in"] }
+  ],
+  "bootDependencies": [
+    { "slotId": "psu", "reason": "converter a energia da rede para as linhas DC internas" },
+    { "slotId": "controller", "reason": "executar firmware, processamento de mídia e coordenação do sistema" },
+    { "slotId": "storage", "reason": "fornecer firmware e dados persistentes da TV" },
+    { "slotId": "panel", "reason": "inicializar a saída visual principal" }
+  ],
+  "tuning": [
+    { "slotId": "psu", "propertyValues": { "ratedPowerW": 180, "efficiencyPercent": 92 } },
+    { "slotId": "controller", "propertyValues": { "videoPipelines": 4, "nominalPowerW": 22 } },
+    { "slotId": "storage", "propertyValues": { "capacityGB": 256 } },
+    { "slotId": "panel", "propertyValues": { "diagonalIn": 55, "refreshHz": 120, "peakBrightnessNits": 1100 } },
+    { "slotId": "speakers", "propertyValues": { "channels": 2, "ratedPowerW": 30 } }
+  ]
+}
