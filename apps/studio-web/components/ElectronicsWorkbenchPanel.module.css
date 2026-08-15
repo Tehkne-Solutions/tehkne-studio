@@ -25,7 +25,8 @@
 .header span,
 .sectionTitle,
 .readout small,
-.measurement small {
+.measurement small,
+.topologyRow small {
   display: block;
   font-size: 0.66rem;
   letter-spacing: 0.12em;
@@ -61,7 +62,8 @@
   color: #bbb69e;
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   border: 1px solid #5f5d50;
   background: #171915;
@@ -121,11 +123,13 @@
   font-size: 0.78rem;
 }
 
-.message[data-status="fault"] {
+.message[data-status="fault"],
+.message[data-status="unsupported"] {
   border-left-color: #8e5148;
 }
 
-.message[data-status="warning"] {
+.message[data-status="warning"],
+.message[data-status="incomplete"] {
   border-left-color: #9b7b4d;
 }
 
@@ -149,6 +153,41 @@
   color: #e8e1ca;
 }
 
+.topology {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.55rem 0 0.8rem;
+}
+
+.topology > p {
+  margin: 0;
+  padding: 0.6rem;
+  border: 1px dashed #55564d;
+  color: #969282;
+  font-size: 0.72rem;
+}
+
+.topologyRow {
+  display: grid;
+  grid-template-columns: 5.2rem 1fr;
+  gap: 0.18rem 0.55rem;
+  align-items: baseline;
+  border: 1px solid #4e5047;
+  background: #20221e;
+  padding: 0.48rem 0.55rem;
+}
+
+.topologyRow strong {
+  color: #e4dec8;
+  font-size: 0.78rem;
+}
+
+.topologyRow span {
+  grid-column: 1 / -1;
+  color: #8f8c7d;
+  font-size: 0.64rem;
+}
+
 .note {
   margin-top: 0.7rem;
   color: #918e7e;
@@ -162,7 +201,8 @@
     bottom: 5.2rem;
     max-height: 46%;
   }
-  .readouts {
+  .readouts,
+  .controls {
     grid-template-columns: repeat(2, 1fr);
   }
 }
