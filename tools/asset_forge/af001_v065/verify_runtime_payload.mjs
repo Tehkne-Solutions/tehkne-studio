@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { brotliDecompressSync } from "node:zlib";
 
 // Deterministic recovery gate: source-of-truth fingerprints come from the DCC GLB evidence.
-// Every payload chunk is compared by content hash before this gate is considered promotable.
+// The node contract follows the exported engineering parts + four official sockets.
 const ROOT = resolve(process.cwd());
 const PAYLOAD_DIR = resolve(ROOT, "apps/studio-web/app/api/asset-forge/af001/motor/lod0");
 const EXPECTED_COMPRESSED_BYTES = 25_162;
@@ -12,8 +12,6 @@ const EXPECTED_COMPRESSED_SHA256 = "f6b1062238c941f81bbd5c38e154add9bb4ab56b81c0
 const EXPECTED_GLB_BYTES = 243_672;
 const EXPECTED_GLB_SHA256 = "ad73d83d0dcd8485a8c2a7a680f83090a98d637cea455dde4915f0d771cd6552";
 const REQUIRED_NODES = [
-  "PIVOT_MAIN",
-  "PIVOT_SHAFT",
   "BODY_CAN",
   "FRONT_CAP",
   "REAR_CAP",
@@ -77,7 +75,7 @@ const names = new Set((document.nodes ?? []).map((node) => node.name).filter(Boo
 const missing = REQUIRED_NODES.filter((name) => !names.has(name));
 if (missing.length) fail(`required nodes missing: ${missing.join(", ")}`);
 
-console.log(`AF001I_V065_CONTRACT PASS chunks=6 brotli_bytes=${compressed.length} glb_bytes=${glb.length}`);
+console.log(`AF001I_V065_CONTRACT PASS chunks=6 brotli_bytes=${compressed.length} glb_bytes=${glb.length} nodes=${REQUIRED_NODES.length}`);
 console.log(`AF001I_V065_TRANSPORT_SHA256 ${transportHash}`);
 console.log(`AF001I_V065_GLB_SHA256 ${glbHash}`);
 console.log("Tehkné Solutions");
