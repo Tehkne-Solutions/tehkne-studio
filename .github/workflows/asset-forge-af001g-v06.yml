@@ -22,7 +22,9 @@ jobs:
       - name: Install Blender DCC
         run: |
           sudo apt-get update
-          sudo apt-get install -y blender python3-numpy libegl1 libgl1 libglx-mesa0
+          sudo apt-get install -y \
+            blender python3-numpy xvfb \
+            libegl1 libegl-mesa0 libgl1 libgl1-mesa-dri libglx-mesa0 mesa-vulkan-drivers
           blender --version
           blender --background --python-expr "import numpy; print('AF001_BLENDER_NUMPY', numpy.__version__)"
           ldconfig -p | grep 'libEGL.so.1'
@@ -31,7 +33,9 @@ jobs:
       - name: Build Golden Motor v0.6
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
-        run: blender --background --python tools/asset_forge/af001_v06/build_golden_motor_v06.py
+          MESA_LOADER_DRIVER_OVERRIDE: "llvmpipe"
+          LD_LIBRARY_PATH: "/usr/lib/x86_64-linux-gnu"
+        run: xvfb-run -a -s "-screen 0 1280x1024x24" blender --background --python tools/asset_forge/af001_v06/build_golden_motor_v06.py
 
       - name: Assert DCC QA
         run: |
