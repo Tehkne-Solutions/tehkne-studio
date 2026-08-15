@@ -3,6 +3,7 @@
 import { Canvas } from "@react-three/fiber";
 import { useEffect, useState, type FormEvent } from "react";
 import type { EngineeringEntity } from "../../../packages/engineering-core/src/index";
+import { ComponentRegistry, parseComponentCatalog } from "../../../packages/component-library/src/index";
 import type { PrototypeManufacturingProfile, PrototypePackageManifest } from "../../../packages/factory-runtime/src/index";
 import type { TehkneStudioProject } from "../../../packages/project-format/src/index";
 import {
@@ -10,6 +11,10 @@ import {
   restoreSessionSnapshot,
   type StudioSessionSnapshot
 } from "../../../packages/persistence-runtime/src/index";
+import {
+  createSmartphoneProject,
+  type SmartphonePresetProfile
+} from "../../../packages/smartphone-runtime/src/index";
 import type { ArmVariantProfile } from "../../../packages/variant-runtime/src/index";
 import {
   EngineeringSession,
@@ -25,11 +30,13 @@ import {
   type EngineeringVariantRecord
 } from "../../../packages/studio-variants/src/index";
 import { StudioIntelligence } from "../../../packages/studio-intelligence/src/index";
+import componentCatalog from "../../../library/components/catalog.json";
 import desktopPreset from "../../../presets/desktop-pc/project.json";
 import armPreset from "../../../presets/arm-01/project.json";
 import failureProfile from "../../../presets/arm-01/failure-profile.json";
 import manufacturingProfile from "../../../presets/arm-01/manufacturing-profile.json";
 import highTorqueProfile from "../../../presets/arm-01/variants/high-torque-profile.json";
+import smartphoneProfile from "../../../presets/smartphone-01/profile.json";
 import {
   browserProjectExists,
   loadBrowserProject,
@@ -41,6 +48,7 @@ import { Arm01Assembly } from "./Arm01Assembly";
 import { ArmRuntimePanel } from "./ArmRuntimePanel";
 import { BehaviorPanel } from "./BehaviorPanel";
 import { DesktopPcAssembly } from "./DesktopPcAssembly";
+import { SmartphoneAssembly } from "./SmartphoneAssembly";
 
 interface FeedbackState {
   readonly message: string;
@@ -48,7 +56,7 @@ interface FeedbackState {
   readonly error?: boolean;
 }
 
-type ActiveProduct = "desktop" | "arm" | null;
+type ActiveProduct = "desktop" | "arm" | "smartphone" | null;
 
 interface WorkspacePersistenceState {
   readonly activeProduct: Exclude<ActiveProduct, null>;
@@ -76,6 +84,17 @@ interface ArmRuntimeBundle {
   readonly factory: ArmPrototypeFactory;
   readonly intelligence: StudioIntelligence;
 }
+
+interface SmartphoneRuntimeBundle {
+  readonly session: EngineeringSession;
+  readonly intelligence: StudioIntelligence;
+}
+
+const universalRegistry = new ComponentRegistry(parseComponentCatalog(componentCatalog));
+const smartphoneMaterialization = createSmartphoneProject(
+  smartphoneProfile as unknown as SmartphonePresetProfile,
+  universalRegistry
+);
 
 function objectExtension(snapshot: StudioSessionSnapshot | undefined, key: string): Record<string, unknown> {
   const value = snapshot?.extensions[key];
@@ -126,6 +145,17 @@ function createArmRuntime(snapshot?: StudioSessionSnapshot): ArmRuntimeBundle {
   return { session, controller, failureLab, variantLab, factory, intelligence };
 }
 
+function createSmartphoneRuntime(snapshot?: StudioSessionSnapshot): SmartphoneRuntimeBundle {
+  if (snapshot && snapshot.project.projectId !== smartphoneMaterialization.project.projectId) {
+    throw new Error(`Snapshot ${snapshot.project.projectId} não pertence ao Smartphone 01.`);
+  }
+  const session = snapshot
+    ? restoreSessionSnapshot(snapshot)
+    : new EngineeringSession(smartphoneMaterialization.project);
+  const intelligence = new StudioIntelligence(session);
+  return { session, intelligence };
+}
+
 function savedSelection(snapshot: StudioSessionSnapshot, session: EngineeringSession): string | null {
   const workspace = objectExtension(snapshot, "workspace") as Partial<WorkspacePersistenceState>;
   const selected = workspace.selectedEntityId;
@@ -138,9 +168,16 @@ function savedSelection(snapshot: StudioSessionSnapshot, session: EngineeringSes
   }
 }
 
+function productLabel(product: Exclude<ActiveProduct, null>): string {
+  if (product === "desktop") return "Desktop PC";
+  if (product === "arm") return "ARM-01";
+  return "Smartphone 01";
+}
+
 export function SpatialWorkbench() {
   const [desktopRuntime, setDesktopRuntime] = useState<DesktopRuntimeBundle>(() => createDesktopRuntime());
   const [armRuntime, setArmRuntime] = useState<ArmRuntimeBundle>(() => createArmRuntime());
+  const [smartphoneRuntime, setSmartphoneRuntime] = useState<SmartphoneRuntimeBundle>(() => createSmartphoneRuntime());
   const { session: desktopSession, behavior: desktopBehavior, intelligence: desktopIntelligence } = desktopRuntime;
   const {
     session: armSession,
@@ -150,6 +187,7 @@ export function SpatialWorkbench() {
     factory: armFactory,
     intelligence: armIntelligence
   } = armRuntime;
+  const { session: smartphoneSession, intelligence: smartphoneIntelligence } = smartphoneRuntime;
 
   const [activeProduct, setActiveProduct] = useState<ActiveProduct>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -161,18 +199,31 @@ export function SpatialWorkbench() {
   );
   const [speechSupported, setSpeechSupported] = useState(false);
   const [listening, setListening] = useState(false);
-  const [savedProjects, setSavedProjects] = useState<Record<PersistedStudioProduct, boolean>>({ desktop: false, arm: false });
+  const [savedProjects, setSavedProjects] = useState<Record<PersistedStudioProduct, boolean>>({
+    desktop: false,
+    arm: false,
+    smartphone: false
+  });
 
   useEffect(() => {
     setSpeechSupported(browserSpeechSupported());
     setSavedProjects({
       desktop: browserProjectExists("desktop"),
-      arm: browserProjectExists("arm")
+      arm: browserProjectExists("arm"),
+      smartphone: browserProjectExists("smartphone")
     });
   }, []);
 
-  const activeSession = activeProduct === "arm" ? armSession : desktopSession;
-  const activeIntelligence = activeProduct === "arm" ? armIntelligence : desktopIntelligence;
+  const activeSession = activeProduct === "arm"
+    ? armSession
+    : activeProduct === "smartphone"
+      ? smartphoneSession
+      : desktopSession;
+  const activeIntelligence = activeProduct === "arm"
+    ? armIntelligence
+    : activeProduct === "smartphone"
+      ? smartphoneIntelligence
+      : desktopIntelligence;
   const selected = selectedId ? activeSession.getEntity(selectedId) : null;
   const relationshipSnapshot = activeSession.graph.snapshot().relationships;
   const selectedRelations = selected
@@ -184,8 +235,8 @@ export function SpatialWorkbench() {
 
   const desktopRoot = desktopSession.getEntity("pc.root");
   const desktopBoot = desktopSession.getEntity("pc.boot");
-  const powerState = String(desktopRoot.properties.powerState?.value ?? "off");
-  const bootStage = String(desktopBoot.properties.stage?.value ?? "IDLE");
+  const desktopPowerState = String(desktopRoot.properties.powerState?.value ?? "off");
+  const desktopBootStage = String(desktopBoot.properties.stage?.value ?? "IDLE");
   const desktopComponents = desktopSession.graph
     .getDependencies(desktopRoot.id, "contains")
     .filter((entity) => entity.type !== "BootProcess");
@@ -193,6 +244,14 @@ export function SpatialWorkbench() {
   const armRoot = armSession.getEntity("arm.root");
   const cube = armSession.getEntity("object.cube.red");
   const armTaskState = String(armRoot.properties.taskState?.value ?? "idle");
+
+  const smartphoneRoot = smartphoneSession.getEntity("phone.root");
+  const smartphoneBoot = smartphoneSession.getEntity("phone.boot");
+  const smartphonePowerState = String(smartphoneRoot.properties.powerState?.value ?? "off");
+  const smartphoneBootStage = String(smartphoneBoot.properties.stage?.value ?? "IDLE");
+  const smartphoneComponents = smartphoneSession.graph
+    .getDependencies(smartphoneRoot.id, "contains")
+    .filter((entity) => entity.type !== "BootProcess");
 
   const returnToWorkbench = (message?: string) => {
     setActiveProduct(null);
@@ -210,7 +269,9 @@ export function SpatialWorkbench() {
     setIntelligenceMessage(
       product === "arm"
         ? "ARM-01 pronto. Teste a carga, investigue uma falha ou peça uma variante."
-        : "Desktop PC pronto para inspeção, boot causal e automações."
+        : product === "smartphone"
+          ? "Smartphone 01 materializado pela Component Library. Abra, inspecione, ligue ou remova a bateria para testar causalidade."
+          : "Desktop PC pronto para inspeção, boot causal e automações."
     );
   };
 
@@ -224,7 +285,7 @@ export function SpatialWorkbench() {
           extensions: { workspace }
         });
         saveBrowserProject("desktop", snapshot);
-      } else {
+      } else if (activeProduct === "arm") {
         const armRuntimeState: ArmRuntimePersistenceState = {
           motionRecords: armController.records(),
           failureRecords: armFailureLab.records(),
@@ -235,10 +296,12 @@ export function SpatialWorkbench() {
           extensions: { workspace, armRuntime: armRuntimeState }
         });
         saveBrowserProject("arm", snapshot);
+      } else {
+        const snapshot = createSessionSnapshot(smartphoneSession, { extensions: { workspace } });
+        saveBrowserProject("smartphone", snapshot);
       }
       setSavedProjects((current) => ({ ...current, [activeProduct]: true }));
-      const label = activeProduct === "desktop" ? "Desktop PC" : "ARM-01";
-      returnToWorkbench(`${label} salvo com Engineering Graph, histórico e evidências da sessão.`);
+      returnToWorkbench(`${productLabel(activeProduct)} salvo com Engineering Graph, histórico e evidências da sessão.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Não foi possível salvar o projeto.";
       setFeedback({ message, error: true });
@@ -254,17 +317,20 @@ export function SpatialWorkbench() {
         const restored = createDesktopRuntime(snapshot);
         setDesktopRuntime(restored);
         setSelectedId(savedSelection(snapshot, restored.session));
-        setDesktopRuntime(restored);
-      } else {
+      } else if (product === "arm") {
         const restored = createArmRuntime(snapshot);
         setArmRuntime(restored);
+        setSelectedId(savedSelection(snapshot, restored.session));
+      } else {
+        const restored = createSmartphoneRuntime(snapshot);
+        setSmartphoneRuntime(restored);
         setSelectedId(savedSelection(snapshot, restored.session));
       }
       setActiveProduct(product);
       setFeedback(null);
       setCommandText("");
       setIntelligenceMessage(
-        `${product === "desktop" ? "Desktop PC" : "ARM-01"} restaurado de ${new Date(snapshot.savedAt).toLocaleString("pt-BR")} · ${snapshot.history.length} entradas de histórico · ${snapshot.events.length} eventos.`
+        `${productLabel(product)} restaurado de ${new Date(snapshot.savedAt).toLocaleString("pt-BR")} · ${snapshot.history.length} entradas de histórico · ${snapshot.events.length} eventos.`
       );
       setRevision((current) => current + 1);
     } catch (error) {
@@ -297,18 +363,31 @@ export function SpatialWorkbench() {
     setCommandText(trimmed);
 
     const looksRobotic = /\b(pegue|pegar|apanhe|segure|cubo|arm-01|braco|braço|robo|robô|pick|grab|versao|versão|variante|redesign|levantar|peso|torque)\b/i.test(trimmed);
-    const intelligence = activeProduct === null && looksRobotic ? armIntelligence : activeIntelligence;
-    if (activeProduct === null && looksRobotic) setActiveProduct("arm");
+    const looksSmartphone = /\b(celular|smartphone|telefone|phone|bateria|battery|tela|display|camera|câmera|soc|usb-c|usb c|wifi|bluetooth)\b/i.test(trimmed);
+    const autoProduct: Exclude<ActiveProduct, null> | null = activeProduct === null
+      ? looksRobotic
+        ? "arm"
+        : looksSmartphone
+          ? "smartphone"
+          : null
+      : null;
+    const intelligence = autoProduct === "arm"
+      ? armIntelligence
+      : autoProduct === "smartphone"
+        ? smartphoneIntelligence
+        : activeIntelligence;
+    if (autoProduct) setActiveProduct(autoProduct);
 
     const execution = await intelligence.executeUtterance(trimmed, {
-      selectedEntityId: activeProduct === null && looksRobotic ? null : selectedId,
-      lastEntityId: activeProduct === null && looksRobotic ? null : selectedId,
+      selectedEntityId: autoProduct ? null : selectedId,
+      lastEntityId: autoProduct ? null : selectedId,
       source
     });
     setIntelligenceMessage(execution.message);
 
     if (execution.targetEntityId?.startsWith("pc.")) setActiveProduct("desktop");
     if (execution.targetEntityId?.startsWith("arm.") || execution.robotTask || execution.variantTask) setActiveProduct("arm");
+    if (execution.targetEntityId?.startsWith("phone.")) setActiveProduct("smartphone");
     if (execution.targetEntityId) setSelectedId(execution.targetEntityId);
 
     if (execution.result) {
@@ -414,6 +493,9 @@ export function SpatialWorkbench() {
         {activeProduct === "arm" ? (
           <Arm01Assembly session={armSession} selectedId={selectedId} onSelect={selectEntity} />
         ) : null}
+        {activeProduct === "smartphone" ? (
+          <SmartphoneAssembly session={smartphoneSession} selectedId={selectedId} onSelect={selectEntity} />
+        ) : null}
       </Canvas>
 
       {!activeProduct ? (
@@ -423,8 +505,10 @@ export function SpatialWorkbench() {
           <div className="actions">
             <button type="button" onClick={() => switchProduct("desktop")}>Chamar Desktop PC</button>
             <button type="button" onClick={() => switchProduct("arm")}>Chamar ARM-01</button>
+            <button type="button" onClick={() => switchProduct("smartphone")}>Chamar Smartphone 01</button>
             {savedProjects.desktop ? <button type="button" onClick={() => restoreProject("desktop")}>Restaurar Desktop salvo</button> : null}
             {savedProjects.arm ? <button type="button" onClick={() => restoreProject("arm")}>Restaurar ARM-01 salvo</button> : null}
+            {savedProjects.smartphone ? <button type="button" onClick={() => restoreProject("smartphone")}>Restaurar Smartphone salvo</button> : null}
             <button type="button" disabled aria-disabled="true">Projeto vazio · em breve</button>
           </div>
         </div>
@@ -437,14 +521,21 @@ export function SpatialWorkbench() {
           {activeProduct === "desktop" ? (
             <>
               <span>DESKTOP-PC-001 · {desktopComponents.length} COMPONENTES · {desktopRoot.state.toUpperCase()}</span>
-              <span className={`runtime-state runtime-${powerState}`}>
-                POWER {powerState.toUpperCase()} · BOOT {bootStage}
+              <span className={`runtime-state runtime-${desktopPowerState}`}>
+                POWER {desktopPowerState.toUpperCase()} · BOOT {desktopBootStage}
               </span>
             </>
-          ) : (
+          ) : activeProduct === "arm" ? (
             <>
               <span>ARM-01 · 3 JOINTS · {armTaskState.toUpperCase()}</span>
               <span className="runtime-state">WORKPIECE {cube.state.toUpperCase()}</span>
+            </>
+          ) : (
+            <>
+              <span>SMARTPHONE-01 · {smartphoneComponents.length} COMPONENTES · {smartphoneRoot.state.toUpperCase()}</span>
+              <span className={`runtime-state runtime-${smartphonePowerState}`}>
+                POWER {smartphonePowerState.toUpperCase()} · BOOT {smartphoneBootStage}
+              </span>
             </>
           )}
         </div>
@@ -584,7 +675,9 @@ export function SpatialWorkbench() {
             onChange={(event) => setCommandText(event.target.value)}
             placeholder={activeProduct === "arm"
               ? "Ex.: pegue o cubo · teste 1,60 kg · crie uma versão capaz de levantar esse peso"
-              : "Ex.: abra o computador · tire a RAM · crie uma automação térmica"}
+              : activeProduct === "smartphone"
+                ? "Ex.: abra o celular · ligue o smartphone · remova a bateria · por que não iniciou?"
+                : "Ex.: abra o computador · tire a RAM · crie uma automação térmica"}
             aria-label="Comando para o Tehkné Studio"
           />
           <button type="submit">Executar</button>

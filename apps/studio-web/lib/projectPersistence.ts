@@ -4,7 +4,7 @@ import {
   type StudioSessionSnapshot
 } from "../../../packages/persistence-runtime/src/index";
 
-export type PersistedStudioProduct = "desktop" | "arm";
+export type PersistedStudioProduct = "desktop" | "arm" | "smartphone";
 
 const STORAGE_PREFIX = "tehkne-studio:s2.2:project:";
 

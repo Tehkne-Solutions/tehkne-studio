@@ -1,0 +1,50 @@
+{
+  "profileId": "smartphone-01-v1",
+  "projectId": "smartphone-01",
+  "name": "Smartphone 01",
+  "signature": "Tehkné Solutions",
+  "root": {
+    "id": "phone.root",
+    "name": "Smartphone 01",
+    "type": "Smartphone",
+    "voiceAliases": ["smartphone", "celular", "telefone", "phone"]
+  },
+  "slots": [
+    { "slotId": "frame", "definitionId": "structural.frame.modular-v1", "entityId": "phone.frame", "name": "Midframe", "spatial": { "position": [0, 0, 0], "exploded": [0, 0, -0.5], "size": [1.5, 3.1, 0.16] } },
+    { "slotId": "battery", "definitionId": "energy.battery.lithium-ion-v1", "entityId": "phone.battery", "name": "Battery Pack", "teardown": true, "spatial": { "position": [0, -0.25, 0.12], "exploded": [-1.6, -0.25, 0.6], "size": [1.1, 1.65, 0.16] } },
+    { "slotId": "regulator", "definitionId": "power.regulator.dc-v1", "entityId": "phone.regulator", "name": "Power Management", "spatial": { "position": [0.38, 0.72, 0.13], "exploded": [1.6, 0.75, 0.62], "size": [0.32, 0.35, 0.12] } },
+    { "slotId": "soc", "definitionId": "compute.soc.mobile-v1", "entityId": "phone.soc", "name": "Mobile SoC", "spatial": { "position": [0, 0.8, 0.13], "exploded": [0, 1.85, 0.72], "size": [0.48, 0.48, 0.12] } },
+    { "slotId": "memory", "definitionId": "memory.lpddr.package-v1", "entityId": "phone.memory", "name": "LPDDR Memory", "spatial": { "position": [-0.38, 0.78, 0.13], "exploded": [-1.55, 1.45, 0.65], "size": [0.35, 0.3, 0.1] } },
+    { "slotId": "storage", "definitionId": "storage.solid-state.general-v1", "entityId": "phone.storage", "name": "Flash Storage", "spatial": { "position": [-0.42, 0.38, 0.13], "exploded": [-1.65, 0.55, 0.65], "size": [0.28, 0.34, 0.1] } },
+    { "slotId": "display", "definitionId": "display.oled.touch-v1", "entityId": "phone.display", "name": "OLED Touch Display", "spatial": { "position": [0, 0, 0.34], "exploded": [0, 0, 1.35], "size": [1.38, 2.92, 0.06] } },
+    { "slotId": "imu", "definitionId": "sensing.imu.6dof-v1", "entityId": "phone.imu", "name": "Motion Sensor", "spatial": { "position": [0.48, 0.35, 0.13], "exploded": [1.55, 0.05, 0.65], "size": [0.18, 0.18, 0.08] } },
+    { "slotId": "camera", "definitionId": "sensing.camera.rgb-v1", "entityId": "phone.camera", "name": "Main Camera", "spatial": { "position": [-0.47, 1.16, 0.16], "exploded": [-1.5, 2.15, 0.78], "size": [0.3, 0.3, 0.18] } },
+    { "slotId": "wireless", "definitionId": "communication.wireless.combo-v1", "entityId": "phone.wireless", "name": "Wireless Module", "spatial": { "position": [0.42, 1.14, 0.13], "exploded": [1.55, 2.05, 0.65], "size": [0.3, 0.24, 0.1] } },
+    { "slotId": "usbC", "definitionId": "interface.usb-c.port-v1", "entityId": "phone.usb-c", "name": "USB-C Port", "spatial": { "position": [0, -1.35, 0.13], "exploded": [0, -2.1, 0.7], "size": [0.35, 0.14, 0.12] } }
+  ],
+  "connections": [
+    { "id": "phone-power-source", "from": ["battery", "dc-output"], "to": ["regulator", "dc-input"] },
+    { "id": "phone-power-soc", "from": ["regulator", "regulated-output"], "to": ["soc", "power-in"] },
+    { "id": "phone-power-display", "from": ["regulator", "regulated-output"], "to": ["display", "power-in"] },
+    { "id": "phone-power-imu", "from": ["regulator", "regulated-output"], "to": ["imu", "power-in"] },
+    { "id": "phone-power-camera", "from": ["regulator", "regulated-output"], "to": ["camera", "power-in"] },
+    { "id": "phone-power-wireless", "from": ["regulator", "regulated-output"], "to": ["wireless", "power-in"] },
+    { "id": "phone-memory-bus", "from": ["soc", "memory"], "to": ["memory", "memory-bus"] },
+    { "id": "phone-storage-bus", "from": ["soc", "storage"], "to": ["storage", "storage-bus"] },
+    { "id": "phone-display-data", "from": ["soc", "display-out"], "to": ["display", "display-in"] },
+    { "id": "phone-touch-data", "from": ["soc", "sensor-bus"], "to": ["display", "touch-data"] },
+    { "id": "phone-imu-data", "from": ["soc", "sensor-bus"], "to": ["imu", "sensor-data"] },
+    { "id": "phone-camera-video", "from": ["camera", "video-out"], "to": ["soc", "camera-in"] },
+    { "id": "phone-camera-control", "from": ["soc", "sensor-bus"], "to": ["camera", "control"] },
+    { "id": "phone-wireless-data", "from": ["soc", "wireless-bus"], "to": ["wireless", "host-data"] },
+    { "id": "phone-charge", "from": ["usbC", "charge"], "to": ["battery", "charge-input"] }
+  ],
+  "bootDependencies": [
+    { "slotId": "battery", "reason": "fornecer energia primária ao aparelho" },
+    { "slotId": "regulator", "reason": "regular a energia para os circuitos internos" },
+    { "slotId": "soc", "reason": "executar o firmware e coordenar o sistema" },
+    { "slotId": "memory", "reason": "fornecer memória de trabalho ao sistema" },
+    { "slotId": "storage", "reason": "fornecer armazenamento persistente e imagem de boot" },
+    { "slotId": "display", "reason": "inicializar a interface visual do aparelho" }
+  ]
+}
