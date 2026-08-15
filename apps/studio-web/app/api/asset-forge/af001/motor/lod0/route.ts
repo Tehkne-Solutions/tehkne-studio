@@ -28,10 +28,16 @@ async function loadMotor(): Promise<Buffer> {
   return motor;
 }
 
+function toResponseBody(buffer: Buffer): ArrayBuffer {
+  const body = new ArrayBuffer(buffer.byteLength);
+  new Uint8Array(body).set(buffer);
+  return body;
+}
+
 export async function GET() {
   const motor = await loadMotor();
 
-  return new Response(motor, {
+  return new Response(toResponseBody(motor), {
     status: 200,
     headers: {
       "Content-Type": "model/gltf-binary",
