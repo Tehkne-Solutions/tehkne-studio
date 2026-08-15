@@ -15,8 +15,8 @@ if (!motor || motor.domain !== "actuation" || motor.metadata?.provenance !== "au
 const visual = motor.metadata?.visualAsset;
 if (visual?.kind !== "gltf" || visual?.assetId !== "TS_ELEC_MOTOR_DC_A") throw new Error("S2.13 motor visual identity mismatch");
 if (visual?.version !== "0.6.6-hero-candidate" || visual?.status !== "HERO_CANDIDATE") throw new Error("S2.13 AF-001 v0.6.6 HERO_CANDIDATE contract mismatch");
-if (visual?.lod !== "LOD0" || visual?.triangles !== 3292 || visual?.bytes !== 243812) throw new Error("S2.13 motor LOD0 evidence mismatch");
-if (visual?.sha256 !== "d19e51fd33c461cf761b7c2c086c1284fc4ddfb38f3274acabd88e33fc5ce487") throw new Error("S2.13 motor GLB SHA mismatch");
+if (visual?.lod !== "LOD0" || visual?.triangles !== 3292 || visual?.bytes !== 243848) throw new Error("S2.13 motor LOD0 evidence mismatch");
+if (visual?.sha256 !== "65b82b78ecc038fa872a8d8ff9e6e720956cdcdec9e4e51d9eb7904adac8622c") throw new Error("S2.13 motor GLB SHA mismatch");
 if (visual?.runtimeUrl !== "/api/asset-forge/af001/motor/lod0") throw new Error("S2.13 motor runtime URL mismatch");
 for (const [portId, socket] of Object.entries({ "power-pos": "SOCKET_ELEC_POWER_POS", "power-neg": "SOCKET_ELEC_POWER_NEG", "shaft-out": "SOCKET_MECH_AXIS_OUT", "mount-front": "SOCKET_MECH_MOUNT_FRONT" })) {
   if (motor.metadata?.portSocketMap?.[portId] !== socket) throw new Error(`S2.13 port/socket mapping mismatch: ${portId}`);
