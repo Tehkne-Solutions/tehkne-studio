@@ -19,6 +19,7 @@ assert.match(defaultPlaywright, /testDir:\s*"\.\/tests\/browser"/);
 assert.doesNotMatch(defaultPlaywright, /tests\/hardware/);
 assert.match(hardwarePlaywright, /testDir:\s*"\.\/tests\/hardware"/);
 assert.match(hardwarePlaywright, /workers:\s*1/);
+assert.match(hardwarePlaywright, /headless:\s*false/);
 assert.match(hardwarePlaywright, /--enable-gpu/);
 assert.match(hardwarePlaywright, /--ignore-gpu-blocklist/);
 
@@ -75,6 +76,6 @@ assert.doesNotMatch(hardwareJob, /runs-on:\s*macos-/i, "AF-001L hardware job mus
 
 console.log(
   "AF-001L contract PASS · physical self-hosted target-hardware gate only · " +
-  "strict v0.6.5 fingerprint + GPU attestation + six views + <100/<150 thresholds · " +
+  "headful GPU + strict v0.6.5 fingerprint + GPU attestation + six views + <100/<150 thresholds · " +
   "GOLDEN_ASSET promotion remains blocked until physical evidence exists · Tehkné Solutions"
 );
