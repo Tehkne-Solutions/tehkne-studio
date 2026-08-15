@@ -1,9 +1,13 @@
 import json
+import sys
 from pathlib import Path
 
 import bpy
 import numpy as np
 
+SCRIPT_DIR=Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0,str(SCRIPT_DIR))
 import build_golden_motor_v06 as base
 
 VERSION='0.6.4-dcc-candidate'
@@ -49,7 +53,6 @@ def bind_stamped_steel_roughness():
         tex.name='AF001_STEEL_ROUGHNESS'
         tex.label='AF001 authored stamped-steel roughness'
     tex.image=ensure_roughness_texture()
-    # idempotent: replace any old roughness link with the authoritative texture.
     for link in list(bsdf.inputs['Roughness'].links):
         links.remove(link)
     links.new(tex.outputs['Color'],bsdf.inputs['Roughness'])
@@ -65,8 +68,6 @@ def add_vent_recesses(collection,lod):
     for side in (-1,1):
         for index,runtime_z in enumerate(z_positions):
             runtime_loc=(side*.01194,0,runtime_z)
-            # Runtime dimensions: 80 µm shell depth × 2 mm height × 4 mm length.
-            # After (x,-z,y) conversion the Blender dimensions are x, z-length, y-height.
             obj=base.cube(
                 f"VENT_RECESS_{'L' if side<0 else 'R'}_{index}",
                 (.00008,.0040,.0020),
