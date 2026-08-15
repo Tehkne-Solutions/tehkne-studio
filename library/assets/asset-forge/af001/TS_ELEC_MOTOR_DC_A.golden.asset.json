@@ -1,0 +1,61 @@
+{
+  "asset_id": "TS_ELEC_MOTOR_DC_A",
+  "version": "0.3.0-golden-candidate",
+  "status": "GOLDEN_ASSET_CANDIDATE",
+  "signature": "Tehkné Solutions",
+  "shape_language": "rounded stamped rectangular DC motor can",
+  "brand_dependency": "none",
+  "lods": {
+    "LOD0": {
+      "file": "TS_ELEC_MOTOR_DC_A_LOD0.glb",
+      "triangles": 3744,
+      "vertices": 1936,
+      "geometries": 34,
+      "nodes": 41,
+      "extents_m": [0.0334, 0.019, 0.0547]
+    },
+    "LOD1": {
+      "file": "TS_ELEC_MOTOR_DC_A_LOD1.glb",
+      "triangles": 2316,
+      "vertices": 1208,
+      "geometries": 27,
+      "nodes": 34,
+      "extents_m": [0.0334, 0.019, 0.0547]
+    },
+    "LOD2": {
+      "file": "TS_ELEC_MOTOR_DC_A_LOD2.glb",
+      "triangles": 824,
+      "vertices": 432,
+      "geometries": 10,
+      "nodes": 17,
+      "extents_m": [0.024, 0.018, 0.0547]
+    }
+  },
+  "sockets": [
+    "SOCKET_ELEC_POWER_NEG",
+    "SOCKET_ELEC_POWER_POS",
+    "SOCKET_MECH_AXIS_OUT",
+    "SOCKET_MECH_MOUNT_FRONT"
+  ],
+  "texture_set": [
+    "TS_MOTOR_MICRO_BASECOLOR.png",
+    "TS_MOTOR_MICRO_NORMAL.png",
+    "TS_MOTOR_ORM_REFERENCE.png"
+  ],
+  "dimensions_m": {
+    "can_max_width": 0.024,
+    "can_max_height": 0.018,
+    "can_body_length": 0.03,
+    "shaft_diameter": 0.002,
+    "shaft_exposed": 0.012
+  },
+  "promotion": {
+    "allowed": false,
+    "blocked_by": [
+      "engine_pbr_render",
+      "web_mobile_benchmark",
+      "final_visual_review",
+      "dcc_blend_master"
+    ]
+  }
+}
