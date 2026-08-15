@@ -32,6 +32,8 @@ test("AF-001H Golden Motor loads the integrity-checked GLB and completes the bro
   const averageFrameMs = Number.parseFloat(averageText);
   const p95FrameMs = Number.parseFloat(p95Text);
 
+  console.log(`AF001H_METRICS average_frame_ms=${averageFrameMs} p95_frame_ms=${p95FrameMs} samples=120 bytes=${EXPECTED_BYTES} sha256=${EXPECTED_SHA256}`);
+
   expect(Number.isFinite(averageFrameMs)).toBe(true);
   expect(Number.isFinite(p95FrameMs)).toBe(true);
   expect(averageFrameMs).toBeLessThan(100);
