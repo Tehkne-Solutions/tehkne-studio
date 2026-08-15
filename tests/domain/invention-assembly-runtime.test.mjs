@@ -29,6 +29,10 @@ async function assemblyRuntime() {
   return { session, builder, spatial };
 }
 
+function assertClose(actual, expected, epsilon = 1e-12) {
+  assert.ok(Math.abs(actual - expected) <= epsilon, `expected ${actual} to be within ${epsilon} of ${expected}`);
+}
+
 test("S2.15 derives a coincident mechanical constraint from the authoritative connectedTo relationship", async () => {
   const { session, builder, spatial } = await assemblyRuntime();
   const motor = builder.addComponent("actuation.motor.dc-brushed-v1");
@@ -90,8 +94,8 @@ test("S2.15 assembly translation is atomic and fails closed before any member le
 
   const plan = planMechanicalAssemblyTranslation(before, members, { x: 0.05, y: 0, z: 0 });
   for (const move of plan) spatial.move(move.entityId, move.to);
-  assert.equal(spatial.binding(motor.id).position.x, 0.4);
-  assert.equal(spatial.binding(wheel.id).position.x, 0.43);
+  assertClose(spatial.binding(motor.id).position.x, 0.4);
+  assertClose(spatial.binding(wheel.id).position.x, 0.43);
 });
 
 test("S2.15 keeps electrical relationships out of the mechanical constraint projection", async () => {
