@@ -96,9 +96,18 @@ for (const token of [
   'source: "proxy-anchor"',
   'source: "center-fallback"',
   "transformSocketPosition",
-  "scene.worldToLocal(node.getWorldPosition(new Vector3()))"
+  "PreparedAssetScene",
+  "prepareAssetScene",
+  "const scene = source.clone(true);",
+  "position: node.getWorldPosition(new Vector3())",
+  "portSocketSignature",
+  "pre-mount operation",
+  "transformSocketPosition(position, binding)"
 ]) {
   if (!visual.includes(token)) throw new Error(`S2.15 physical endpoint resolver missing: ${token}`);
+}
+if (visual.includes("scene.worldToLocal(")) {
+  throw new Error("S2.15 GLB sockets must be captured before R3F parenting, not converted from a lifecycle-sensitive parented world matrix");
 }
 
 const dccHelper = await readFile("tools/asset_forge/af001_v06/glb_socket_transforms.py", "utf8");
@@ -177,4 +186,4 @@ if (!workflow.includes("npm run verify:s2.15")) throw new Error("S2.15 CI contra
 if (!workflow.includes("tests/browser/mechanical-assembly-invention.spec.ts")) throw new Error("S2.15 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.15 CI must remain read-only");
 
-console.log("S2.15 Mechanical Assembly Constraints PASS · canonical wheel/bracket proxies + connectedTo-derived coincident constraints + AF-001 v0.6.6 repaired physical socket transforms + atomic assembly movement + AF-001L rebound + no parallel graph · Tehkné Solutions");
+console.log("S2.15 Mechanical Assembly Constraints PASS · canonical wheel/bracket proxies + connectedTo-derived coincident constraints + AF-001 v0.6.6 repaired physical socket transforms + pre-mount GLB-local snapshot + atomic assembly movement + AF-001L rebound + no parallel graph · Tehkné Solutions");
