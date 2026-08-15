@@ -1,11 +1,11 @@
 "use client";
 
 import { Canvas, useFrame, useLoader } from "@react-three/fiber";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Group } from "three";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 const MOTOR_URL = "/asset-forge/af001/TS_ELEC_MOTOR_DC_A_LOD2_RUNTIME_PREVIEW.glb";
+const MOTOR_SCENE_NAME = "AF001_RUNTIME_MOTOR";
 
 interface RuntimeStats {
   readonly samples: number;
@@ -14,7 +14,6 @@ interface RuntimeStats {
 }
 
 function GoldenMotorModel({ onReady }: { readonly onReady: () => void }) {
-  const group = useRef<Group>(null);
   const gltf = useLoader(GLTFLoader, MOTOR_URL);
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
 
@@ -22,12 +21,13 @@ function GoldenMotorModel({ onReady }: { readonly onReady: () => void }) {
     onReady();
   }, [onReady]);
 
-  useFrame((_, delta) => {
-    if (group.current) group.current.rotation.y += delta * 0.35;
+  useFrame(({ scene: rootScene }, delta) => {
+    const motor = rootScene.getObjectByName(MOTOR_SCENE_NAME);
+    if (motor) motor.rotation.y += delta * 0.35;
   });
 
   return (
-    <group ref={group} rotation={[-0.35, 0.65, -0.08]}>
+    <group name={MOTOR_SCENE_NAME} rotation={[-0.35, 0.65, -0.08]}>
       <primitive object={scene} />
     </group>
   );
