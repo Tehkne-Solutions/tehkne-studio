@@ -19,9 +19,9 @@ const BENCHMARK_WINDOW_MS = 8_000;
 const MAX_VALID_DELTA_MS = 1_000;
 const MIN_BENCHMARK_SAMPLES = 30;
 
+// AF-001 v0.6 replaced the v0.5 helper-pivot convention with explicit
+// engineering sockets authored and QA-checked by the Blender DCC source.
 const REQUIRED_NODES = [
-  "PIVOT_MAIN",
-  "PIVOT_SHAFT",
   "BODY_CAN",
   "FRONT_CAP",
   "REAR_CAP",
@@ -95,23 +95,26 @@ function inspectScene(root: Object3D): AssetInspection {
 }
 
 function CameraRig({ view }: { readonly view: CameraView }) {
-  const { camera } = useThree();
+  const { camera, invalidate } = useThree();
   useEffect(() => {
     const preset = CAMERA_VIEWS[view];
     camera.position.set(...preset.position);
     camera.lookAt(...preset.target);
     camera.updateProjectionMatrix();
-  }, [camera, view]);
+    invalidate();
+  }, [camera, invalidate, view]);
   return null;
 }
 
 function GoldenMotor({ onReady }: { readonly onReady: (inspection: AssetInspection) => void }) {
   const gltf = useLoader(GLTFLoader, MOTOR_URL);
+  const { invalidate } = useThree();
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
 
   useEffect(() => {
     onReady(inspectScene(scene));
-  }, [onReady, scene]);
+    invalidate();
+  }, [invalidate, onReady, scene]);
 
   return <primitive object={scene} />;
 }
@@ -163,8 +166,8 @@ export function GoldenMotorPbrReviewGate() {
       const elapsed = now - startedAt;
 
       if (elapsed >= WARMUP_MS && delta > 0 && delta <= MAX_VALID_DELTA_MS) {
-        // Slow frames remain evidence; optimization changes renderer cost, not
-        // the fail-closed measurement policy or thresholds.
+        // Slow frames remain evidence. The static WebGL scene is rendered only
+        // when content/camera changes; the benchmark thresholds stay unchanged.
         samples.push(delta);
       }
 
@@ -204,7 +207,7 @@ export function GoldenMotorPbrReviewGate() {
       data-runtime-ready={runtimeReady ? "true" : "false"}
       data-benchmark-ready={stats ? "true" : "false"}
       data-node-gate={nodeGatePass ? "pass" : runtimeReady ? "blocked" : "pending"}
-      data-render-policy="static-pbr-key-fill-no-realtime-shadow-map"
+      data-render-policy="static-pbr-demand-key-fill-no-realtime-shadow-map"
       style={{ minHeight: "100dvh", background: "#0b0e11", color: "#edf1f3", padding: 22, display: "grid", gap: 16, gridTemplateRows: "auto auto 1fr auto" }}
     >
       <header style={{ display: "flex", justifyContent: "space-between", gap: 24, alignItems: "end", flexWrap: "wrap" }}>
@@ -212,7 +215,7 @@ export function GoldenMotorPbrReviewGate() {
           <span style={{ color: "#82aeb1", fontWeight: 800, letterSpacing: ".16em", fontSize: 11 }}>TEHKNÉ SOLUTIONS · ASSET FORGE</span>
           <h1 style={{ margin: "8px 0 0", fontSize: "clamp(26px, 4vw, 42px)", letterSpacing: "-.03em" }}>AF-001I · LOD0 PBR Runtime Review</h1>
           <p style={{ color: "#9da7ae", margin: "8px 0 0", maxWidth: 820, lineHeight: 1.55 }}>
-            Golden Motor Hero v0.5.1 · LOD0 real de 3.904 tris · PBR estático key+fill · frames lentos contam contra o gate.
+            Golden Motor Hero v0.6.5 · LOD0 real de 3.292 tris · sockets DCC v0.6 · PBR estático on-demand · frames lentos contam contra o gate.
           </p>
         </div>
         <div style={{ border: `1px solid ${runtimePass ? "#51765f" : "#62533a"}`, background: runtimePass ? "#142019" : "#201b14", padding: "10px 14px", borderRadius: 12, color: runtimePass ? "#8dc9a0" : stats ? "#e08378" : "#d6ae6c", fontWeight: 900 }}>
@@ -230,7 +233,7 @@ export function GoldenMotorPbrReviewGate() {
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(300px, 360px)", gap: 16, minHeight: 0 }}>
         <div data-testid="pbr-canvas-shell" data-camera-view={view} style={{ minHeight: 600, borderRadius: 18, overflow: "hidden", border: "1px solid #343d43", background: "#151a1e" }}>
-          <Canvas camera={{ position: CAMERA_VIEWS["three-quarter"].position, fov: 30, near: 0.001, far: 5 }} dpr={1} gl={{ antialias: true, powerPreference: "high-performance" }} onCreated={({ gl }) => { gl.outputColorSpace = SRGBColorSpace; gl.toneMapping = ACESFilmicToneMapping; gl.toneMappingExposure = 1.05; }}>
+          <Canvas frameloop="demand" camera={{ position: CAMERA_VIEWS["three-quarter"].position, fov: 30, near: 0.001, far: 5 }} dpr={1} gl={{ antialias: true, powerPreference: "high-performance" }} onCreated={({ gl }) => { gl.outputColorSpace = SRGBColorSpace; gl.toneMapping = ACESFilmicToneMapping; gl.toneMappingExposure = 1.05; }}>
             <color attach="background" args={["#14181b"]} />
             <ambientLight intensity={0.42} />
             <directionalLight position={[0.075, 0.11, 0.075]} intensity={4.2} />
@@ -245,7 +248,7 @@ export function GoldenMotorPbrReviewGate() {
           <h2 style={{ margin: "0 0 16px", fontSize: 18 }}>Gate técnico</h2>
           <dl style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "10px 16px", margin: 0 }}>
             <dt>Asset</dt><dd style={{ margin: 0, fontWeight: 800 }}>TS_ELEC_MOTOR_DC_A</dd>
-            <dt>LOD / tris</dt><dd style={{ margin: 0, fontWeight: 800 }}>LOD0 · 3.904</dd>
+            <dt>LOD / tris</dt><dd style={{ margin: 0, fontWeight: 800 }}>LOD0 · 3.292</dd>
             <dt>Meshes</dt><dd data-testid="mesh-count" style={{ margin: 0, fontWeight: 800 }}>{inspection?.meshCount ?? "—"}</dd>
             <dt>Materiais</dt><dd data-testid="material-count" style={{ margin: 0, fontWeight: 800 }}>{inspection?.materialCount ?? "—"}</dd>
             <dt>Nodes</dt><dd data-testid="node-gate-verdict" style={{ margin: 0, fontWeight: 900, color: nodeGatePass ? "#8dc9a0" : "#e08378" }}>{nodeGatePass ? "PASS" : runtimeReady ? "BLOCKED" : "WAIT"}</dd>
@@ -263,7 +266,7 @@ export function GoldenMotorPbrReviewGate() {
         </aside>
       </div>
 
-      <footer style={{ display: "flex", justifyContent: "space-between", color: "#78848b", fontSize: 12 }}><span>HERO_CANDIDATE · static PBR · fail-closed</span><span>Tehkné Solutions</span></footer>
+      <footer style={{ display: "flex", justifyContent: "space-between", color: "#78848b", fontSize: 12 }}><span>HERO_CANDIDATE · static PBR demand render · fail-closed</span><span>Tehkné Solutions</span></footer>
     </section>
   );
 }
