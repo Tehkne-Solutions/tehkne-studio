@@ -35,7 +35,7 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
           MESA_LOADER_DRIVER_OVERRIDE: "llvmpipe"
           LD_LIBRARY_PATH: "/usr/lib/x86_64-linux-gnu"
-        run: xvfb-run -a -s "-screen 0 1280x1024x24" blender --background --python tools/asset_forge/af001_v06/build_golden_motor_v06.py
+        run: xvfb-run -a -s "-screen 0 1280x1024x24" blender --background --python tools/asset_forge/af001_v06/build_golden_motor_v064.py
 
       - name: Assert DCC QA
         run: |
@@ -46,6 +46,7 @@ jobs:
           assert qa["signature"] == "Tehkné Solutions"
           assert qa["automated_pass"] is True
           assert qa["visual_status"] == "DCC_CANDIDATE_NOT_GOLDEN"
+          assert qa.get("surface_textures") == ["TS_MOTOR_STAMPED_STEEL_ROUGHNESS.png"]
           for lod in ("LOD0", "LOD1", "LOD2"):
               assert qa["lods"][lod]["budget_pass"] is True, qa["lods"][lod]
               assert qa["lods"][lod]["socket_pass"] is True, qa["lods"][lod]
