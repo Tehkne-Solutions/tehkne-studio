@@ -11,20 +11,25 @@ const EXPECTED_COMPRESSED_BYTES = 25_162;
 const EXPECTED_COMPRESSED_SHA256 = "f6b1062238c941f81bbd5c38e154add9bb4ab56b81c06f9c45989c9604dd90c8";
 const EXPECTED_GLB_BYTES = 243_672;
 const EXPECTED_GLB_SHA256 = "ad73d83d0dcd8485a8c2a7a680f83090a98d637cea455dde4915f0d771cd6552";
-const REQUIRED_NODES = [
-  "PIVOT_MAIN",
-  "PIVOT_SHAFT",
+
+// AF-001 v0.6 replaced the old helper-pivot convention with explicit
+// engineering interfaces authored by the DCC generator: physical shaft and
+// terminals plus four sockets validated in every generated LOD.
+const REQUIRED_PHYSICAL_NODES = [
   "BODY_CAN",
   "FRONT_CAP",
   "REAR_CAP",
   "SHAFT",
   "TERMINAL_POS",
-  "TERMINAL_NEG",
+  "TERMINAL_NEG"
+];
+const REQUIRED_SOCKETS = [
   "SOCKET_MECH_AXIS_OUT",
   "SOCKET_MECH_MOUNT_FRONT",
   "SOCKET_ELEC_POWER_POS",
   "SOCKET_ELEC_POWER_NEG"
 ];
+const REQUIRED_NODES = [...REQUIRED_PHYSICAL_NODES, ...REQUIRED_SOCKETS];
 
 function sha256(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
@@ -75,9 +80,12 @@ if (glbHash !== EXPECTED_GLB_SHA256) fail(`GLB SHA-256 ${glbHash} != ${EXPECTED_
 const document = glbDocument(glb);
 const names = new Set((document.nodes ?? []).map((node) => node.name).filter(Boolean));
 const missing = REQUIRED_NODES.filter((name) => !names.has(name));
-if (missing.length) fail(`required nodes missing: ${missing.join(", ")}`);
+if (missing.length) fail(`required v0.6 nodes missing: ${missing.join(", ")}`);
 
-console.log(`AF001I_V065_CONTRACT PASS chunks=6 brotli_bytes=${compressed.length} glb_bytes=${glb.length}`);
+console.log(
+  `AF001I_V065_CONTRACT PASS chunks=6 brotli_bytes=${compressed.length} glb_bytes=${glb.length} ` +
+  `physical_nodes=${REQUIRED_PHYSICAL_NODES.length} sockets=${REQUIRED_SOCKETS.length}`
+);
 console.log(`AF001I_V065_TRANSPORT_SHA256 ${transportHash}`);
 console.log(`AF001I_V065_GLB_SHA256 ${glbHash}`);
 console.log("Tehkné Solutions");
