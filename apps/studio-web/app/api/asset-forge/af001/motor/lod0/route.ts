@@ -1,18 +1,26 @@
 import { createHash } from "node:crypto";
 import { brotliDecompressSync } from "node:zlib";
-import { readFile } from "node:fs/promises";
 
 const EXPECTED_BYTES = 74_472;
 const EXPECTED_SHA256 = "2142509d651e5ae1683da383360675b4343cbad83fbbb498326a894cf0c2baae";
 const EXPECTED_TRIANGLES = 3_904;
 const EXPECTED_LOD = "LOD0";
+const COMPRESSED_ASSET_PATH = "/asset-forge/af001/motor-lod0.glb.br";
 
 let cachedMotor: Buffer | null = null;
 
-async function loadMotor(): Promise<Buffer> {
+async function loadMotor(requestUrl: string): Promise<Buffer> {
   if (cachedMotor) return cachedMotor;
 
-  const compressed = await readFile(new URL("./motor-lod0.glb.br", import.meta.url));
+  const assetUrl = new URL(COMPRESSED_ASSET_PATH, requestUrl);
+  const compressedResponse = await fetch(assetUrl, { cache: "force-cache" });
+  if (!compressedResponse.ok) {
+    throw new Error(
+      `AF001I compressed LOD0 fetch failed: ${compressedResponse.status} ${compressedResponse.statusText}`
+    );
+  }
+
+  const compressed = Buffer.from(await compressedResponse.arrayBuffer());
   const motor = brotliDecompressSync(compressed);
 
   if (motor.byteLength !== EXPECTED_BYTES) {
@@ -34,8 +42,8 @@ function toResponseBody(buffer: Buffer): ArrayBuffer {
   return body;
 }
 
-export async function GET() {
-  const motor = await loadMotor();
+export async function GET(request: Request) {
+  const motor = await loadMotor(request.url);
 
   return new Response(toResponseBody(motor), {
     status: 200,
