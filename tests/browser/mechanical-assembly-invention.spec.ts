@@ -24,10 +24,12 @@ test("S2.15 snaps a proxy wheel to the real AF-001 shaft socket and moves the co
   );
   await definition.selectOption("actuation.motor.dc-brushed-v1");
   await add.click();
-  await motorResponse;
+  const response = await motorResponse;
+  expect(response.headers()["x-tehkne-asset-version"]).toBe("0.6.6-hero-candidate");
   await workspace.getByRole("button", { name: /Brushed DC Motor/ }).click();
   const motorXBefore = Number(await selected.getAttribute("data-x"));
   const motorYBefore = Number(await selected.getAttribute("data-y"));
+  const motorZAtAssembly = Number(await selected.getAttribute("data-z"));
 
   await definition.selectOption("mechanical.wheel.drive-v1");
   await add.click();
@@ -52,10 +54,11 @@ test("S2.15 snaps a proxy wheel to the real AF-001 shaft socket and moves the co
   await expect(constraint).toHaveAttribute("data-state", "snapped", { timeout: 20_000 });
   await expect(status).toHaveAttribute("data-mechanical-assemblies", "1");
 
-  // The v0.6.5 shaft is centered on the motor X/Y axis. This assertion proves
-  // that the spatial binding is applied exactly once to the GLTF-local socket.
+  // AF-001 v0.6.6 shaft is centered on motor X/Y and 31.85 mm forward on Z.
+  // This proves the GLB serializes the socket and the spatial binding is applied exactly once.
   await expect.poll(async () => Number(await constraint.getAttribute("data-driver-x"))).toBeCloseTo(motorXBefore, 3);
   await expect.poll(async () => Number(await constraint.getAttribute("data-driver-y"))).toBeCloseTo(motorYBefore, 3);
+  await expect.poll(async () => Number(await constraint.getAttribute("data-driver-z"))).toBeCloseTo(motorZAtAssembly + 0.03185, 3);
 
   const wire = page.getByTestId("invention-3d-wire-invention-connection-1");
   await expect(wire).toHaveAttribute("data-mechanical", "true");
