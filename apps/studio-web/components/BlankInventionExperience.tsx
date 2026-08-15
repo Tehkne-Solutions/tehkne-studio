@@ -85,15 +85,16 @@ function restoreRuntime(): InventionRuntimeBundle {
   if (!snapshot) throw new Error("Não existe projeto de invenção salvo.");
   const session = restoreSessionSnapshot(snapshot);
   const builder = new InventionBuilder(session, registry);
+  const hasSpatialEvidence = Object.prototype.hasOwnProperty.call(snapshot.extensions, "inventionSpatial");
   const rawSpatial = snapshot.extensions.inventionSpatial;
-  const spatial = rawSpatial
+  const spatial = hasSpatialEvidence
     ? new InventionSpatialScene(session, parseInventionSpatialDocument(rawSpatial))
     : new InventionSpatialScene(session);
 
   // S2.10 snapshots did not yet carry spatial evidence. They remain readable and
-  // receive a deterministic layout once. When spatial evidence exists, however,
-  // parse/restore above stays fail-closed for tampering or incomplete coverage.
-  if (!rawSpatial) {
+  // receive a deterministic layout once. A present spatial extension — including
+  // null/undefined/tampered values — must parse successfully or restoration fails.
+  if (!hasSpatialEvidence) {
     for (const entity of builder.components()) spatial.ensureComponent(entity.id);
   }
 
