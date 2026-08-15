@@ -96,7 +96,7 @@
   border-color: #85897c;
 }
 
-button[disabled] {
+.shell button[disabled] {
   opacity: .45;
   cursor: not-allowed;
 }
