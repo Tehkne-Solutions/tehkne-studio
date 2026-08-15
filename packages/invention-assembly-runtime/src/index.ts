@@ -44,6 +44,10 @@ export interface PlannedAxialAlignment {
   readonly fromRotation: SpatialVector3;
   readonly toRotation: SpatialVector3;
 }
+export interface PlannedRotaryJointStep extends PlannedAxialAlignment {
+  readonly axisWorld: SpatialVector3;
+  readonly radians: number;
+}
 interface Quaternion { readonly x: number; readonly y: number; readonly z: number; readonly w: number; }
 
 function metadataPortId(relationship: EngineeringRelationship, key: "sourcePortId" | "targetPortId"): string {
@@ -167,6 +171,12 @@ function axisQuaternion(axis: MechanicalRotationAxis, radians: number): Quaterni
   if (axis === "z") return { x: 0, y: 0, z: sine, w: cosine };
   throw new Error(`Unsupported mechanical assembly rotation axis: ${String(axis)}`);
 }
+function quaternionAroundUnitAxis(axisInput: SpatialVector3, radians: number): Quaternion {
+  if (!Number.isFinite(radians)) throw new Error("Mechanical rotary joint radians must be finite");
+  const axis = normalized(axisInput, "Mechanical rotary joint axis");
+  const sine = Math.sin(radians / 2); const cosine = Math.cos(radians / 2);
+  return normalizeQuaternion({ x: axis.x * sine, y: axis.y * sine, z: axis.z * sine, w: cosine });
+}
 function rotateOffset(offset: SpatialVector3, axis: MechanicalRotationAxis, radians: number): SpatialVector3 {
   const cosine = Math.cos(radians); const sine = Math.sin(radians);
   if (axis === "x") return { x: offset.x, y: offset.y * cosine - offset.z * sine, z: offset.y * sine + offset.z * cosine };
@@ -177,6 +187,10 @@ function transformedLocalOffset(local: SpatialVector3, scale: SpatialVector3, ro
   finiteVector(local, "Mechanical endpoint local position");
   finiteVector(scale, "Mechanical endpoint scale");
   return applyQuaternion({ x: local.x * scale.x, y: local.y * scale.y, z: local.z * scale.z }, eulerXyzToQuaternion(rotation));
+}
+function endpointFromBinding(local: SpatialVector3, binding: SpatialEntityBinding): SpatialVector3 {
+  const offset = transformedLocalOffset(local, binding.scale, binding.rotation);
+  return { x: binding.position.x + offset.x, y: binding.position.y + offset.y, z: binding.position.z + offset.z };
 }
 
 export function deriveMechanicalAssemblyConstraints(session: EngineeringSession, relationships: readonly EngineeringRelationship[]): readonly MechanicalAssemblyConstraint[] {
@@ -295,6 +309,47 @@ export function planMechanicalAxialAlignment(
     toPosition,
     fromRotation: { ...followerBinding.rotation },
     toRotation
+  };
+}
+
+export function planMechanicalRotaryJointStep(
+  driverEndpoint: SpatialVector3,
+  followerEndpointLocal: SpatialVector3,
+  driverAxisLocal: SpatialVector3,
+  followerAxisLocal: SpatialVector3,
+  driverBinding: SpatialEntityBinding,
+  followerBinding: SpatialEntityBinding,
+  radians: number
+): PlannedRotaryJointStep {
+  finiteVector(driverEndpoint, "Mechanical rotary joint driver endpoint");
+  finiteVector(followerEndpointLocal, "Mechanical rotary joint follower local endpoint");
+  if (!Number.isFinite(radians)) throw new Error("Mechanical rotary joint radians must be finite");
+  const currentFollowerEndpoint = endpointFromBinding(followerEndpointLocal, followerBinding);
+  if (!endpointsAreCoincident(driverEndpoint, currentFollowerEndpoint)) {
+    throw new Error(`Mechanical rotary joint requires coincident endpoints before rotation: driver=${vectorLabel(driverEndpoint)} follower=${vectorLabel(currentFollowerEndpoint)}`);
+  }
+  const driverWorld = mechanicalWorldAxis(driverAxisLocal, driverBinding.rotation);
+  const followerWorld = mechanicalWorldAxis(followerAxisLocal, followerBinding.rotation);
+  if (!mechanicalAxesAreAligned(driverWorld, followerWorld)) throw new Error("Mechanical rotary joint requires aligned shaft axes before rotation");
+  const delta = quaternionAroundUnitAxis(driverWorld, radians);
+  const toRotation = quaternionToEulerXyz(multiplyQuaternion(delta, eulerXyzToQuaternion(followerBinding.rotation)));
+  const endpointOffset = transformedLocalOffset(followerEndpointLocal, followerBinding.scale, toRotation);
+  const toPosition = {
+    x: driverEndpoint.x - endpointOffset.x,
+    y: driverEndpoint.y - endpointOffset.y,
+    z: driverEndpoint.z - endpointOffset.z
+  };
+  if (!withinBounds(toPosition)) throw new Error(`Mechanical rotary joint would place ${followerBinding.entityId} outside invention workspace bounds`);
+  const nextFollowerWorld = mechanicalWorldAxis(followerAxisLocal, toRotation);
+  if (!mechanicalAxesAreAligned(driverWorld, nextFollowerWorld)) throw new Error(`Mechanical rotary joint lost axial alignment for ${followerBinding.entityId}`);
+  return {
+    entityId: followerBinding.entityId,
+    fromPosition: { ...followerBinding.position },
+    toPosition,
+    fromRotation: { ...followerBinding.rotation },
+    toRotation,
+    axisWorld: { ...driverWorld },
+    radians
   };
 }
 
