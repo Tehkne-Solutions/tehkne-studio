@@ -37,7 +37,12 @@ jobs:
           LD_LIBRARY_PATH: "/usr/lib/x86_64-linux-gnu"
         run: |
           mkdir -p "$AF001_OUTPUT_DIR"
-          xvfb-run -a -s "-screen 0 1280x1024x24" blender --background --python tools/asset_forge/af001_v06/build_golden_motor_v064.py
+          set +e
+          xvfb-run -a -s "-screen 0 1280x1024x24" blender --background --python tools/asset_forge/af001_v06/build_golden_motor_v064.py 2>&1 | tee "$AF001_OUTPUT_DIR/blender-build.log"
+          status=${PIPESTATUS[0]}
+          echo "AF001_BLENDER_EXIT=$status" | tee -a "$AF001_OUTPUT_DIR/blender-build.log"
+          find "$AF001_OUTPUT_DIR" -maxdepth 1 -type f -printf '%f %s bytes\n' | sort | tee "$AF001_OUTPUT_DIR/build-inventory.txt"
+          if [ "$status" -ne 0 ]; then exit "$status"; fi
           test -f "$AF001_OUTPUT_DIR/AF001G_V06_DCC_QA.json"
           test -f "$AF001_OUTPUT_DIR/TS_ELEC_MOTOR_DC_A_LOD0.glb"
           test -f "$AF001_OUTPUT_DIR/TS_ELEC_MOTOR_DC_A_MASTER_CANDIDATE_v06.blend"
@@ -47,8 +52,9 @@ jobs:
         if: always()
         run: |
           echo "AF001_OUTPUT_DIR=$AF001_OUTPUT_DIR"
-          pwd
           find "$AF001_OUTPUT_DIR" -maxdepth 2 -type f -printf '%p %s bytes\n' | sort || true
+          echo '--- blender-build.log tail ---'
+          tail -n 80 "$AF001_OUTPUT_DIR/blender-build.log" || true
           echo '--- AF001G_V06_DCC_QA.json ---'
           if [ -f "$AF001_OUTPUT_DIR/AF001G_V06_DCC_QA.json" ]; then
             cat "$AF001_OUTPUT_DIR/AF001G_V06_DCC_QA.json"
@@ -62,37 +68,28 @@ jobs:
           python - <<'PY'
           import json, os
           from pathlib import Path
-
-          failures = []
+          failures=[]
           def check(name, condition, actual=None):
-              status = "PASS" if condition else "FAIL"
+              status="PASS" if condition else "FAIL"
               print(f"AF001_DCC_CHECK {name} {status} actual={actual!r}")
               if not condition: failures.append(name)
-
-          output = Path(os.environ["AF001_OUTPUT_DIR"])
-          qa_path = output / "AF001G_V06_DCC_QA.json"
-          check("qa_json_exists", qa_path.exists(), str(qa_path))
+          output=Path(os.environ["AF001_OUTPUT_DIR"]); qa_path=output/"AF001G_V06_DCC_QA.json"
+          check("qa_json_exists",qa_path.exists(),str(qa_path))
           if qa_path.exists():
-              qa = json.loads(qa_path.read_text())
-              print("AF001_DCC_QA_BEGIN")
-              print(json.dumps(qa, indent=2))
-              print("AF001_DCC_QA_END")
-              check("signature", qa.get("signature") == "Tehkné Solutions", qa.get("signature"))
-              check("automated_pass", qa.get("automated_pass") is True, qa.get("automated_pass"))
-              check("visual_status", qa.get("visual_status") == "DCC_CANDIDATE_NOT_GOLDEN", qa.get("visual_status"))
-              check("surface_textures", qa.get("surface_textures") == ["TS_MOTOR_STAMPED_STEEL_ROUGHNESS.png"], qa.get("surface_textures"))
-              lods = qa.get("lods", {})
-              for lod in ("LOD0", "LOD1", "LOD2"):
-                  entry = lods.get(lod, {})
-                  check(f"{lod}_budget", entry.get("budget_pass") is True, entry)
-                  check(f"{lod}_sockets", entry.get("socket_pass") is True, entry.get("sockets"))
-              renders = qa.get("renders", [])
-              check("six_renders", len(renders) == 6, renders)
-              overlay = qa.get("manufacturing_overlay", {})
-              check("roughness_metadata", "stamped_steel_roughness" in overlay, overlay)
-              check("vent_metadata", "vent_recesses" in overlay, overlay)
-          if failures:
-              raise SystemExit("AF001 DCC QA failed: " + ", ".join(failures))
+              qa=json.loads(qa_path.read_text()); print("AF001_DCC_QA_BEGIN"); print(json.dumps(qa,indent=2)); print("AF001_DCC_QA_END")
+              check("signature",qa.get("signature")=="Tehkné Solutions",qa.get("signature"))
+              check("automated_pass",qa.get("automated_pass") is True,qa.get("automated_pass"))
+              check("visual_status",qa.get("visual_status")=="DCC_CANDIDATE_NOT_GOLDEN",qa.get("visual_status"))
+              check("surface_textures",qa.get("surface_textures")==["TS_MOTOR_STAMPED_STEEL_ROUGHNESS.png"],qa.get("surface_textures"))
+              for lod in ("LOD0","LOD1","LOD2"):
+                  entry=qa.get("lods",{}).get(lod,{})
+                  check(f"{lod}_budget",entry.get("budget_pass") is True,entry)
+                  check(f"{lod}_sockets",entry.get("socket_pass") is True,entry.get("sockets"))
+              check("six_renders",len(qa.get("renders",[]))==6,qa.get("renders"))
+              overlay=qa.get("manufacturing_overlay",{})
+              check("roughness_metadata","stamped_steel_roughness" in overlay,overlay)
+              check("vent_metadata","vent_recesses" in overlay,overlay)
+          if failures: raise SystemExit("AF001 DCC QA failed: "+", ".join(failures))
           PY
 
       - name: Preserve AF-001G v0.6 DCC evidence
