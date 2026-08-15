@@ -12,43 +12,13 @@ jobs:
   tablet-preset:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           package-manager-cache: false
-      - name: AF-001I materialize raw LOD0 GLB
-        if: github.event_name == 'pull_request'
-        env:
-          HEAD_REF: ${{ github.head_ref }}
-        run: |
-          git fetch origin "$HEAD_REF"
-          git checkout -B "$HEAD_REF" "origin/$HEAD_REF"
-          node - <<'NODE'
-          const { readFileSync, writeFileSync } = require('node:fs');
-          const { brotliDecompressSync } = require('node:zlib');
-          const { createHash } = require('node:crypto');
-          const source = 'apps/studio-web/public/asset-forge/af001/motor-lod0.glb.br';
-          const target = 'apps/studio-web/public/asset-forge/af001/motor-lod0.glb';
-          const expectedBytes = 74472;
-          const expectedSha = '2142509d651e5ae1683da383360675b4343cbad83fbbb498326a894cf0c2baae';
-          const motor = brotliDecompressSync(readFileSync(source));
-          const sha = createHash('sha256').update(motor).digest('hex');
-          if (motor.byteLength !== expectedBytes || sha !== expectedSha) {
-            throw new Error(`AF001I raw materialization mismatch bytes=${motor.byteLength} sha=${sha}`);
-          }
-          writeFileSync(target, motor);
-          console.log(`AF001I_RAW_MATERIALIZED bytes=${motor.byteLength} sha256=${sha}`);
-          NODE
-          git config user.name "Tehkne Asset Forge CI"
-          git config user.email "asset-forge-ci@users.noreply.github.com"
-          git add apps/studio-web/public/asset-forge/af001/motor-lod0.glb
-          if ! git diff --cached --quiet; then
-            git commit -m "AF-001I — materialize raw Golden Motor LOD0"
-            git push origin "HEAD:$HEAD_REF"
-          fi
       - run: npm ci --ignore-scripts
       - name: Dependency security audit
         run: npm run security:audit
