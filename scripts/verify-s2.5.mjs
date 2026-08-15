@@ -123,7 +123,7 @@ const domain = await readFile("tests/domain/notebook-runtime.test.mjs", "utf8");
 for (const token of [
   "extends the catalog without mutating the S2.3 base",
   "materializes 12 reusable components with 17 validated connections",
-  "DDR teardown produces causal POST failure",
+  "DDR teardown fails at MEMORY_CHECK and reinstall restores RUNNING",
   "battery remains a second independent causal teardown point",
   "cannot materialize against the unextended S2.3 catalog",
   "tuning remains bounded by Engineering Property constraints"
@@ -145,6 +145,33 @@ for (const token of [
   if (!assembly.includes(token)) throw new Error(`S2.5 Notebook spatial UX missing: ${token}`);
 }
 
+const workbench = await readFile("apps/studio-web/components/SpatialWorkbench.tsx", "utf8");
+for (const token of [
+  "createNotebookRegistry",
+  "createNotebookProject",
+  "createNotebookRuntime",
+  "notebookSession",
+  "notebookIntelligence",
+  "<NotebookAssembly session={notebookSession}",
+  "Chamar Notebook 01",
+  "Restaurar Notebook salvo",
+  'saveBrowserProject("notebook"',
+  "looksNotebook",
+  'execution.targetEntityId?.startsWith("notebook.")',
+  "NOTEBOOK-01",
+  "POWER {notebookPowerState.toUpperCase()} · BOOT {notebookBootStage}"
+]) {
+  if (!workbench.includes(token)) throw new Error(`S2.5 Notebook Workbench integration missing: ${token}`);
+}
+
+const persistence = await readFile("apps/studio-web/lib/projectPersistence.ts", "utf8");
+if (!persistence.includes('"notebook"')) throw new Error("S2.5 persistence adapter does not include notebook");
+
+const libraryPanel = await readFile("apps/studio-web/components/ComponentLibraryPanel.tsx", "utf8");
+for (const token of ["applyComponentCatalogOverlay", "notebookOverlay", "notebookCatalog", '"notebook"']) {
+  if (!libraryPanel.includes(token)) throw new Error(`S2.5 Notebook overlay is not surfaced in Component Library UX: ${token}`);
+}
+
 const browser = await readFile("tests/browser/notebook.spec.ts", "utf8");
 for (const token of [
   "Chamar Notebook 01",
@@ -153,7 +180,7 @@ for (const token of [
   "Ligue o notebook",
   "Por que não iniciou?",
   "Reinstale a RAM",
-  "POWER FAULT · BOOT POST",
+  "POWER FAULT · BOOT MEMORY_CHECK",
   "POWER ON · BOOT RUNNING",
   "Restaurar Notebook salvo",
   "page.reload",
@@ -173,4 +200,4 @@ for (const include of [
   if (!tsconfig.includes(include)) throw new Error(`S2.5 core compile surface missing: ${include}`);
 }
 
-console.log("S2.5 Notebook structure PASS · shared product composition + signed overlay + 12 components + 17 connections · Tehkné Solutions");
+console.log("S2.5 Notebook structure PASS · shared product composition + signed overlay + 12 components + 17 connections + Workbench persistence · Tehkné Solutions");

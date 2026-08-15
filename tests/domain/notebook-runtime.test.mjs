@@ -80,7 +80,7 @@ test("S2.5 Notebook 01 materializes 12 reusable components with 17 validated con
   }
 });
 
-test("S2.5 Notebook DDR teardown produces causal POST failure and reinstall restores RUNNING", async () => {
+test("S2.5 Notebook DDR teardown fails at MEMORY_CHECK and reinstall restores RUNNING", async () => {
   const { baseCatalog, overlay, profile } = await inputs();
   const { registry } = createNotebookRegistry(baseCatalog, overlay);
   const { project } = createNotebookProject(profile, registry);
@@ -101,7 +101,7 @@ test("S2.5 Notebook DDR teardown produces causal POST failure and reinstall rest
   const failed = await session.executeCapability("notebook.root", "powerOn");
   assert.equal(failed.result.bootRun.status, "failure");
   assert.equal(failed.result.bootRun.fault.entityId, "notebook.memory");
-  assert.equal(failed.result.bootRun.fault.stage, "POST");
+  assert.equal(failed.result.bootRun.fault.stage, "MEMORY_CHECK");
 
   const why = await session.executeCapability("notebook.boot", "why");
   assert.match(why.result.explanation, /DDR Memory/);

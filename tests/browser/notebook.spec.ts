@@ -30,7 +30,7 @@ test("S2.5 Notebook 01 runs DDR causal teardown, recovery and persistence", asyn
   await expect(page.getByText(/notebook.memory · removed/)).toBeVisible();
 
   await command(page, "Ligue o notebook");
-  await expect(page.getByText(/POWER FAULT · BOOT POST/)).toBeVisible();
+  await expect(page.getByText(/POWER FAULT · BOOT MEMORY_CHECK/)).toBeVisible();
   await expect(page.getByLabel("Timeline do boot")).toBeVisible();
 
   await command(page, "Por que não iniciou?");

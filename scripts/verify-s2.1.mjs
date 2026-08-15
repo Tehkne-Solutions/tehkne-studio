@@ -48,7 +48,10 @@ for (const token of [
   "npm run verify:s2.1",
   "npx playwright install --with-deps chromium",
   "npm run smoke:browser",
-  "s2-01-browser-failure"
+  "actions/upload-artifact@v7",
+  "if: failure()",
+  "path: test-results",
+  "retention-days: 7"
 ]) {
   if (!workflow.includes(token)) throw new Error(`S2.1 workflow contract missing: ${token}`);
 }
