@@ -1,0 +1,19 @@
+{
+  "overlayId": "display-system-compat-v1",
+  "overlayVersion": "1",
+  "signature": "Tehkné Solutions",
+  "mutations": [
+    {
+      "definitionId": "storage.solid-state.general-v1",
+      "addProductFamilies": ["display-system"]
+    },
+    {
+      "definitionId": "communication.wireless.combo-v1",
+      "addProductFamilies": ["display-system"]
+    },
+    {
+      "definitionId": "control.mcu.general-v1",
+      "addProductFamilies": ["display-system"]
+    }
+  ]
+}
