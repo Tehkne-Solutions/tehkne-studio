@@ -23,11 +23,27 @@ export interface GltfVisualAssetDescriptor {
   readonly portSocketMap: Readonly<Record<string, string>>;
 }
 
+export interface SpatialProxyPortAnchor {
+  readonly name: string;
+  readonly position: SpatialVector3;
+}
+
+export interface SpatialProxyDescriptor {
+  readonly kind: "wheel" | "motor-bracket";
+  readonly status: "PROXY_EXPLICIT";
+  readonly dimensionsM: Readonly<Record<string, number>>;
+  readonly portAnchors: Readonly<Record<string, SpatialProxyPortAnchor>>;
+}
+
 export interface AssetSocketEvidence {
   readonly entityId: string;
   readonly portId: string;
   readonly socketName: string;
   readonly position: SpatialVector3;
+}
+
+export interface SpatialPortEndpointEvidence extends AssetSocketEvidence {
+  readonly source: "asset-socket" | "proxy-anchor" | "center-fallback";
 }
 
 const socketEndpoints = new Map<string, AssetSocketEvidence>();
@@ -64,6 +80,29 @@ function parsePortSocketMap(entity: EngineeringEntity): Readonly<Record<string, 
     mapping[portId] = socketName;
   }
   return Object.freeze(mapping);
+}
+
+function finiteNumber(value: unknown, label: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`${label} must be finite`);
+  return value;
+}
+
+function parseProxyAnchor(entity: EngineeringEntity, portId: string, value: unknown): SpatialProxyPortAnchor {
+  if (!entity.ports[portId]) throw new Error(`Spatial proxy references unknown port ${entity.id}:${portId}`);
+  if (!record(value)) throw new Error(`Spatial proxy anchor must be an object: ${entity.id}:${portId}`);
+  const name = requiredString(value, "name");
+  const position = value.position;
+  if (!Array.isArray(position) || position.length !== 3) {
+    throw new Error(`Spatial proxy anchor position must be [x,y,z]: ${entity.id}:${portId}`);
+  }
+  return {
+    name,
+    position: {
+      x: finiteNumber(position[0], `${entity.id}:${portId} x`),
+      y: finiteNumber(position[1], `${entity.id}:${portId} y`),
+      z: finiteNumber(position[2], `${entity.id}:${portId} z`)
+    }
+  };
 }
 
 function socketKey(entityId: string, portId: string): string {
@@ -126,6 +165,30 @@ export function portSocketNameForEntity(entity: EngineeringEntity, portId: strin
   return visual?.portSocketMap[portId] ?? null;
 }
 
+export function spatialProxyForEntity(entity: EngineeringEntity): SpatialProxyDescriptor | null {
+  const raw = entity.metadata.spatialProxy;
+  if (raw === undefined) return null;
+  if (!record(raw)) throw new Error(`Spatial proxy metadata must be an object: ${entity.id}`);
+  if (raw.kind !== "wheel" && raw.kind !== "motor-bracket") {
+    throw new Error(`Unsupported spatial proxy kind for ${entity.id}: ${String(raw.kind)}`);
+  }
+  if (raw.status !== "PROXY_EXPLICIT") throw new Error(`Spatial proxy status must remain explicit: ${entity.id}`);
+  if (!record(raw.dimensionsM)) throw new Error(`Spatial proxy dimensions missing: ${entity.id}`);
+  const dimensionsM: Record<string, number> = {};
+  for (const [key, value] of Object.entries(raw.dimensionsM)) dimensionsM[key] = finiteNumber(value, `${entity.id} ${key}`);
+  if (!record(raw.portAnchors)) throw new Error(`Spatial proxy portAnchors missing: ${entity.id}`);
+  const portAnchors: Record<string, SpatialProxyPortAnchor> = {};
+  for (const [portId, anchor] of Object.entries(raw.portAnchors)) {
+    portAnchors[portId] = parseProxyAnchor(entity, portId, anchor);
+  }
+  return {
+    kind: raw.kind,
+    status: "PROXY_EXPLICIT",
+    dimensionsM: Object.freeze(dimensionsM),
+    portAnchors: Object.freeze(portAnchors)
+  };
+}
+
 export function useAssetSocketEndpoint(
   entityId: string,
   portId: string,
@@ -137,6 +200,33 @@ export function useAssetSocketEndpoint(
     portId,
     socketName: "",
     position: fallback
+  };
+}
+
+export function useSpatialPortEndpoint(
+  entity: EngineeringEntity,
+  binding: SpatialEntityBinding,
+  portId: string
+): SpatialPortEndpointEvidence {
+  useSyncExternalStore(subscribeSockets, socketSnapshot, socketSnapshot);
+  const socket = socketEndpoints.get(socketKey(entity.id, portId));
+  if (socket) return { ...socket, source: "asset-socket" };
+  const anchor = spatialProxyForEntity(entity)?.portAnchors[portId];
+  if (anchor) {
+    return {
+      entityId: entity.id,
+      portId,
+      socketName: anchor.name,
+      position: transformSocketPosition(new Vector3(anchor.position.x, anchor.position.y, anchor.position.z), binding),
+      source: "proxy-anchor"
+    };
+  }
+  return {
+    entityId: entity.id,
+    portId,
+    socketName: "",
+    position: { ...binding.position },
+    source: "center-fallback"
   };
 }
 
