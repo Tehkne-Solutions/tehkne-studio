@@ -22,6 +22,7 @@
     "packages/tablet-runtime/src/**/*.ts",
     "packages/display-system-runtime/src/**/*.ts",
     "packages/electronics-runtime/src/**/*.ts",
+    "packages/circuit-runtime/src/**/*.ts",
     "packages/behavior-runtime/src/**/*.ts",
     "packages/project-format/src/**/*.ts",
     "packages/persistence-runtime/src/**/*.ts",
