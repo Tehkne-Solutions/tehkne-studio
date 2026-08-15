@@ -33,6 +33,11 @@ interface PreparedAssetScene {
   readonly localSockets: readonly { readonly portId: string; readonly socketName: string; readonly position: Vector3 }[];
 }
 
+// The shared store deliberately keeps GLB-local socket coordinates. World-space
+// endpoints are derived synchronously from the current SpatialEntityBinding so
+// all members of a rigid transform observe one spatial snapshot. This prevents
+// transient false re-snaps when React effects for different components commit
+// at different times.
 const socketEndpoints = new Map<string, AssetSocketEvidence>();
 const socketListeners = new Set<() => void>();
 let socketRevision = 0;
@@ -111,7 +116,16 @@ export function useAssetSocketEndpoint(entityId: string, portId: string, fallbac
 }
 export function useSpatialPortEndpoint(entity: EngineeringEntity, binding: SpatialEntityBinding, portId: string): SpatialPortEndpointEvidence {
   useSyncExternalStore(subscribeSockets, socketSnapshot, socketSnapshot);
-  const socket = socketEndpoints.get(socketKey(entity.id, portId)); if (socket) return { ...socket, source: "asset-socket" };
+  const socket = socketEndpoints.get(socketKey(entity.id, portId));
+  if (socket) {
+    return {
+      entityId: entity.id,
+      portId,
+      socketName: socket.socketName,
+      position: transformSocketPosition(new Vector3(socket.position.x, socket.position.y, socket.position.z), binding),
+      source: "asset-socket"
+    };
+  }
   const anchor = spatialProxyForEntity(entity)?.portAnchors[portId];
   if (anchor) return { entityId: entity.id, portId, socketName: anchor.name, position: transformSocketPosition(new Vector3(anchor.position.x, anchor.position.y, anchor.position.z), binding), source: "proxy-anchor" };
   return { entityId: entity.id, portId, socketName: "", position: { ...binding.position }, source: "center-fallback" };
@@ -135,9 +149,14 @@ export function AssetBackedComponent({ entity, binding, descriptor, selected, so
     return prepareAssetScene(gltf.scene, descriptor.assetId, entity.id, socketEntries);
   }, [descriptor.assetId, descriptor.runtimeUrl, descriptor.sha256, descriptor.version, entity.id, gltf.scene, portSocketSignature]);
   useEffect(() => {
-    publishSocketEvidence(localSockets.map(({ portId, socketName, position }) => ({ entityId: entity.id, portId, socketName, position: transformSocketPosition(position, binding) })));
+    publishSocketEvidence(localSockets.map(({ portId, socketName, position }) => ({
+      entityId: entity.id,
+      portId,
+      socketName,
+      position: { x: position.x, y: position.y, z: position.z }
+    })));
     return () => clearSocketEvidence(entity.id);
-  }, [binding.position.x, binding.position.y, binding.position.z, binding.rotation.x, binding.rotation.y, binding.rotation.z, binding.scale.x, binding.scale.y, binding.scale.z, entity.id, localSockets]);
+  }, [entity.id, localSockets]);
   const showSockets = selected || Boolean(socketSourceKey);
   return (
     <group position={[binding.position.x, binding.position.y, binding.position.z]} rotation={[binding.rotation.x, binding.rotation.y, binding.rotation.z]} scale={[binding.scale.x, binding.scale.y, binding.scale.z]} name={`invention-3d-${entity.id}`} onClick={(event) => { event.stopPropagation(); onSelect(entity.id); }}>

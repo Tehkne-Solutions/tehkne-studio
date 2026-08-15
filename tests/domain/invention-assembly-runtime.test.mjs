@@ -9,6 +9,7 @@ import {
   deriveMechanicalAssemblyConstraints,
   endpointsAreCoincident,
   mechanicalAssemblyMembers,
+  planMechanicalAssemblyRotation,
   planMechanicalAssemblyTranslation
 } from "../../dist/packages/invention-assembly-runtime/src/index.js";
 import { InventionSpatialScene } from "../../dist/packages/invention-spatial-runtime/src/index.js";
@@ -66,4 +67,40 @@ test("S2.16 keeps electrical relationships out of the mechanical constraint proj
   const battery = builder.addComponent("energy.battery.lithium-ion-v1"); const motor = builder.addComponent("actuation.motor.dc-brushed-v1"); spatial.ensureComponent(battery.id); spatial.ensureComponent(motor.id);
   builder.connect({ entityId: battery.id, portId: "dc-output" }, { entityId: motor.id, portId: "power-pos" });
   assert.deepEqual(deriveMechanicalAssemblyConstraints(session, builder.connections()), []);
+});
+
+test("S2.17 rigid assembly rotation keeps pivot fixed, orbits followers and composes orientation", async () => {
+  const { session, builder, spatial } = await assemblyRuntime();
+  const motor = builder.addComponent("actuation.motor.dc-brushed-v1"); const wheel = builder.addComponent("mechanical.wheel.drive-v1");
+  spatial.ensureComponent(motor.id, { x: 0, y: 0, z: 0 }); spatial.ensureComponent(wheel.id, { x: 0, y: 0, z: 0.1 });
+  builder.connect({ entityId: motor.id, portId: "shaft-out" }, { entityId: wheel.id, portId: "hub-in" });
+  const constraints = deriveMechanicalAssemblyConstraints(session, builder.connections()); const members = mechanicalAssemblyMembers(constraints, motor.id);
+  const plan = planMechanicalAssemblyRotation(spatial.bindings(), members, motor.id, "y", Math.PI / 2);
+  assert.equal(plan.length, 2);
+  const motorPlan = plan.find((entry) => entry.entityId === motor.id); const wheelPlan = plan.find((entry) => entry.entityId === wheel.id);
+  assert.ok(motorPlan); assert.ok(wheelPlan);
+  assertClose(motorPlan.toPosition.x, 0); assertClose(motorPlan.toPosition.y, 0); assertClose(motorPlan.toPosition.z, 0);
+  assertClose(wheelPlan.toPosition.x, 0.1); assertClose(wheelPlan.toPosition.y, 0); assertClose(wheelPlan.toPosition.z, 0, 1e-10);
+  for (const entry of plan) { spatial.move(entry.entityId, entry.toPosition); spatial.rotate(entry.entityId, entry.toRotation); }
+  assertClose(spatial.binding(motor.id).rotation.y, Math.PI / 2, 1e-10);
+  assertClose(spatial.binding(wheel.id).rotation.y, Math.PI / 2, 1e-10);
+  assertClose(spatial.binding(wheel.id).position.x, 0.1, 1e-10);
+});
+
+test("S2.17 rotation planning fails closed before an orbit moves any assembly member out of bounds", async () => {
+  const { session, builder, spatial } = await assemblyRuntime();
+  const motor = builder.addComponent("actuation.motor.dc-brushed-v1"); const wheel = builder.addComponent("mechanical.wheel.drive-v1");
+  spatial.ensureComponent(motor.id, { x: 0.45, y: 0, z: 0 }); spatial.ensureComponent(wheel.id, { x: 0.45, y: 0, z: 0.2 });
+  builder.connect({ entityId: motor.id, portId: "shaft-out" }, { entityId: wheel.id, portId: "hub-in" });
+  const constraints = deriveMechanicalAssemblyConstraints(session, builder.connections()); const members = mechanicalAssemblyMembers(constraints, motor.id); const before = spatial.bindings();
+  assert.throws(() => planMechanicalAssemblyRotation(before, members, motor.id, "y", Math.PI / 2), /outside invention workspace bounds/);
+  assert.deepEqual(spatial.bindings(), before, "rotation planning failure must not partially mutate position or orientation");
+});
+
+test("S2.17 spatial rotation is persisted in the invention spatial document without replay", async () => {
+  const { builder, spatial } = await assemblyRuntime();
+  const motor = builder.addComponent("actuation.motor.dc-brushed-v1"); spatial.ensureComponent(motor.id, { x: 0, y: 0, z: 0 });
+  spatial.rotate(motor.id, { x: 0.1, y: 0.2, z: -0.3 });
+  const document = spatial.document(); const persisted = document.bindings.find((binding) => binding.entityId === motor.id);
+  assert.deepEqual(persisted?.rotation, { x: 0.1, y: 0.2, z: -0.3 });
 });

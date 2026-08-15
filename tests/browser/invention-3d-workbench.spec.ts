@@ -42,7 +42,7 @@ test("S2.12 materializes the same invention graph in 3D, moves depth, keeps wiri
   const initialWireZ = await wire.getAttribute("data-source-z");
   expect(initialWireZ).toBe(initialZ);
 
-  await workspace.getByRole("button", { name: "Z +" }).click();
+  await workspace.getByRole("button", { name: "Z +", exact: true }).click();
   await expect(selected).not.toHaveAttribute("data-z", initialZ ?? "");
   const movedZ = await selected.getAttribute("data-z");
   await expect(wire).toHaveAttribute("data-source-z", movedZ ?? "");
