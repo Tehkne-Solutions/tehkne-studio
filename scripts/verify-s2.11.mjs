@@ -74,7 +74,8 @@ for (const token of [
   'data-interfaces", "power.dc.source"',
   "page.mouse.down()",
   "page.mouse.move",
-  "Posição atualizada",
+  "movedWireX",
+  "invention-spatial-selection",
   "2 bindings · sem replay"
 ]) {
   if (!browser.includes(token)) throw new Error(`S2.11 Chromium evidence missing: ${token}`);
