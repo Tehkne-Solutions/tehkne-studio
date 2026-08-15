@@ -55,8 +55,6 @@ for (const token of [
 
 const workbench = await readFile("apps/studio-web/components/Invention3DWorkbench.tsx", "utf8");
 for (const token of [
-  "S2.14",
-  "Socket-Aware 3D Invention Workbench",
   "useAssetSocketEndpoint",
   "sourcePortId",
   "targetPortId",
@@ -70,6 +68,12 @@ for (const token of [
   "runtime.builder.disconnect"
 ]) {
   if (!workbench.includes(token)) throw new Error(`S2.14 workbench contract missing: ${token}`);
+}
+if (!workbench.includes("S2.14") && !workbench.includes("S2.15")) {
+  throw new Error("S2.14 workbench lineage marker missing");
+}
+if (!workbench.includes("Socket-Aware 3D Invention Workbench") && !workbench.includes("Direct Socket Wiring")) {
+  throw new Error("S2.14 socket-aware workbench presentation lineage missing");
 }
 for (const forbidden of [
   "parallelGraph",
