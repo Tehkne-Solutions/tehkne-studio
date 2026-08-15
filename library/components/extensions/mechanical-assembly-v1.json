@@ -33,7 +33,7 @@
           "kind": "wheel",
           "status": "PROXY_EXPLICIT",
           "dimensionsM": { "radius": 0.0325, "width": 0.018, "hubRadius": 0.006 },
-          "portAnchors": { "hub-in": { "name": "PROXY_HUB_CENTER", "position": [0, 0, 0] } }
+          "portAnchors": { "hub-in": { "name": "PROXY_HUB_CENTER", "position": [0, 0, 0], "axis": [0, 0, 1] } }
         }
       }
     },
