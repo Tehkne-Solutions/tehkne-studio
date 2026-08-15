@@ -221,12 +221,18 @@ function ComponentVisual({
   entity,
   binding,
   selected,
-  onSelect
+  socketSourceKey,
+  compatibleTargetKeys,
+  onSelect,
+  onSocketSelect
 }: {
   readonly entity: EngineeringEntity;
   readonly binding: SpatialEntityBinding;
   readonly selected: boolean;
+  readonly socketSourceKey: string;
+  readonly compatibleTargetKeys: ReadonlySet<string>;
   readonly onSelect: (entityId: string) => void;
+  readonly onSocketSelect: (entityId: string, portId: string) => void;
 }) {
   const descriptor = visualAssetForEntity(entity);
   if (!descriptor) {
@@ -239,7 +245,10 @@ function ComponentVisual({
         binding={binding}
         descriptor={descriptor}
         selected={selected}
+        socketSourceKey={socketSourceKey}
+        compatibleTargetKeys={compatibleTargetKeys}
         onSelect={onSelect}
+        onSocketSelect={onSocketSelect}
       />
     </Suspense>
   );
@@ -322,15 +331,21 @@ function Scene({
   bindings,
   wires,
   selectedEntityId,
+  socketSourceKey,
+  compatibleTargetKeys,
   cameraPreset,
-  onSelect
+  onSelect,
+  onSocketSelect
 }: {
   readonly components: readonly EngineeringEntity[];
   readonly bindings: readonly SpatialEntityBinding[];
   readonly wires: readonly InventionSpatialConnectionSegment[];
   readonly selectedEntityId: string | null;
+  readonly socketSourceKey: string;
+  readonly compatibleTargetKeys: ReadonlySet<string>;
   readonly cameraPreset: CameraPreset;
   readonly onSelect: (entityId: string) => void;
+  readonly onSocketSelect: (entityId: string, portId: string) => void;
 }) {
   const bindingMap = useMemo(() => new Map(bindings.map((binding) => [binding.entityId, binding])), [bindings]);
   return (
@@ -351,7 +366,10 @@ function Scene({
             entity={entity}
             binding={binding}
             selected={selectedEntityId === entity.id}
+            socketSourceKey={socketSourceKey}
+            compatibleTargetKeys={compatibleTargetKeys}
             onSelect={onSelect}
+            onSocketSelect={onSocketSelect}
           />
         );
       })}
@@ -410,7 +428,10 @@ export function Invention3DWorkbench() {
       }))
   ), [components]);
   const sourceRef = parsePortKey(sourceKey);
-  const compatibleTargetKeys = new Set((sourceRef ? runtime.builder.compatibleTargets(sourceRef) : []).map(portKey));
+  const compatibleTargetKeys = useMemo(() => {
+    const from = parsePortKey(sourceKey);
+    return new Set((from ? runtime.builder.compatibleTargets(from) : []).map(portKey));
+  }, [runtime, revision, sourceKey]);
   const targetOptions = useMemo<readonly PortOption[]>(() => components.flatMap((entity) =>
     Object.values(entity.ports)
       .filter((port) => port.state === "available" && port.direction !== "out")
@@ -419,7 +440,7 @@ export function Invention3DWorkbench() {
         ref: { entityId: entity.id, portId: port.id },
         label: `${entity.name} · ${port.id}`
       }))
-  ).filter((option) => !sourceRef || compatibleTargetKeys.has(option.key)), [components, compatibleTargetKeys, sourceRef]);
+  ).filter((option) => !sourceKey || compatibleTargetKeys.has(option.key)), [components, compatibleTargetKeys, sourceKey]);
 
   const changed = (nextMessage: string): void => {
     setMessage(nextMessage);
@@ -509,6 +530,57 @@ export function Invention3DWorkbench() {
     }
   };
 
+  const selectSocket = (entityId: string, portId: string): void => {
+    const ref: InventionPortRef = { entityId, portId };
+    const key = portKey(ref);
+    const entity = components.find((candidate) => candidate.id === entityId);
+    const port = entity?.ports[portId];
+    if (!entity || !port) {
+      blocked(new Error(`Socket de autoria desconhecido: ${key}`));
+      return;
+    }
+    if (port.state !== "available") {
+      blocked(new Error(`Socket já ocupado ou indisponível: ${key}`));
+      return;
+    }
+
+    if (!sourceRef) {
+      if (port.direction === "in") {
+        blocked(new Error(`Socket somente de entrada não pode iniciar um wire: ${key}`));
+        return;
+      }
+      setSelectedEntityId(entityId);
+      setSourceKey(key);
+      setTargetKey("");
+      setError(false);
+      setMessage(`Socket origem armado · ${entity.name} · ${portId}. Selecione um socket compatível em outro componente.`);
+      return;
+    }
+
+    if (key === sourceKey) {
+      setSourceKey("");
+      setTargetKey("");
+      setError(false);
+      setMessage(`Autoria por socket cancelada · ${entity.name} · ${portId}.`);
+      return;
+    }
+
+    if (!compatibleTargetKeys.has(key)) {
+      blocked(new Error(`Socket incompatível com a origem armada: ${sourceKey} → ${key}`));
+      return;
+    }
+
+    try {
+      const connection = runtime.builder.connect(sourceRef, ref);
+      setSelectedEntityId(entityId);
+      setSourceKey("");
+      setTargetKey("");
+      changed(`Wire criado diretamente por sockets · ${connection.id} · ${connection.sharedInterfaces.join(", ")} · Engineering Graph permanece autoritativo.`);
+    } catch (cause) {
+      blocked(cause);
+    }
+  };
+
   const save = (): void => {
     try {
       saveBrowserProject("invention", createSessionSnapshot(runtime.session, {
@@ -548,8 +620,8 @@ export function Invention3DWorkbench() {
           <div className={styles.shell}>
             <header className={styles.header}>
               <div>
-                <span>TEHKNÉ SOLUTIONS · S2.14</span>
-                <strong>Socket-Aware 3D Invention Workbench</strong>
+                <span>TEHKNÉ SOLUTIONS · S2.15</span>
+                <strong>Direct Socket Wiring · 3D Invention Workbench</strong>
               </div>
               <div className={styles.actions}>
                 <button type="button" onClick={newProject}>Novo projeto</button>
@@ -565,10 +637,13 @@ export function Invention3DWorkbench() {
               data-real-assets={assetBackedCount}
               data-proxies={proxyCount}
               data-socket-aware-wires={socketAwareWireCount}
+              data-direct-socket-mode={sourceRef ? "armed" : "idle"}
+              data-direct-socket-source={sourceKey}
             >
               <strong>INVENTION 3D · {components.length} COMPONENTES · {connections.length} WIRES</strong>
               <span>MESMO ENGINEERING GRAPH · {bindings.length} BINDINGS · SIMULAÇÃO {document.simulationStatus.toUpperCase()}</span>
               <span>VISUAL · {assetBackedCount} REAL ASSET · {proxyCount} PROXY · {socketAwareWireCount} SOCKET-AWARE WIRES</span>
+              <span>SOCKET AUTHORING · {sourceRef ? `ORIGEM ${sourceKey} · ${compatibleTargetKeys.size} ALVOS` : "IDLE · CLIQUE UM SOCKET REAL"}</span>
             </div>
 
             <div className={styles.body}>
@@ -625,8 +700,11 @@ export function Invention3DWorkbench() {
                     bindings={bindings}
                     wires={wires}
                     selectedEntityId={selectedEntityId}
+                    socketSourceKey={sourceKey}
+                    compatibleTargetKeys={compatibleTargetKeys}
                     cameraPreset={cameraPreset}
                     onSelect={setSelectedEntityId}
+                    onSocketSelect={selectSocket}
                   />
                 </Canvas>
 
@@ -669,6 +747,42 @@ export function Invention3DWorkbench() {
                           : "Ainda sem arte Asset Forge cadastrada."}
                       </small>
                     </div>
+                    {selectedVisual ? (
+                      <div
+                        className={styles.wireEvidence}
+                        aria-label="Sockets 3D interativos"
+                        data-testid="invention-3d-socket-authoring"
+                        data-source-key={sourceKey}
+                      >
+                        {Object.entries(selectedVisual.portSocketMap).map(([portId, socketName]) => {
+                          const key = portKey({ entityId: selectedEntity.id, portId });
+                          const port = selectedEntity.ports[portId];
+                          const isSource = key === sourceKey;
+                          const readySource = Boolean(port && port.state === "available" && port.direction !== "in");
+                          const compatibleTarget = Boolean(sourceRef && compatibleTargetKeys.has(key));
+                          const enabled = Boolean(port && port.state === "available" && (isSource || (!sourceRef && readySource) || compatibleTarget));
+                          const socketState = isSource
+                            ? "source"
+                            : sourceRef
+                              ? compatibleTarget ? "compatible" : "blocked"
+                              : readySource ? "ready" : "blocked";
+                          return (
+                            <button
+                              type="button"
+                              key={portId}
+                              data-testid={`invention-3d-socket-${selectedEntity.id}-${portId}`}
+                              data-socket-name={socketName}
+                              data-socket-state={socketState}
+                              disabled={!enabled}
+                              onClick={() => selectSocket(selectedEntity.id, portId)}
+                            >
+                              <strong>{portId}</strong>
+                              <small>{socketName} · {socketState.toUpperCase()}</small>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                     <div className={styles.axisGrid}>
                       <button type="button" onClick={() => moveSelected("x", -MOVE_STEP)}>X −</button>
                       <button type="button" onClick={() => moveSelected("x", MOVE_STEP)}>X +</button>
@@ -680,7 +794,7 @@ export function Invention3DWorkbench() {
                   </>
                 ) : <p>Selecione uma entidade na lista ou diretamente na viewport.</p>}
 
-                <span>WIRING REAL</span>
+                <span>WIRING REAL · FALLBACK ACESSÍVEL</span>
                 <label>
                   Origem
                   <select aria-label="Origem 3D" value={sourceKey} onChange={(event) => { setSourceKey(event.target.value); setTargetKey(""); }}>
