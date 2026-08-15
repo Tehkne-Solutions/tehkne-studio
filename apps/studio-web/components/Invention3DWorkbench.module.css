@@ -1,8 +1,9 @@
 .trigger {
-  position: fixed;
-  right: 18px;
-  bottom: 86px;
-  z-index: 32;
+  position: relative;
+  display: block;
+  width: fit-content;
+  margin: 0 18px 18px auto;
+  z-index: 10;
   border: 1px solid #65685f;
   background: #22241f;
   color: #dedbcf;
@@ -362,7 +363,6 @@
   }
 
   .trigger {
-    right: 10px;
-    bottom: 78px;
+    margin: 0 10px 14px auto;
   }
 }
