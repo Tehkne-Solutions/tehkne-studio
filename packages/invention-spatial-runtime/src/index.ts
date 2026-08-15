@@ -59,7 +59,7 @@ function defaultPosition(index: number): SpatialVector3 {
   const row = Math.floor(index / columns);
   const position = {
     x: -0.36 + column * 0.24,
-    y: 0.25 - row * 0.1,
+    y: 0.15 - row * 0.08,
     z: 0
   };
   assertFinitePosition(position);
