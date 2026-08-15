@@ -127,3 +127,29 @@ test("S2.10 snapshot restores the authored topology without replay or duplicate 
     [["power.dc.source"], ["power.dc.low-voltage"], ["display.mipi-dsi"]]
   );
 });
+
+test("S2.10 restored builders keep monotonic IDs after sparse component and connection histories", async () => {
+  const { registry, session, builder, battery, regulator, soc, display } = await canonicalPhoneCore();
+  const first = builder.connect({ entityId: battery.id, portId: "dc-output" }, { entityId: regulator.id, portId: "dc-input" });
+  const second = builder.connect({ entityId: regulator.id, portId: "regulated-output" }, { entityId: soc.id, portId: "power-in" });
+  const third = builder.connect({ entityId: soc.id, portId: "display-out" }, { entityId: display.id, portId: "display-in" });
+  assert.equal(first.id, "invention-connection-1");
+  assert.equal(second.id, "invention-connection-2");
+  assert.equal(third.id, "invention-connection-3");
+
+  builder.disconnect(first.id);
+  builder.disconnect(third.id);
+  builder.removeComponent(battery.id);
+  const sparseSnapshot = createSessionSnapshot(session, { extensions: { invention: builder.document() } });
+  const restoredSession = restoreSessionSnapshot(sparseSnapshot);
+  const restored = new InventionBuilder(restoredSession, registry);
+
+  const replacementBattery = restored.addComponent("energy.battery.lithium-ion-v1");
+  assert.equal(replacementBattery.id, "invention.component.5", "removed component IDs must not be reused after restore");
+  const replacementConnection = restored.connect(
+    { entityId: replacementBattery.id, portId: "dc-output" },
+    { entityId: regulator.id, portId: "dc-input" }
+  );
+  assert.equal(replacementConnection.id, "invention-connection-3", "surviving connection 2 requires a monotonic next ID");
+  assert.equal(restored.connections().length, 2);
+});
