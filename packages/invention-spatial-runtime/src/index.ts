@@ -44,10 +44,14 @@ function isInventionComponent(entity: EngineeringEntity): boolean {
   return entity.metadata.inventionComponent === true && entity.parentId === "invention.root";
 }
 
-function assertFinitePosition(position: SpatialVector3): void {
-  for (const [axis, value] of Object.entries(position)) {
-    if (!Number.isFinite(value)) throw new Error(`Spatial ${axis} must be finite`);
+function assertFiniteVector(vector: SpatialVector3, label: string): void {
+  for (const [axis, value] of Object.entries(vector)) {
+    if (!Number.isFinite(value)) throw new Error(`${label} ${axis} must be finite`);
   }
+}
+
+function assertFinitePosition(position: SpatialVector3): void {
+  assertFiniteVector(position, "Spatial");
   const { min, max } = INVENTION_SPATIAL_BOUNDS;
   if (position.x < min.x || position.x > max.x || position.y < min.y || position.y > max.y || position.z < min.z || position.z > max.z) {
     throw new Error(`Spatial position outside invention workspace bounds: ${position.x},${position.y},${position.z}`);
@@ -174,6 +178,15 @@ export class InventionSpatialScene {
     const binding = this.#bindings.get(entityId);
     if (!binding) throw new Error(`Unknown invention spatial binding: ${entityId}`);
     const next: SpatialEntityBinding = { ...binding, position: clone(position) };
+    this.#bindings.set(entityId, next);
+    return clone(next);
+  }
+
+  rotate(entityId: EntityId, rotation: SpatialVector3): SpatialEntityBinding {
+    assertFiniteVector(rotation, "Spatial rotation");
+    const binding = this.#bindings.get(entityId);
+    if (!binding) throw new Error(`Unknown invention spatial binding: ${entityId}`);
+    const next: SpatialEntityBinding = { ...binding, rotation: clone(rotation) };
     this.#bindings.set(entityId, next);
     return clone(next);
   }
