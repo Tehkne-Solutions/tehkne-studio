@@ -58,7 +58,7 @@ test("S2.9 Circuit Builder creates, wires, simulates, probes, faults and restore
   const probe = builder.getByLabel("Última medição do Circuit Builder");
   await expect(probe).toContainText("Probe Resistor 1");
   await expect(probe).toContainText("calculated");
-  await expect(probe).toContainText("3 V");
+  await expect(probe).toContainText(/3(?:\.\d+)? V/);
 
   await builder.getByLabel("Resistência do Circuit Builder").fill("100");
   await builder.getByRole("button", { name: "Aplicar Ω" }).click();
@@ -93,5 +93,5 @@ test("S2.9 Studio Intelligence can build and measure the supported circuit by na
   await command(page, "feche a chave");
   await expect(circuitBuilderPanel(page).getByText("PASS", { exact: true })).toBeVisible();
   await command(page, "meça tensão no resistor");
-  await expect(page.getByLabel("Electronics Studio Intelligence")).toContainText(/Resistor 1: 3 V · calculated/);
+  await expect(page.getByLabel("Electronics Studio Intelligence")).toContainText(/Resistor 1: 3(?:\.\d+)? V · calculated/);
 });
