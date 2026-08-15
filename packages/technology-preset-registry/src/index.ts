@@ -10,6 +10,7 @@ export interface TechnologyPresetDefinition {
   readonly signature: typeof TECHNOLOGY_PRESET_REGISTRY_SIGNATURE;
   readonly displayName: string;
   readonly launcherLabel: string;
+  readonly restoreLabel: string;
   readonly projectId: string;
   readonly rootEntityId: string;
   readonly productFamily: string;
@@ -102,6 +103,7 @@ export function parseTechnologyPresetManifest(input: unknown): TechnologyPresetM
       signature: TECHNOLOGY_PRESET_REGISTRY_SIGNATURE,
       displayName: requiredString(candidate.displayName, `${presetId}.displayName`),
       launcherLabel: requiredString(candidate.launcherLabel, `${presetId}.launcherLabel`),
+      restoreLabel: requiredString(candidate.restoreLabel, `${presetId}.restoreLabel`),
       projectId,
       rootEntityId: requiredString(candidate.rootEntityId, `${presetId}.rootEntityId`),
       productFamily: requiredString(candidate.productFamily, `${presetId}.productFamily`),
