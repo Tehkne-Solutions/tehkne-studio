@@ -9,13 +9,15 @@ SCRIPT_DIR=Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0,str(SCRIPT_DIR))
 import build_golden_motor_v06 as base
+from glb_socket_transforms import inspect_socket_transforms, patch_socket_transforms
 
-VERSION='0.6.5-dcc-candidate'
+VERSION='0.6.6-dcc-candidate'
 ROUGHNESS_NAME='TS_MOTOR_STAMPED_STEEL_ROUGHNESS'
 ROUGHNESS_FILE='TS_MOTOR_STAMPED_STEEL_ROUGHNESS.png'
 
 base.VERSION=VERSION
 original_build=base.build
+original_export=base.export
 
 
 def ensure_roughness_texture():
@@ -105,7 +107,15 @@ def patched_build(lod):
     return collection,triangles
 
 
+def patched_export(collection,lod):
+    path=original_export(collection,lod)
+    patch_socket_transforms(path)
+    inspect_socket_transforms(path)
+    return path
+
+
 base.build=patched_build
+base.export=patched_export
 
 
 def main():
@@ -119,7 +129,15 @@ def main():
         'rolled_seams':'dedicated lower-contrast metallic seam material',
         'vent_recesses':'LOD0 two shallow recesses per side; LOD1 one per side; LOD2 omitted'
     }
+    qa['socket_transform_contract']={
+        lod: inspect_socket_transforms(base.OUT/info['glb'])
+        for lod,info in qa['lods'].items()
+    }
+    qa['socket_transform_pass']=all(len(value)==4 for value in qa['socket_transform_contract'].values())
+    qa['automated_pass']=bool(qa.get('automated_pass')) and qa['socket_transform_pass']
     qa_path.write_text(json.dumps(qa,indent=2),encoding='utf-8')
+    if not qa['automated_pass']:
+        raise SystemExit('AF-001G v0.6.6 DCC QA blocked')
 
 
 if __name__=='__main__':
