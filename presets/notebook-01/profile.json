@@ -1,0 +1,161 @@
+{
+  "compositionVersion": "1",
+  "profileId": "notebook-01-v1",
+  "projectId": "notebook-01",
+  "name": "Notebook 01",
+  "signature": "Tehkné Solutions",
+  "productFamily": "notebook",
+  "projectType": "teardown",
+  "root": {
+    "id": "notebook.root",
+    "name": "Notebook 01",
+    "type": "Notebook",
+    "formFactor": "clamshell-notebook",
+    "voiceAliases": ["notebook", "laptop", "computador portatil", "computador portátil"],
+    "simpleExplanation": "Um notebook integra processamento, memória, armazenamento, energia, tela, interfaces e refrigeração em um computador portátil dobrável."
+  },
+  "boot": {
+    "id": "notebook.boot",
+    "name": "Notebook Boot Process",
+    "voiceAliases": ["boot do notebook", "boot do laptop", "inicializacao do notebook", "inicialização do notebook"],
+    "simpleExplanation": "O boot do notebook valida energia e os subsistemas essenciais antes de iniciar o sistema."
+  },
+  "requiredSlots": ["frame", "battery", "regulator", "soc", "memory", "storage", "display", "cooling", "wireless", "camera", "input", "usbC"],
+  "slots": [
+    {
+      "slotId": "frame",
+      "definitionId": "structural.frame.modular-v1",
+      "entityId": "notebook.frame",
+      "name": "Notebook Chassis",
+      "voiceAliases": ["chassi", "estrutura", "base do notebook"],
+      "spatial": { "position": [0, 0, 0], "exploded": [0, -0.45, 0], "size": [3.8, 0.16, 2.45] }
+    },
+    {
+      "slotId": "battery",
+      "definitionId": "energy.battery.lithium-ion-v1",
+      "entityId": "notebook.battery",
+      "name": "Notebook Battery",
+      "teardown": true,
+      "voiceAliases": ["bateria", "battery", "bateria do notebook"],
+      "spatial": { "position": [0, 0.16, 0.7], "exploded": [-2.75, 0.75, 0.7], "size": [2.3, 0.18, 0.72] }
+    },
+    {
+      "slotId": "regulator",
+      "definitionId": "power.regulator.dc-v1",
+      "entityId": "notebook.regulator",
+      "name": "Notebook Power Management",
+      "voiceAliases": ["regulador", "energia", "power management", "pmic"],
+      "spatial": { "position": [1.15, 0.18, 0.35], "exploded": [2.6, 0.65, 0.7], "size": [0.42, 0.12, 0.36] }
+    },
+    {
+      "slotId": "soc",
+      "definitionId": "compute.soc.mobile-v1",
+      "entityId": "notebook.soc",
+      "name": "Notebook SoC",
+      "voiceAliases": ["processador", "soc", "chip principal", "cpu"],
+      "spatial": { "position": [0.55, 0.18, -0.3], "exploded": [1.4, 1.15, -0.25], "size": [0.62, 0.12, 0.62] }
+    },
+    {
+      "slotId": "memory",
+      "definitionId": "memory.ddr.module-v1",
+      "entityId": "notebook.memory",
+      "name": "DDR Memory",
+      "teardown": true,
+      "voiceAliases": ["memoria", "memória", "ram", "ddr"],
+      "spatial": { "position": [-0.3, 0.18, -0.48], "exploded": [-1.15, 1.0, -0.6], "size": [0.92, 0.1, 0.22] }
+    },
+    {
+      "slotId": "storage",
+      "definitionId": "storage.solid-state.general-v1",
+      "entityId": "notebook.storage",
+      "name": "Notebook SSD",
+      "teardown": true,
+      "voiceAliases": ["ssd", "armazenamento", "storage", "disco"],
+      "spatial": { "position": [-1.05, 0.18, 0.05], "exploded": [-2.25, 1.0, -0.05], "size": [0.75, 0.1, 0.34] }
+    },
+    {
+      "slotId": "display",
+      "definitionId": "display.oled.touch-v1",
+      "entityId": "notebook.display",
+      "name": "14-inch OLED Display",
+      "voiceAliases": ["tela", "display", "monitor", "oled"],
+      "spatial": { "position": [0, 1.65, -1.18], "exploded": [0, 2.7, -1.9], "size": [3.5, 2.05, 0.08] }
+    },
+    {
+      "slotId": "cooling",
+      "definitionId": "thermal.cooling.compact-v1",
+      "entityId": "notebook.cooling",
+      "name": "Notebook Cooling",
+      "voiceAliases": ["cooler", "ventoinha", "refrigeracao", "refrigeração"],
+      "spatial": { "position": [1.35, 0.18, -0.65], "exploded": [2.75, 1.0, -0.75], "size": [0.62, 0.14, 0.62] }
+    },
+    {
+      "slotId": "wireless",
+      "definitionId": "communication.wireless.combo-v1",
+      "entityId": "notebook.wireless",
+      "name": "Notebook Wireless",
+      "voiceAliases": ["wifi", "wi-fi", "bluetooth", "wireless"],
+      "spatial": { "position": [-1.35, 0.18, -0.65], "exploded": [-2.8, 0.75, -0.8], "size": [0.42, 0.1, 0.28] }
+    },
+    {
+      "slotId": "camera",
+      "definitionId": "sensing.camera.rgb-v1",
+      "entityId": "notebook.camera",
+      "name": "Notebook Camera",
+      "voiceAliases": ["camera", "câmera", "webcam"],
+      "spatial": { "position": [0, 2.7, -1.16], "exploded": [0, 3.65, -2.0], "size": [0.22, 0.08, 0.12] }
+    },
+    {
+      "slotId": "input",
+      "definitionId": "control.mcu.general-v1",
+      "entityId": "notebook.input",
+      "name": "Keyboard & Trackpad Controller",
+      "voiceAliases": ["teclado", "trackpad", "touchpad", "controlador de entrada"],
+      "spatial": { "position": [0.9, 0.18, 0.78], "exploded": [2.2, 0.85, 1.5], "size": [0.38, 0.1, 0.3] }
+    },
+    {
+      "slotId": "usbC",
+      "definitionId": "interface.usb-c.port-v1",
+      "entityId": "notebook.usb-c",
+      "name": "USB-C Port",
+      "voiceAliases": ["usb-c", "usb c", "porta usb", "carregador"],
+      "spatial": { "position": [1.82, 0.08, 0.25], "exploded": [3.2, 0.5, 0.25], "size": [0.16, 0.12, 0.32] }
+    }
+  ],
+  "connections": [
+    { "id": "notebook-power-source", "from": ["battery", "dc-output"], "to": ["regulator", "dc-input"] },
+    { "id": "notebook-charge", "from": ["usbC", "charge"], "to": ["battery", "charge-input"] },
+    { "id": "notebook-power-soc", "from": ["regulator", "regulated-output"], "to": ["soc", "power-in"] },
+    { "id": "notebook-power-display", "from": ["regulator", "regulated-output"], "to": ["display", "power-in"] },
+    { "id": "notebook-power-wireless", "from": ["regulator", "regulated-output"], "to": ["wireless", "power-in"] },
+    { "id": "notebook-power-camera", "from": ["regulator", "regulated-output"], "to": ["camera", "power-in"] },
+    { "id": "notebook-power-input", "from": ["regulator", "regulated-output"], "to": ["input", "power-in"] },
+    { "id": "notebook-power-cooling", "from": ["regulator", "regulated-output"], "to": ["cooling", "fan-power"] },
+    { "id": "notebook-memory", "from": ["soc", "memory-ddr"], "to": ["memory", "memory-bus"] },
+    { "id": "notebook-storage", "from": ["soc", "storage"], "to": ["storage", "storage-bus"] },
+    { "id": "notebook-display-data", "from": ["soc", "display-out"], "to": ["display", "display-in"] },
+    { "id": "notebook-camera-video", "from": ["camera", "video-out"], "to": ["soc", "camera-in"] },
+    { "id": "notebook-camera-control", "from": ["soc", "sensor-bus"], "to": ["camera", "control"] },
+    { "id": "notebook-wireless", "from": ["soc", "wireless-bus"], "to": ["wireless", "host-data"] },
+    { "id": "notebook-input", "from": ["soc", "sensor-bus"], "to": ["input", "sensor-bus"] },
+    { "id": "notebook-thermal", "from": ["soc", "thermal"], "to": ["cooling", "thermal-interface"] },
+    { "id": "notebook-usb-data", "from": ["soc", "usb-host"], "to": ["usbC", "external"] }
+  ],
+  "bootDependencies": [
+    { "slotId": "battery", "reason": "fornecer energia primária ao notebook" },
+    { "slotId": "regulator", "reason": "regular as linhas de alimentação internas" },
+    { "slotId": "soc", "reason": "executar firmware e processamento principal" },
+    { "slotId": "memory", "reason": "fornecer memória de trabalho ao boot" },
+    { "slotId": "storage", "reason": "fornecer firmware e sistema persistente" },
+    { "slotId": "display", "reason": "inicializar a saída visual principal" }
+  ],
+  "tuning": [
+    { "slotId": "battery", "propertyValues": { "capacityWh": 55, "nominalVoltageV": 11.55 } },
+    { "slotId": "soc", "propertyValues": { "cpuCores": 12, "nominalPowerW": 24 } },
+    { "slotId": "memory", "propertyValues": { "capacityGB": 16 } },
+    { "slotId": "storage", "propertyValues": { "capacityGB": 512 } },
+    { "slotId": "display", "propertyValues": { "diagonalIn": 14, "refreshHz": 120 } },
+    { "slotId": "cooling", "propertyValues": { "thermalCapacityW": 45 } },
+    { "slotId": "camera", "propertyValues": { "megapixels": 2 } }
+  ]
+}

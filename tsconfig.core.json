@@ -16,6 +16,7 @@
     "packages/engineering-core/src/**/*.ts",
     "packages/engineering-graph/src/**/*.ts",
     "packages/component-library/src/**/*.ts",
+    "packages/product-composition-runtime/src/**/*.ts",
     "packages/smartphone-runtime/src/**/*.ts",
     "packages/behavior-runtime/src/**/*.ts",
     "packages/project-format/src/**/*.ts",

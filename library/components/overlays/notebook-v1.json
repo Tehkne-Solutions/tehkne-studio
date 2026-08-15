@@ -1,0 +1,34 @@
+{
+  "overlayId": "notebook-v1",
+  "overlayVersion": "1",
+  "signature": "Tehkné Solutions",
+  "mutations": [
+    {
+      "definitionId": "display.oled.touch-v1",
+      "addProductFamilies": ["notebook"]
+    },
+    {
+      "definitionId": "control.mcu.general-v1",
+      "addProductFamilies": ["notebook"]
+    },
+    {
+      "definitionId": "compute.soc.mobile-v1",
+      "addPorts": {
+        "thermal": {
+          "id": "thermal",
+          "kind": "thermal",
+          "direction": "bidirectional",
+          "compatibility": ["thermal.compute-spreader"],
+          "state": "available"
+        },
+        "usb-host": {
+          "id": "usb-host",
+          "kind": "data",
+          "direction": "bidirectional",
+          "compatibility": ["usb.usb-c"],
+          "state": "available"
+        }
+      }
+    }
+  ]
+}
