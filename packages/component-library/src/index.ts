@@ -19,6 +19,7 @@ export type ComponentDomain =
   | "power"
   | "energy"
   | "display"
+  | "audio"
   | "sensing"
   | "actuation"
   | "control"
@@ -82,7 +83,7 @@ export interface ComponentCompatibilityMatch {
 }
 
 const COMPONENT_DOMAINS = new Set<ComponentDomain>([
-  "compute", "memory", "storage", "power", "energy", "display", "sensing",
+  "compute", "memory", "storage", "power", "energy", "display", "audio", "sensing",
   "actuation", "control", "thermal", "communication", "structural", "interface"
 ]);
 const PRODUCT_FAMILIES = new Set<ProductFamily>([
