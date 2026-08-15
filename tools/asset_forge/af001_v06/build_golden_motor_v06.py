@@ -2,13 +2,12 @@ import bpy, json, os, math
 from pathlib import Path
 from mathutils import Vector, Matrix
 
-ASSET='TS_ELEC_MOTOR_DC_A'; VERSION='0.6.1-dcc-candidate'; SIGN='Tehkné Solutions'
+ASSET='TS_ELEC_MOTOR_DC_A'; VERSION='0.6.2-dcc-candidate'; SIGN='Tehkné Solutions'
 SOCKETS=('SOCKET_MECH_AXIS_OUT','SOCKET_MECH_MOUNT_FRONT','SOCKET_ELEC_POWER_POS','SOCKET_ELEC_POWER_NEG')
 BUDGET={'LOD0':(3000,4500),'LOD1':(1500,2400),'LOD2':(500,900)}
 OUT=Path(os.environ.get('AF001_OUTPUT_DIR','build/asset-forge/af001g-v06')).resolve(); OUT.mkdir(parents=True,exist_ok=True)
-# Tehkné runtime/glTF coordinates are +Y up / +Z forward. Blender is +Z up;
-# rotating local runtime-like authoring +90 degrees around X maps runtime +Z to Blender -Y,
-# which the glTF exporter converts back to runtime +Z.
+# Tehkné runtime/glTF coordinates are +Y up / +Z forward. Blender is +Z up.
+# Runtime (x,y,z) -> Blender (x,-z,y); glTF export maps it back to +Y up/+Z forward.
 RUNTIME_TO_BLENDER=Matrix.Rotation(math.radians(90),4,'X')
 
 def reset():
@@ -86,9 +85,10 @@ def triangulate(c):
 
 def build(lod):
     reset(); m=materials(); c=collection(f'{ASSET}_{lod}'); level=int(lod[-1])
-    seg={0:3,1:2,2:1}[level]; radial={0:32,1:20,2:8}[level]
+    # v0.6.2: LOD0 gets just enough radial density to recover the 3k floor;
+    # LOD2 drops one radial step to stay below the 900-triangle ceiling.
+    seg={0:3,1:2,2:1}[level]; radial={0:36,1:20,2:7}[level]
     body=cube('BODY_CAN',(.024,.018,.028),(0,0,0),m['shell'],{0:.00145,1:.00115,2:.00085}[level],seg,c); body['manufacturing']='stamped_steel_can'
-    # Rolled seams are silhouette-relevant in LOD0/1; LOD2 carries them as single low-cost lips.
     for z,n in ((.01415,'FRONT_ROLLED_SEAM'),(-.01415,'REAR_ROLLED_SEAM')): cube(n,(.0234,.0174,.00072),(0,0,z),m['dark'],.00036,max(1,seg-1),c)
     cube('FRONT_CAP',(.0224,.0164,.0024),(0,0,.01535),m['shell'],.00105,seg,c)
     cyl('FRONT_DISH',.0048,.00065,(0,0,.0169),m['dark'],radial,c,.00012)
@@ -109,7 +109,7 @@ def build(lod):
         zs=(-.006,0,.006) if level==0 else (-.0045,.0045)
         for side in (-1,1):
             for i,z in enumerate(zs): cube(f"SHELL_STAMP_{'L' if side<0 else 'R'}_{i}",(.00034,.0031,.0009),(side*.0120,0,z),m['dark'],.00008,1,c)
-        # Flush, tiny identity inlay: intentionally not a protruding cyan fin.
+        # Flush identity inlay; never a protruding cyan fin.
         cube('IDENTITY_INLAY',(.0046,.00012,.00072),(0,.0090,.0035),m['id'],.00005,1,c)
     socket('SOCKET_MECH_AXIS_OUT',(0,0,.0320),c); socket('SOCKET_MECH_MOUNT_FRONT',(0,0,.0166),c)
     socket('SOCKET_ELEC_POWER_POS',(-.0047,-.001,-.01935),c); socket('SOCKET_ELEC_POWER_NEG',(.0047,-.001,-.01935),c)
@@ -123,41 +123,58 @@ def export(c,lod):
     p=OUT/f'{ASSET}_{lod}.glb'; bpy.ops.export_scene.gltf(filepath=str(p),export_format='GLB',use_selection=True,export_yup=True,export_apply=True,export_animations=False); return p
 
 def camera(c):
-    d=bpy.data.cameras.new('AF001_CAMERA'); d.lens=62; o=bpy.data.objects.new('AF001_CAMERA',d); c.objects.link(o); bpy.context.scene.camera=o; return o
+    d=bpy.data.cameras.new('AF001_CAMERA'); d.lens=68; d.clip_start=.001; d.clip_end=5
+    o=bpy.data.objects.new('AF001_CAMERA',d); c.objects.link(o); bpy.context.scene.camera=o; return o
 
 def point(cam,pos,target):
     cam.location=pos; cam.rotation_euler=(Vector(target)-cam.location).to_track_quat('-Z','Y').to_euler()
 
 def studio(c):
-    floor=mat('TS_MAT_STUDIO_FLOOR',(0.045,.052,.058,1),.02,.82)
-    # Horizontal in Blender Z-up: runtime Y=-.011 becomes Blender Z=-.011.
-    cube('STUDIO_FLOOR',(.18,.12,.004),(0,0,-.011),floor,.001,2,c)
-    # Product-scale lighting. Prior 400-900 W rig clipped a 24 mm object to white.
-    for name,runtime_loc,energy,size in (('KEY',(.075,.09,.075),32,.055),('FILL',(-.07,.025,.045),10,.045),('RIM',(.02,.06,-.085),18,.038)):
+    floor=mat('TS_MAT_STUDIO_FLOOR',(0.035,.042,.048,1),.02,.84)
+    floor_obj=cube('STUDIO_FLOOR',(.18,.12,.003),(0,0,-.011),floor,.0008,2,c)
+    # Calibrated for a 24 mm product. Sub-watt area lights preserve metal response
+    # without clipping every material to white in Eevee/llvmpipe.
+    for name,runtime_loc,energy,size in (('KEY',(.09,.11,.10),1.20,.060),('FILL',(-.08,.035,.06),.35,.050),('RIM',(.025,.075,-.10),.65,.045)):
         loc=runtime_to_blender(runtime_loc); d=bpy.data.lights.new('AF001_'+name,'AREA'); d.energy=energy; d.shape='DISK'; d.size=size
         o=bpy.data.objects.new(d.name,d); o.location=loc; c.objects.link(o); point(o,loc,runtime_to_blender((0,0,0)))
+    return floor_obj
+
+def render_view(sc,cam,name,pos,target,projection,scale,floor):
+    cam.data.type='PERSP' if projection=='perspective' else 'ORTHO'
+    if projection=='perspective': cam.data.lens=72
+    else: cam.data.ortho_scale=scale
+    point(cam,runtime_to_blender(pos),runtime_to_blender(target))
+    floor.hide_render = name!='three-quarter'
+    p=OUT/f'AF001G_V06_{name}.png'; sc.render.filepath=str(p); bpy.ops.render.render(write_still=True); return p.name
 
 def renders(c):
     sc=bpy.context.scene
     try: sc.render.engine='BLENDER_EEVEE_NEXT'
     except: sc.render.engine='BLENDER_EEVEE'
-    sc.render.resolution_x=sc.render.resolution_y=960; sc.render.resolution_percentage=100; sc.render.image_settings.file_format='PNG'; sc.world.color=(.012,.016,.02)
+    sc.render.resolution_x=sc.render.resolution_y=960; sc.render.resolution_percentage=100; sc.render.image_settings.file_format='PNG'; sc.world.color=(.006,.008,.012)
     try: sc.view_settings.look='AgX - Medium High Contrast'
     except: pass
-    sc.view_settings.exposure=-.45
-    studio(c); cam=camera(c)
-    views={'three-quarter':((.066,.046,.08),(0,0,0)),'front':((0,.003,.08),(0,0,.014)),'side':((.083,.004,.004),(0,0,0)),'rear':((0,.003,-.08),(0,0,-.014)),'bearing':((.025,.015,.052),(0,0,.019)),'terminals':((.025,-.004,-.054),(0,-.001,-.018))}
+    sc.view_settings.exposure=-.90
+    floor=studio(c); cam=camera(c)
+    views={
+      'three-quarter':((.105,.075,.135),(0,0,0),'perspective',0),
+      'front':((0,.002,.12),(0,0,.014),'ortho',.064),
+      'side':((.12,.002,0),(0,0,0),'ortho',.066),
+      'rear':((0,.002,-.12),(0,0,-.014),'ortho',.064),
+      'bearing':((.020,.010,.085),(0,0,.019),'ortho',.038),
+      'terminals':((.020,-.003,-.085),(0,-.001,-.018),'ortho',.042),
+    }
     out=[]
-    for n,(pos,tgt) in views.items():
-        point(cam,runtime_to_blender(pos),runtime_to_blender(tgt)); p=OUT/f'AF001G_V06_{n}.png'; sc.render.filepath=str(p); bpy.ops.render.render(write_still=True); out.append(p.name)
-    return out
+    for n,(pos,tgt,projection,scale) in views.items(): out.append(render_view(sc,cam,n,pos,tgt,projection,scale,floor))
+    return out,views
 
 def main():
     qa={'asset_id':ASSET,'version':VERSION,'signature':SIGN,'axis_contract':'Blender (x,-z,y) -> glTF +Y up/+Z forward','lods':{},'required_sockets':list(SOCKETS),'visual_status':'DCC_CANDIDATE_NOT_GOLDEN'}
     for lod in ('LOD0','LOD1','LOD2'):
         c,t=build(lod); p=export(c,lod); ss=sorted(o.name for o in c.objects if o.name.startswith('SOCKET_')); lo,hi=BUDGET[lod]
         qa['lods'][lod]={'triangles':t,'budget':[lo,hi],'budget_pass':lo<=t<=hi,'sockets':ss,'socket_pass':all(x in ss for x in SOCKETS),'glb':p.name,'bytes':p.stat().st_size}
-    c,_=build('LOD0'); qa['renders']=renders(c); sc=bpy.context.scene; sc['asset_id']=ASSET; sc['version']=VERSION; sc['signature']=SIGN
+    c,_=build('LOD0'); qa['renders'],view_config=renders(c); qa['render_config']={k:{'projection':v[2],'scale':v[3]} for k,v in view_config.items()}
+    sc=bpy.context.scene; sc['asset_id']=ASSET; sc['version']=VERSION; sc['signature']=SIGN
     blend=OUT/f'{ASSET}_MASTER_CANDIDATE_v06.blend'; bpy.ops.wm.save_as_mainfile(filepath=str(blend)); qa['blend']=blend.name
     qa['automated_pass']=all(v['budget_pass'] and v['socket_pass'] for v in qa['lods'].values())
     (OUT/'AF001G_V06_DCC_QA.json').write_text(json.dumps(qa,indent=2),encoding='utf-8')
