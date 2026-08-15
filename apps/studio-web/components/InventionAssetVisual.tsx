@@ -19,7 +19,7 @@ export interface GltfVisualAssetDescriptor {
   readonly sha256: string;
   readonly portSocketMap: Readonly<Record<string, string>>;
 }
-export interface SpatialProxyPortAnchor { readonly name: string; readonly position: SpatialVector3; }
+export interface SpatialProxyPortAnchor { readonly name: string; readonly position: SpatialVector3; readonly axis?: SpatialVector3; }
 export interface SpatialProxyDescriptor {
   readonly kind: "wheel" | "motor-bracket";
   readonly status: "PROXY_EXPLICIT";
@@ -27,7 +27,10 @@ export interface SpatialProxyDescriptor {
   readonly portAnchors: Readonly<Record<string, SpatialProxyPortAnchor>>;
 }
 export interface AssetSocketEvidence { readonly entityId: string; readonly portId: string; readonly socketName: string; readonly position: SpatialVector3; }
-export interface SpatialPortEndpointEvidence extends AssetSocketEvidence { readonly source: "asset-socket" | "proxy-anchor" | "center-fallback"; }
+export interface SpatialPortEndpointEvidence extends AssetSocketEvidence {
+  readonly localPosition: SpatialVector3;
+  readonly source: "asset-socket" | "proxy-anchor" | "center-fallback";
+}
 interface PreparedAssetScene {
   readonly scene: Object3D;
   readonly localSockets: readonly { readonly portId: string; readonly socketName: string; readonly position: Vector3 }[];
@@ -49,6 +52,10 @@ function requiredPositiveInteger(source: Record<string, unknown>, key: string): 
   const value = source[key]; if (!Number.isInteger(value) || Number(value) <= 0) throw new Error(`Visual asset ${key} must be a positive integer`); return Number(value);
 }
 function finiteNumber(value: unknown, label: string): number { if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`${label} must be finite`); return value; }
+function vector3(value: unknown, label: string): SpatialVector3 {
+  if (!Array.isArray(value) || value.length !== 3) throw new Error(`${label} must be [x,y,z]`);
+  return { x: finiteNumber(value[0], `${label} x`), y: finiteNumber(value[1], `${label} y`), z: finiteNumber(value[2], `${label} z`) };
+}
 function parsePortSocketMap(entity: EngineeringEntity): Readonly<Record<string, string>> {
   const raw = entity.metadata.portSocketMap; if (raw === undefined) return {}; if (!record(raw)) throw new Error(`Port socket map must be an object: ${entity.id}`);
   const mapping: Record<string, string> = {};
@@ -62,11 +69,11 @@ function parsePortSocketMap(entity: EngineeringEntity): Readonly<Record<string, 
 function parseProxyAnchor(entity: EngineeringEntity, portId: string, value: unknown): SpatialProxyPortAnchor {
   if (!entity.ports[portId]) throw new Error(`Spatial proxy references unknown port ${entity.id}:${portId}`);
   if (!record(value)) throw new Error(`Spatial proxy anchor must be an object: ${entity.id}:${portId}`);
-  const position = value.position;
-  if (!Array.isArray(position) || position.length !== 3) throw new Error(`Spatial proxy anchor position must be [x,y,z]: ${entity.id}:${portId}`);
-  return { name: requiredString(value, "name"), position: {
-    x: finiteNumber(position[0], `${entity.id}:${portId} x`), y: finiteNumber(position[1], `${entity.id}:${portId} y`), z: finiteNumber(position[2], `${entity.id}:${portId} z`)
-  }};
+  const position = vector3(value.position, `Spatial proxy anchor position ${entity.id}:${portId}`);
+  if (value.axis === undefined) return { name: requiredString(value, "name"), position };
+  const axis = vector3(value.axis, `Spatial proxy anchor axis ${entity.id}:${portId}`);
+  if (Math.hypot(axis.x, axis.y, axis.z) <= Number.EPSILON) throw new Error(`Spatial proxy anchor axis must be non-zero: ${entity.id}:${portId}`);
+  return { name: requiredString(value, "name"), position, axis };
 }
 function socketKey(entityId: string, portId: string): string { return `${entityId}::${portId}`; }
 function publishSocketEvidence(evidence: readonly AssetSocketEvidence[]): void {
@@ -118,17 +125,29 @@ export function useSpatialPortEndpoint(entity: EngineeringEntity, binding: Spati
   useSyncExternalStore(subscribeSockets, socketSnapshot, socketSnapshot);
   const socket = socketEndpoints.get(socketKey(entity.id, portId));
   if (socket) {
+    const localPosition = { ...socket.position };
     return {
       entityId: entity.id,
       portId,
       socketName: socket.socketName,
-      position: transformSocketPosition(new Vector3(socket.position.x, socket.position.y, socket.position.z), binding),
+      localPosition,
+      position: transformSocketPosition(new Vector3(localPosition.x, localPosition.y, localPosition.z), binding),
       source: "asset-socket"
     };
   }
   const anchor = spatialProxyForEntity(entity)?.portAnchors[portId];
-  if (anchor) return { entityId: entity.id, portId, socketName: anchor.name, position: transformSocketPosition(new Vector3(anchor.position.x, anchor.position.y, anchor.position.z), binding), source: "proxy-anchor" };
-  return { entityId: entity.id, portId, socketName: "", position: { ...binding.position }, source: "center-fallback" };
+  if (anchor) {
+    const localPosition = { ...anchor.position };
+    return {
+      entityId: entity.id,
+      portId,
+      socketName: anchor.name,
+      localPosition,
+      position: transformSocketPosition(new Vector3(localPosition.x, localPosition.y, localPosition.z), binding),
+      source: "proxy-anchor"
+    };
+  }
+  return { entityId: entity.id, portId, socketName: "", localPosition: { x: 0, y: 0, z: 0 }, position: { ...binding.position }, source: "center-fallback" };
 }
 export function visualAssetForEntity(entity: EngineeringEntity): GltfVisualAssetDescriptor | null {
   const raw = entity.metadata.visualAsset; if (raw === undefined) return null; if (!record(raw)) throw new Error(`Visual asset metadata must be an object: ${entity.id}`);
