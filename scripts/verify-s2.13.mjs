@@ -70,7 +70,7 @@ for (const token of [
 ]) {
   if (!workbench.includes(token)) throw new Error(`S2.13 workbench contract missing: ${token}`);
 }
-if (!workbench.includes("S2.13") && !workbench.includes("S2.14")) {
+if (!workbench.includes("S2.13") && !workbench.includes("S2.14") && !workbench.includes("S2.15")) {
   throw new Error("S2.13 workbench lineage marker missing");
 }
 for (const forbidden of [
