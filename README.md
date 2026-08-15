@@ -4,7 +4,7 @@ Virtual Engineering Atelier by **Tehkné Solutions**.
 
 ## Current baseline
 
-`0.1.0-alpha.1 · S1.12 + S2.19`
+`0.1.0-alpha.1 · S1.12 + S2.20`
 
 Tehkné Studio is an executable engineering workspace where products, components, experiments and spatial assemblies share the same engineering state instead of being disconnected demos.
 
@@ -23,13 +23,16 @@ Tehkné Studio is an executable engineering workspace where products, components
 - `connectedTo`-derived mechanical assembly constraints;
 - rigid assembly translation and RX/RY/RZ rotation;
 - axial alignment for `mechanical.rotary-shaft` joints;
-- **Rotary Joint DOF**: follower-only rotation around an already snapped and aligned shaft while the driver remains fixed.
+- **Rotary Joint DOF**: follower-only rotation around an already snapped and aligned shaft while the driver remains fixed;
+- **Rotary Joint Relative Angle**: signed principal angle in `[-π, π]` derived directly from the existing driver/follower transforms and authored shaft axes, with no duplicate joint-angle state.
 
 ## Engineering invariants
 
 `connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints and rotary controls are projections of that same graph; Tehkné Studio does not maintain a parallel assembly, rotation or joint graph.
 
-Physics and simulation are fail-closed. S2.19 provides the geometric degree of freedom of a rotary joint, but it does **not** claim RPM, angular velocity or torque dynamics. Those require a later explicitly modeled solver and evidence contract.
+The S2.20 joint angle is **derived evidence**, not new mutable state. It is reconstructed from the persisted `inventionSpatial` transforms, remains invariant when the whole assembly receives a rigid transform, and intentionally reports only the principal relative angle. Multi-turn revolution counting requires an explicit future kinematics contract rather than being inferred.
+
+Physics and simulation remain fail-closed. S2.20 does **not** claim RPM, angular velocity, acceleration or torque dynamics. Those require later explicitly modeled state/solver evidence.
 
 ## Asset Forge · AF-001
 
@@ -50,11 +53,11 @@ The AF-001L gate is intentionally fail-closed: hosted CI validates its contract,
 npm ci --ignore-scripts
 npm run security:audit
 npm run verify:s1.12
-npm run verify:s2.19
+npm run verify:s2.20
 npm run smoke:browser
 ```
 
-The cumulative S2.19 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment before validating the S2.19 Rotary Joint DOF, followed by the complete browser smoke and AF-001I deterministic evidence.
+The cumulative S2.20 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF before validating the S2.20 derived Relative Angle, followed by the complete browser smoke and AF-001I deterministic evidence.
 
 ## Repository structure
 
