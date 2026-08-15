@@ -2,6 +2,7 @@ import { BlankInventionExperience } from "../components/BlankInventionExperience
 import { BlankInventionTrigger } from "../components/BlankInventionTrigger";
 import { ComponentLibraryPanel } from "../components/ComponentLibraryPanel";
 import { ElectronicsWorkbenchExperience } from "../components/ElectronicsWorkbenchExperience";
+import { Invention3DWorkbench } from "../components/Invention3DWorkbench";
 import { SpatialWorkbench } from "../components/SpatialWorkbench";
 
 export default function StudioPage() {
@@ -20,9 +21,10 @@ export default function StudioPage() {
       <ElectronicsWorkbenchExperience />
       <BlankInventionTrigger />
       <BlankInventionExperience />
+      <Invention3DWorkbench />
 
       <footer className="studio-footer">
-        <span>Engineering Graph · Component Library · Invention · Intelligence · Automation · Robotics · Electronics · Failure · Variants · Virtual Factory</span>
+        <span>Engineering Graph · Component Library · Invention · 3D Spatial Workbench · Intelligence · Automation · Robotics · Electronics · Failure · Variants · Virtual Factory</span>
         <span>Tehkné Solutions · Alpha 01</span>
       </footer>
     </main>
