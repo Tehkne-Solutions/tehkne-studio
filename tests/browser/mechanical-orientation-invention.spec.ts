@@ -60,7 +60,7 @@ test("S2.17 aligns the follower axis after driver rotation and preserves the sam
 
   await workspace.getByRole("button", { name: /Brushed DC Motor/ }).click();
   await workspace.getByRole("button", { name: "Guardar 3D" }).click();
-  await workspace.getByRole("button", { name: "Fechar", exact: true }).click();
+  await workspace.getByRole("button", { name: "Fechar 3D Invention Workbench", exact: true }).click();
   await page.getByTestId("invention-3d-trigger").click();
   await workspace.getByRole("button", { name: /Brushed DC Motor/ }).click();
   await expect(selected).toHaveAttribute("data-ry", "0.262");
