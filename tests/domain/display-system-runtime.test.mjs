@@ -87,9 +87,9 @@ test("S2.7 TV 01 materializes 11 reusable components with 13 validated AC power,
     assert.equal(relationship.metadata.validatedBy, "component-library");
     assert.ok(relationship.metadata.sharedInterfaces.length >= 1);
   }
-  const hdmi = project.relationships.find((item) => item.id === "connection.tv-hdmi-video");
-  const audio = project.relationships.find((item) => item.id === "connection.tv-audio");
-  const mains = project.relationships.find((item) => item.id === "connection.tv-mains-to-psu");
+  const hdmi = project.relationships.find((item) => item.id === "tv-hdmi-video");
+  const audio = project.relationships.find((item) => item.id === "tv-audio");
+  const mains = project.relationships.find((item) => item.id === "tv-mains-to-psu");
   assert.deepEqual(hdmi.metadata.sharedInterfaces, ["video.hdmi"]);
   assert.deepEqual(audio.metadata.sharedInterfaces, ["audio.line-level"]);
   assert.deepEqual(mains.metadata.sharedInterfaces, ["power.ac.mains"]);
