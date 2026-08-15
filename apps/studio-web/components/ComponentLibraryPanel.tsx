@@ -7,10 +7,7 @@ import {
   type ComponentDefinition,
   type ProductFamily
 } from "../../../packages/component-library/src/index";
-import {
-  applyComponentCatalogExtension,
-  type ComponentCatalogExtension
-} from "../../../packages/component-library/src/extension";
+import { applyComponentCatalogExtension } from "../../../packages/component-library/src/extension";
 import {
   applyComponentCatalogOverlay,
   type ComponentCatalogOverlay
@@ -33,7 +30,7 @@ const tabletCatalog = applyComponentCatalogOverlay(
 );
 const displayExtendedCatalog = applyComponentCatalogExtension(
   tabletCatalog,
-  displaySystemExtension as ComponentCatalogExtension
+  displaySystemExtension
 );
 const expandedCatalog = applyComponentCatalogOverlay(
   displayExtendedCatalog,
