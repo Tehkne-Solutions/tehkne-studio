@@ -28,7 +28,7 @@ for (const token of [
   "invention-3d-wire-${wire.relationshipId}",
   "SIMULAÇÃO {document.simulationStatus.toUpperCase()}",
   "3D Invention Workbench",
-  "Tehkné Solutions"
+  "TEHKNÉ SOLUTIONS"
 ]) {
   if (!workbench.includes(token)) throw new Error(`S2.12 3D workbench contract missing: ${token}`);
 }
