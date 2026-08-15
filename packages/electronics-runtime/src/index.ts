@@ -105,10 +105,7 @@ function componentEntity(input: {
     parentId: input.parentId,
     properties: input.properties,
     ports: input.ports,
-    capabilities: [
-      { id: "inspect", label: "Inspecionar" },
-      { id: "explain", label: "Explicar" }
-    ],
+    capabilities: [{ id: "inspect", label: "Inspecionar" }, { id: "explain", label: "Explicar" }],
     metadata: {
       voiceAliases: [...input.aliases],
       simpleExplanation: input.explanation,
@@ -167,9 +164,7 @@ export function createElectronicsWorkbenchProject(profile: ElectronicsWorkbenchP
     name: "Chave do Circuito",
     state: profile.switchClosed ? "closed" : "open",
     parentId: root.id,
-    properties: {
-      closed: { id: "closed", value: profile.switchClosed, source: "user", confidence: 1 }
-    },
+    properties: { closed: { id: "closed", value: profile.switchClosed, source: "user", confidence: 1 } },
     ports: {
       input: { id: "input", kind: "electrical", direction: "in", compatibility: ["electronics.dc-node"], state: "connected" },
       output: { id: "output", kind: "electrical", direction: "out", compatibility: ["electronics.dc-node"], state: "connected" }
@@ -255,7 +250,7 @@ export function createElectronicsWorkbenchProject(profile: ElectronicsWorkbenchP
     schemaVersion: "0.1",
     projectId: profile.projectId,
     name: profile.name,
-    projectType: "simulation",
+    projectType: "experiment",
     rootEntityId: root.id,
     entities: [root, source, switchEntity, resistor, led, meter],
     relationships,
@@ -371,19 +366,10 @@ export class ElectronicsBench {
       }
     }
 
-    replaceProperties(this.session, "electronics.root", {
-      circuitStatus: status,
-      lastCurrentA: circuitCurrentA
-    });
+    replaceProperties(this.session, "electronics.root", { circuitStatus: status, lastCurrentA: circuitCurrentA });
     replaceProperties(this.session, "electronics.source", { measuredCurrentA: circuitCurrentA });
-    replaceProperties(this.session, "electronics.resistor", {
-      voltageDropV: resistorVoltageV,
-      powerW: resistorPowerW
-    }, resistorPowerW > resistorPowerRatingW ? "fault" : "ready");
-    replaceProperties(this.session, "electronics.led", {
-      currentA: circuitCurrentA,
-      powerW: ledPowerW
-    }, status === "fault" ? "fault" : circuitCurrentA > 0 ? "on" : "off");
+    replaceProperties(this.session, "electronics.resistor", { voltageDropV: resistorVoltageV, powerW: resistorPowerW }, resistorPowerW > resistorPowerRatingW ? "fault" : "ready");
+    replaceProperties(this.session, "electronics.led", { currentA: circuitCurrentA, powerW: ledPowerW }, status === "fault" ? "fault" : circuitCurrentA > 0 ? "on" : "off");
 
     const record: ElectronicsSimulationResult = {
       id: `electronics-sim-${++this.#sequence}`,
@@ -422,7 +408,7 @@ export class ElectronicsBench {
 
   measure(kind: ElectronicsMeasurementKind): ElectronicsMeasurement {
     const simulation = this.#records.at(-1) ?? this.simulate();
-    const map: Record<ElectronicsMeasurementKind, readonly [number, "V" | "A" | "W"]> = {
+    const values: Record<ElectronicsMeasurementKind, readonly [number, "V" | "A" | "W"]> = {
       "source-voltage": [simulation.sourceVoltageV, "V"],
       "circuit-current": [simulation.circuitCurrentA, "A"],
       "resistor-voltage": [simulation.resistorVoltageV, "V"],
@@ -430,7 +416,7 @@ export class ElectronicsBench {
       "resistor-power": [simulation.resistorPowerW, "W"],
       "led-power": [simulation.ledPowerW, "W"]
     };
-    const [value, unit] = map[kind];
+    const [value, unit] = values[kind];
     replaceProperties(this.session, "electronics.multimeter", { lastValue: value, lastUnit: unit });
     return { kind, value, unit, source: "calculated", simulationId: simulation.id };
   }
