@@ -2,14 +2,14 @@ import { expect, test } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const EXPECTED_BYTES = 74_472;
-const EXPECTED_SHA256 = "2142509d651e5ae1683da383360675b4343cbad83fbbb498326a894cf0c2baae";
-const EXPECTED_TRANSPORT_SHA256 = "747034a1fe0082c7b96e66df3891d84895f81d63820d4235730b92ae5e23cd8f";
-const EXPECTED_TRIANGLES = "3904";
+const EXPECTED_BYTES = 243_672;
+const EXPECTED_SHA256 = "ad73d83d0dcd8485a8c2a7a680f83090a98d637cea455dde4915f0d771cd6552";
+const EXPECTED_TRANSPORT_SHA256 = "f6b1062238c941f81bbd5c38e154add9bb4ab56b81c06f9c45989c9604dd90c8";
+const EXPECTED_TRIANGLES = "3292";
 const MIN_BENCHMARK_SAMPLES = 30;
 const EVIDENCE_DIR = resolve("test-results", "af001i-evidence");
 
-test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", async ({ page }, testInfo) => {
+test("AF-001I Golden Motor v0.6.5 runs LOD0 PBR review and preserves visual evidence", async ({ page }, testInfo) => {
   test.setTimeout(60_000);
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
@@ -25,7 +25,7 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
   expect(assetResponse.status()).toBe(200);
   expect(assetResponse.headers()["content-type"]).toContain("model/gltf-binary");
   expect(assetResponse.headers()["x-tehkne-asset-id"]).toBe("TS_ELEC_MOTOR_DC_A");
-  expect(assetResponse.headers()["x-tehkne-asset-version"]).toBe("0.5.1-hero-candidate");
+  expect(assetResponse.headers()["x-tehkne-asset-version"]).toBe("0.6.5-hero-candidate");
   expect(assetResponse.headers()["x-tehkne-asset-lod"]).toBe("LOD0");
   expect(assetResponse.headers()["x-tehkne-asset-triangles"]).toBe(EXPECTED_TRIANGLES);
   expect(assetResponse.headers()["x-tehkne-asset-sha256"]).toBe(EXPECTED_SHA256);
@@ -83,7 +83,7 @@ test("AF-001I Golden Motor runs LOD0 PBR review and preserves visual evidence", 
   const runtimeEvidence = {
     gate: "AF001I",
     asset: "TS_ELEC_MOTOR_DC_A",
-    version: "0.5.1-hero-candidate",
+    version: "0.6.5-hero-candidate",
     lod: "LOD0",
     triangles: Number(EXPECTED_TRIANGLES),
     bytes: EXPECTED_BYTES,
