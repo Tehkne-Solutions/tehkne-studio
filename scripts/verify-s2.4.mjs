@@ -2,6 +2,7 @@ import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const required = [
+  "packages/product-composition-runtime/src/index.ts",
   "packages/smartphone-runtime/src/index.ts",
   "presets/smartphone-01/profile.json",
   "tests/domain/smartphone-runtime.test.mjs",
@@ -42,25 +43,35 @@ for (const token of [
   "SmartphonePresetProfile",
   "validateSmartphoneProfile",
   "createSmartphoneProject",
-  "portsAreCompatible",
-  "registry.instantiate",
-  'validatedBy: "component-library"',
-  'materializedFrom: "tehkne-universal-components-v1"',
-  "contextualTeardown",
+  "materializeProductComposition",
+  "validateProductCompositionProfile",
+  "compositionProfile",
+  'productFamily: "smartphone"',
   'battery: ["bateria"',
   'display: ["tela"',
   'camera: ["camera"',
-  'wireless: ["wifi"'
+  'wireless: ["wifi"',
+  "Invalid smartphone profile"
 ]) {
-  if (!runtime.includes(token)) throw new Error(`S2.4 Smartphone runtime contract missing: ${token}`);
+  if (!runtime.includes(token)) throw new Error(`S2.4 Smartphone adapter contract missing: ${token}`);
 }
-for (const failClosedToken of [
-  "Invalid smartphone profile",
+if (runtime.includes("portsAreCompatible(")) throw new Error("S2.4 Smartphone adapter must not duplicate shared interface validation");
+if (runtime.includes("registry.instantiate(")) throw new Error("S2.4 Smartphone adapter must not duplicate shared component instantiation");
+
+const composition = await readFile("packages/product-composition-runtime/src/index.ts", "utf8");
+for (const token of [
+  "portsAreCompatible",
+  "registry.instantiate",
+  'validatedBy: "component-library"',
+  "contextualTeardown",
+  "materializedFrom",
+  'type: "dependsOn"',
   "uses incompatible interfaces",
   "references unknown slot",
-  "is not declared for smartphone products"
+  "is not declared for",
+  "Invalid product composition profile"
 ]) {
-  if (!runtime.includes(failClosedToken)) throw new Error(`S2.4 fail-closed product rule missing: ${failClosedToken}`);
+  if (!composition.includes(token)) throw new Error(`S2.4 shared composition guarantee missing: ${token}`);
 }
 
 const domain = await readFile("tests/domain/smartphone-runtime.test.mjs", "utf8");
@@ -99,7 +110,7 @@ for (const token of [
   "Restaurar Smartphone salvo",
   'saveBrowserProject("smartphone"',
   'loadBrowserProject(product)',
-  'looksSmartphone',
+  "looksSmartphone",
   'execution.targetEntityId?.startsWith("phone.")',
   "SMARTPHONE-01",
   "POWER {smartphonePowerState.toUpperCase()} · BOOT {smartphoneBootStage}"
@@ -108,7 +119,7 @@ for (const token of [
 }
 
 const persistenceAdapter = await readFile("apps/studio-web/lib/projectPersistence.ts", "utf8");
-if (!persistenceAdapter.includes('"desktop" | "arm" | "smartphone"')) throw new Error("S2.4 persistence adapter does not include smartphone");
+if (!persistenceAdapter.includes('"smartphone"')) throw new Error("S2.4 persistence adapter does not include smartphone");
 
 const browser = await readFile("tests/browser/smartphone.spec.ts", "utf8");
 for (const token of [
@@ -128,6 +139,11 @@ for (const token of [
 }
 
 const tsconfig = await readFile("tsconfig.core.json", "utf8");
-if (!tsconfig.includes("packages/smartphone-runtime/src/**/*.ts")) throw new Error("S2.4 Smartphone runtime is not part of core typecheck/build");
+for (const include of [
+  "packages/product-composition-runtime/src/**/*.ts",
+  "packages/smartphone-runtime/src/**/*.ts"
+]) {
+  if (!tsconfig.includes(include)) throw new Error(`S2.4 core compile surface missing: ${include}`);
+}
 
-console.log("S2.4 Smartphone structure PASS · 11 library components · 15 compatible connections · causal boot + teardown + persistence · Tehkné Solutions");
+console.log("S2.4 Smartphone structure PASS · 11 library components · 15 compatible connections · causal boot + teardown + persistence · shared composition · Tehkné Solutions");
