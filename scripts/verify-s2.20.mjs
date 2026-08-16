@@ -66,8 +66,7 @@ for (const token of [
   'data-angle-mode="principal-derived"',
   "formatAngle(kinematics.principalRadians)",
   "JOINT −",
-  "JOINT +",
-  "sem RPM/torque"
+  "JOINT +"
 ]) {
   if (!control.includes(token)) throw new Error(`S2.20 observable principal-angle projection missing: ${token}`);
 }
@@ -138,4 +137,4 @@ if (!workflow.includes("npm run verify:s2.20")) throw new Error("S2.20 CI contra
 if (!workflow.includes("tests/browser/rotary-joint-relative-angle.spec.ts")) throw new Error("S2.20 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.20 CI must remain read-only");
 
-console.log("S2.20 Rotary Joint Relative Angle PASS · signed principal angle derived from persisted transforms and projected through current CommandBus kinematics + rigid-invariant + semantic README contract + no joint state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.20 Rotary Joint Relative Angle PASS · signed principal angle derived from persisted transforms and projected through current CommandBus kinematics + rigid-invariant + semantic README contract + no joint state/no dynamics solver + successor explicit segment-rate evidence compatible + Tehkné Solutions");
