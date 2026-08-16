@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import struct
 from pathlib import Path
 
 import numpy as np
@@ -117,7 +118,57 @@ scene.metadata.update(
     signature=SIGNATURE,
 )
 
+
+def materialize_socket_translations(glb: bytes) -> bytes:
+    """Patch only GLB JSON socket-node transforms; preserve exported mesh/BIN payloads."""
+    if glb[:4] != b"glTF":
+        raise RuntimeError("AF-002 generated payload is not GLB")
+    version, declared_length = struct.unpack_from("<II", glb, 4)
+    if version != 2 or declared_length != len(glb):
+        raise RuntimeError("AF-002 generated GLB header mismatch")
+
+    chunks: list[tuple[int, bytes]] = []
+    offset = 12
+    json_seen = False
+    while offset + 8 <= len(glb):
+        chunk_len, chunk_type = struct.unpack_from("<II", glb, offset)
+        offset += 8
+        payload = glb[offset : offset + chunk_len]
+        offset += chunk_len
+        if chunk_type == 0x4E4F534A:
+            if json_seen:
+                raise RuntimeError("AF-002 GLB contains multiple JSON chunks")
+            document = json.loads(payload.decode("utf-8").rstrip(" \t\r\n\x00"))
+            nodes = document.get("nodes", [])
+            node_by_name = {node.get("name"): node for node in nodes if node.get("name")}
+            missing = [name for name in socket_transforms if name not in node_by_name]
+            if missing:
+                raise RuntimeError("AF-002 socket nodes missing before serialization patch: " + ", ".join(missing))
+            for name, position in socket_transforms.items():
+                node = node_by_name[name]
+                node.pop("matrix", None)
+                node["translation"] = position
+                node.pop("rotation", None)
+                node.pop("scale", None)
+            patched = json.dumps(document, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+            patched += b" " * ((4 - len(patched) % 4) % 4)
+            chunks.append((chunk_type, patched))
+            json_seen = True
+        else:
+            chunks.append((chunk_type, payload))
+    if not json_seen:
+        raise RuntimeError("AF-002 GLB JSON chunk missing")
+
+    total_length = 12 + sum(8 + len(payload) for _, payload in chunks)
+    output = bytearray(struct.pack("<III", 0x46546C67, 2, total_length))
+    for chunk_type, payload in chunks:
+        output.extend(struct.pack("<II", len(payload), chunk_type))
+        output.extend(payload)
+    return bytes(output)
+
+
 glb = trimesh.exchange.gltf.export_glb(scene)
+glb = materialize_socket_translations(glb)
 GLB_PATH.write_bytes(glb)
 
 sha256 = hashlib.sha256(glb).hexdigest()
@@ -126,11 +177,12 @@ evidence = {
     "sku": SKU,
     "stage": "DCC_CANDIDATE",
     "signature": SIGNATURE,
-    "generator": "trimesh-procedural-reference",
+    "generator": "trimesh-procedural-reference+deterministic-socket-json-patch",
     "bytes": len(glb),
     "sha256": sha256,
     "requiredNodes": REQUIRED_NODES,
-    "note": "Procedural DCC candidate only; not HERO_CANDIDATE and not manufacturing evidence.",
+    "socketTranslations": socket_transforms,
+    "note": "Procedural DCC candidate only; socket node transforms are materialized in GLB JSON; not HERO_CANDIDATE and not manufacturing evidence.",
 }
 EVIDENCE_PATH.write_text(json.dumps(evidence, indent=2) + "\n", encoding="utf-8")
 

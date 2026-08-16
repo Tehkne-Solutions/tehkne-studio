@@ -1,0 +1,39 @@
+name: AF-002 DCC QA Gate
+
+on:
+  pull_request:
+    paths:
+      - "tools/asset_forge/af002_v02/**"
+      - ".github/workflows/af002-dcc-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-af002-dcc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned AF-002 DCC dependencies
+        run: python -m pip install -r tools/asset_forge/af002_v02/requirements-dcc.txt
+      - name: Verify AF-002 engineering reference
+        run: node tools/asset_forge/af002_v02/verify_engineering_reference.mjs
+      - name: Rebuild and verify AF-002 DCC candidate
+        run: python tools/asset_forge/af002_v02/verify_dcc_candidate.py
+      - name: Upload deterministic AF-002 DCC evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: af002-dcc-qa-evidence
+          path: |
+            tools/asset_forge/af002_v02/dcc_qa_evidence.json
+            tools/asset_forge/af002_v02/generated/dcc_candidate_evidence.json
+            tools/asset_forge/af002_v02/generated/AF-002_TS_MECH_SHAFT_COUPLER_A_v0.3.0-dcc-candidate.glb
+          if-no-files-found: error
+          retention-days: 14

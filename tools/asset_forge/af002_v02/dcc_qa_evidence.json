@@ -1,0 +1,44 @@
+{
+  "assetId": "AF-002",
+  "sku": "TS_MECH_SHAFT_COUPLER_A",
+  "stage": "DCC_QA_CANDIDATE",
+  "version": "0.3.0-dcc-candidate",
+  "signature": "Tehkné Solutions",
+  "glbBytes": 22600,
+  "glbSha256": "48e8363cdc38b5ae93ace0b975c42498663e03c922970fb2b60e80c65d26b50e",
+  "payloadChunks": 2,
+  "requiredNodes": [
+    "COUPLER_HALF_IN",
+    "COUPLER_HALF_OUT",
+    "ELASTIC_INSERT",
+    "CLAMP_SCREW_IN_A",
+    "CLAMP_SCREW_IN_B",
+    "CLAMP_SCREW_OUT_A",
+    "CLAMP_SCREW_OUT_B",
+    "SOCKET_MECH_AXIS_IN",
+    "SOCKET_MECH_AXIS_OUT",
+    "SOCKET_MECH_INSPECT_A",
+    "SOCKET_MECH_INSPECT_B"
+  ],
+  "requiredMaterials": [
+    "MAT_COUPLER_BODY",
+    "MAT_FASTENER_STEEL",
+    "MAT_ELASTIC_INSERT"
+  ],
+  "socketPositions": {
+    "SOCKET_MECH_AXIS_IN": [0, 0, -0.0175],
+    "SOCKET_MECH_AXIS_OUT": [0, 0, 0.0175],
+    "SOCKET_MECH_INSPECT_A": [0.015, 0, 0],
+    "SOCKET_MECH_INSPECT_B": [-0.015, 0, 0]
+  },
+  "limits": {
+    "maxLod0Triangles": 7500
+  },
+  "claims": {
+    "heroCandidate": false,
+    "runtimeIntegrated": false,
+    "torqueCapacity": false,
+    "maxRpm": false,
+    "dynamics": false
+  }
+}
