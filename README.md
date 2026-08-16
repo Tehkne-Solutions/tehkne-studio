@@ -4,7 +4,7 @@ Virtual Engineering Atelier by **Tehkné Solutions**.
 
 ## Current baseline
 
-`0.1.0-alpha.1 · S1.12 + S2.27`
+`0.1.0-alpha.1 · S1.12 + S2.28`
 
 Tehkné Studio is an executable engineering workspace where products, components, experiments and spatial assemblies share the same engineering state instead of being disconnected demos.
 
@@ -31,11 +31,12 @@ Tehkné Studio is an executable engineering workspace where products, components
 - **Multi-turn Rotary Kinematics (S2.24)**: principal angle, continuous angle and integer revolutions are reconciled from `inventionSpatial + session.events` without replay;
 - **Rotary Continuous Target (S2.25)**: absolute multi-turn targets such as `720°` and `−450°` use `continuous-absolute` semantics through the same CommandBus;
 - **Rotary Travel Limits (S2.26)**: an optional continuous travel envelope can be authored on the authoritative `connectedTo` relationship. Incremental, principal and continuous targets are rejected fail closed before planning or spatial mutation if they would leave that envelope; a shaft with no envelope remains unlimited;
-- **Rotary Home Position (S2.27)**: the current continuous joint coordinate can be captured as an authored HOME on the same `connectedTo` relationship. `GO HOME` delegates movement to the canonical `setContinuousTarget` path, so S2.26 limits, atomic transforms and persisted movement evidence remain authoritative.
+- **Rotary Home Position (S2.27)**: the current continuous joint coordinate can be captured as an authored HOME on the same `connectedTo` relationship. `GO HOME` delegates movement to the canonical `setContinuousTarget` path, so S2.26 limits, atomic transforms and persisted movement evidence remain authoritative;
+- **Rotary Named Positions (S2.28)**: multiple normalized bookmarks such as `Inspect`, `Load` and `Park` can be saved on the same rotary relationship. `GO POSITION` delegates to the canonical continuous-target path, while save/update/delete remain metadata-only operations.
 
 ## Engineering invariants
 
-`connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints, rotary controls, S2.26 travel limits and S2.27 HOME are projections or metadata of that same graph; Tehkné Studio does not maintain a parallel assembly, rotation, joint, limit, home or revolution graph.
+`connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints, rotary controls, S2.26 travel limits, S2.27 HOME and S2.28 named positions are projections or metadata of that same graph; Tehkné Studio does not maintain a parallel assembly, rotation, joint, limit, home, named-position or revolution graph.
 
 The `inventionSpatial` document remains the only persisted physical spatial source of truth. `transformBatch(...)` prepares and validates the complete mutation set before committing. Mechanical commands do not introduce a shadow transform map or second joint state.
 
@@ -48,7 +49,10 @@ The mechanical runtime deliberately reuses the **existing session CommandBus**. 
 - `invention.mechanical.rotary.clearTravelLimits` — remove that envelope and restore unlimited travel;
 - `invention.mechanical.rotary.setHome` — capture the current continuous coordinate as HOME;
 - `invention.mechanical.rotary.goHome` — resolve the authored HOME and delegate movement to `setContinuousTarget`;
-- `invention.mechanical.rotary.clearHome` — remove the authored HOME reference.
+- `invention.mechanical.rotary.clearHome` — remove the authored HOME reference;
+- `invention.mechanical.rotary.saveNamedPosition` — create or update a normalized named bookmark from the current continuous coordinate;
+- `invention.mechanical.rotary.goToNamedPosition` — resolve a bookmark and delegate movement to `setContinuousTarget`;
+- `invention.mechanical.rotary.deleteNamedPosition` — remove only the selected bookmark.
 
 UI, voice and automation therefore invoke the same validated operations rather than separate implementations.
 
@@ -87,15 +91,33 @@ signature = Tehkné Solutions
 
 A HOME may remain authored even if a later travel envelope makes it temporarily unreachable. In that case `GO HOME` fails closed through the existing S2.26 limit check without spatial mutation or false HOME-request success evidence. Clearing or widening the envelope can make the same persisted HOME reachable again. No `homeMap`, home document, second planner or second spatial state exists.
 
+### Named-position authority and persistence
+
+S2.28 stores multiple bookmarks directly in the same authoritative connection metadata under `rotaryNamedPositions`:
+
+```text
+version = 1
+positions[] = { key, name, continuousRadians, signature }
+signature = Tehkné Solutions
+```
+
+Position names are Unicode-normalized, trimmed, internal whitespace is collapsed and identity is case-insensitive through a normalized key. Saving the same normalized name updates the existing bookmark instead of creating a duplicate. Names must contain 1–64 characters and tampered duplicate keys or invalid signatures fail closed.
+
+`SAVE POSITION` captures the current continuous coordinate and updates only relationship metadata. `DELETE POSITION` removes only the selected bookmark. Their `MechanicalRotaryNamedPositionSaved` and `MechanicalRotaryNamedPositionDeleted` events are audit evidence and remain outside the S2.24 movement fold, so authoring bookmarks cannot manufacture angle or revolutions.
+
+`GO POSITION` resolves the authored bookmark and delegates to the existing `setContinuousTarget` operation on the same session CommandBus. Movement therefore remains `continuous-absolute`, passes through S2.26 travel-limit validation, uses the established follower-only rotary planner and commits through the same atomic `transformBatch(...)`. `MechanicalRotaryNamedPositionRequested` links the bookmark request to the canonical movement command and also remains outside the kinematic fold.
+
+A named position may remain persisted while temporarily unreachable because of a later travel envelope. In that case `GO POSITION` fails closed before spatial mutation and records no false request-success evidence. Clearing or widening the envelope restores reachability without rewriting the bookmark. HOME remains independent: it is the one special reference target, while named positions provide multiple reusable bookmarks. No `positionMap`, named-position document outside the relationship, second planner or second spatial state exists.
+
 Successful mechanical movement commands continue recording audit evidence in `session.events` with command ID, source, relationship, driver/follower, before/after principal angle, signed delta, continuous angle and revolutions. Restore reconstructs kinematics from evidence and current transforms; it does not replay commands or reapply transforms.
 
 The S2.24 stabilization continues canonicalizing numerical zero within the established rotary epsilon. Its canonical wrap proof uses `170° → -170°`, while the exact `180°` boundary remains covered in domain regression.
 
-S2.25 continuous targets remain exact kinematic state changes rather than time-resolved motor simulations. S2.26 adds an authored admissible envelope around those exact states. S2.27 adds a named authored HOME target on that same coordinate system; none of these sprints simulate the swept path between states.
+S2.25 continuous targets remain exact kinematic state changes rather than time-resolved motor simulations. S2.26 adds an authored admissible envelope around those exact states. S2.27 adds a special HOME target, and S2.28 adds multiple reusable named targets on that same coordinate system; none of these sprints simulate the swept path between states.
 
 Mechanical endpoint resolution remains runtime-safe outside React. Canonical mechanical local positions come from authored component metadata or explicit proxy anchors; AF-001 `shaft-out` is `[0, 0, 0.03185] m`, matching AF-001M socket-transform QA for `SOCKET_MECH_AXIS_OUT`.
 
-Physics and simulation remain fail-closed. S2.27 is **kinematics and authored constraints only**: it does not claim elapsed time, RPM, angular velocity, angular acceleration, torque, collision sweep, inertia, backlash or motor dynamics.
+Physics and simulation remain fail-closed. S2.28 is **kinematics and authored constraints only**: it does not claim elapsed time, RPM, angular velocity, angular acceleration, torque, collision sweep, inertia, backlash or motor dynamics.
 
 ## Asset Forge · AF-001
 
@@ -116,11 +138,11 @@ The AF-001L gate remains intentionally fail-closed: hosted CI validates its cont
 npm ci --ignore-scripts
 npm run security:audit
 npm run verify:s1.12
-npm run verify:s2.27
+npm run verify:s2.28
 npm run smoke:browser
 ```
 
-The cumulative S2.27 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform → S2.23 Mechanical Command Runtime → S2.24 Multi-turn Rotary Kinematics → S2.25 Rotary Continuous Target → S2.26 Rotary Travel Limits before validating S2.27 Rotary Home Position, followed by complete Chromium smoke and AF-001I deterministic evidence.
+The cumulative S2.28 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform → S2.23 Mechanical Command Runtime → S2.24 Multi-turn Rotary Kinematics → S2.25 Rotary Continuous Target → S2.26 Rotary Travel Limits → S2.27 Rotary Home Position before validating S2.28 Rotary Named Positions, followed by complete Chromium smoke and AF-001I deterministic evidence.
 
 ## Repository structure
 
