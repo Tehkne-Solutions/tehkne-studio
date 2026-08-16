@@ -94,18 +94,24 @@ for (const token of [
   "pure continuous state reconciles principal angle with integer revolutions",
   "twenty-four 15-degree CommandBus steps produce exactly one continuous revolution",
   "principal target commands preserve shortest-path semantics while advancing continuous turns",
+  "170 * DEG",
+  "20 * DEG",
+  "530 * DEG",
+  "550 * DEG",
   "restore reconstructs multi-turn state from persisted session events plus spatial evidence without command replay",
   "rejects tampered continuous event evidence"
 ]) {
   if (!domain.includes(token)) throw new Error(`S2.24 domain evidence missing: ${token}`);
 }
+if (domain.includes("180 * DEG")) throw new Error("S2.24 domain gate must not depend on ambiguous ±π shortest-path sign");
 
 const browser = await readFile("tests/browser/rotary-multiturn-kinematics.spec.ts", "utf8");
 for (const token of [
   "derives continuous multi-turn angle across repeated steps targets and restore",
   'data-continuous-angle-rad", "6.283"',
-  'data-revolutions", "1"',
-  'data-continuous-angle-rad", "9.425"',
+  'target.fill("170")',
+  'data-continuous-angle-rad", "9.250"',
+  'target.fill("-170")',
   'data-continuous-angle-rad", "9.599"',
   'data-revolutions", "2"',
   'data-kinematics-evidence", "26"',
@@ -115,6 +121,7 @@ for (const token of [
 ]) {
   if (!browser.includes(token)) throw new Error(`S2.24 browser evidence missing: ${token}`);
 }
+if (browser.includes('target.fill("180")')) throw new Error("S2.24 browser gate must avoid the ambiguous ±π target representative");
 
 const readme = await readFile("README.md", "utf8");
 for (const token of ["Current baseline", "S2.24", "Multi-turn Rotary Kinematics", "session.events", "continuous", "revolutions", "HERO_CANDIDATE", "AF-001L", "Tehkné Solutions"]) {
@@ -128,4 +135,4 @@ if (!workflow.includes("npm run verify:s2.24")) throw new Error("S2.24 CI contra
 if (!workflow.includes("tests/browser/rotary-multiturn-kinematics.spec.ts")) throw new Error("S2.24 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.24 CI must remain read-only");
 
-console.log("S2.24 Multi-turn Rotary Kinematics PASS · continuous angle + integer revolutions derived from persisted session.events and spatial principal evidence + CommandBus/atomic lineage + no global state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.24 Multi-turn Rotary Kinematics PASS · continuous angle + integer revolutions derived from persisted session.events and spatial principal evidence + unambiguous wrap gate + CommandBus/atomic lineage + no global state/no dynamics fiction + Tehkné Solutions");
