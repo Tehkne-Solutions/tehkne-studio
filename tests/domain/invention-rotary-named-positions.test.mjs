@@ -140,9 +140,10 @@ test("S2.28 fails closed for invalid names missing bookmarks and tampered named-
   const { session, spatial, connection } = await rotaryRuntime("rotary-named-position-fail-closed");
   const mechanical = mechanicalCommandRuntimeFor(spatial);
   const positions = mechanicalRotaryNamedPositionsRuntimeFor(spatial);
-  const blank = await positions.savePosition(connection.id, "   ", "system");
-  assert.equal(blank.ok, false);
-  assert.match(blank.error ?? "", /1 to 64 characters/);
+  await assert.rejects(
+    () => positions.savePosition(connection.id, "   ", "system"),
+    /1 to 64 characters/
+  );
   const missing = await positions.goToPosition(connection.id, "Missing", "system");
   assert.equal(missing.ok, false);
   assert.match(missing.error ?? "", /not authored/);
