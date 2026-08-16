@@ -7,6 +7,11 @@ import {
   type MechanicalAxialConstraint
 } from "../../invention-assembly-runtime/src/index.js";
 import {
+  advanceRotaryContinuousState,
+  rotaryContinuousState,
+  type RotaryContinuousState
+} from "../../invention-assembly-runtime/src/rotary-continuous-angle.js";
+import {
   rotaryJointRelativeAngle,
   rotaryJointTargetDelta
 } from "../../invention-assembly-runtime/src/rotary-relative-angle.js";
@@ -27,6 +32,12 @@ export interface MechanicalRotaryTargetPayload {
   readonly targetRadians: number;
 }
 
+export interface MechanicalRotaryKinematics extends RotaryContinuousState {
+  readonly relationshipId: string;
+  readonly evidenceCommands: number;
+  readonly derivedFrom: "session-events+spatial";
+}
+
 export interface MechanicalRotaryCommandResult {
   readonly commandId: string;
   readonly relationshipId: string;
@@ -35,6 +46,10 @@ export interface MechanicalRotaryCommandResult {
   readonly followerEntityId: string;
   readonly beforeRadians: number;
   readonly afterRadians: number;
+  readonly beforeContinuousRadians: number;
+  readonly afterContinuousRadians: number;
+  readonly beforeRevolutions: number;
+  readonly afterRevolutions: number;
   readonly deltaRadians: number;
   readonly mode: "incremental" | "principal-shortest";
   readonly changed: boolean;
@@ -56,6 +71,15 @@ function normalizeNearZero(value: number): number {
 
 function record(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function numeric(value: unknown, label: string): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) throw new Error(`${label} must be finite numeric evidence`);
+  return value;
+}
+
+function rotaryEventType(type: string): boolean {
+  return type === "MechanicalRotaryStepExecuted" || type === "MechanicalRotaryTargetExecuted";
 }
 
 export class InventionMechanicalCommandRuntime {
@@ -105,6 +129,43 @@ export class InventionMechanicalCommandRuntime {
     });
   }
 
+  kinematics(relationshipId: string): MechanicalRotaryKinematics {
+    const { constraint } = this.#resolveJoint(relationshipId);
+    const driverBinding = this.spatial.binding(constraint.driver.entityId);
+    const followerBinding = this.spatial.binding(constraint.follower.entityId);
+    const principalRadians = normalizeNearZero(rotaryJointRelativeAngle(
+      constraint.driverAxisLocal,
+      constraint.followerAxisLocal,
+      driverBinding.rotation,
+      followerBinding.rotation
+    ));
+    const evidence = this.#rotaryEvidence(relationshipId);
+    if (evidence.length === 0) {
+      const state = rotaryContinuousState(principalRadians, principalRadians);
+      return { ...state, relationshipId, evidenceCommands: 0, derivedFrom: "session-events+spatial" };
+    }
+
+    const firstPayload = evidence[0]?.payload;
+    if (!firstPayload) throw new Error(`Mechanical rotary evidence missing first payload: ${relationshipId}`);
+    let continuousRadians = firstPayload.beforeContinuousRadians !== undefined
+      ? numeric(firstPayload.beforeContinuousRadians, "Mechanical rotary beforeContinuousRadians")
+      : numeric(firstPayload.beforeRadians, "Mechanical rotary legacy beforeRadians");
+
+    for (const entry of evidence) {
+      const deltaRadians = numeric(entry.payload.deltaRadians, "Mechanical rotary deltaRadians");
+      continuousRadians += deltaRadians;
+      if (entry.payload.afterContinuousRadians !== undefined) {
+        const recorded = numeric(entry.payload.afterContinuousRadians, "Mechanical rotary afterContinuousRadians");
+        if (Math.abs(recorded - continuousRadians) > 0.000001) {
+          throw new Error(`Mechanical rotary continuous evidence mismatch: ${relationshipId}`);
+        }
+      }
+    }
+
+    const state = rotaryContinuousState(principalRadians, continuousRadians);
+    return { ...state, relationshipId, evidenceCommands: evidence.length, derivedFrom: "session-events+spatial" };
+  }
+
   #relationships(): readonly EngineeringRelationship[] {
     return this.session.graph.snapshot().relationships;
   }
@@ -150,6 +211,7 @@ export class InventionMechanicalCommandRuntime {
     finiteRadians(deltaRadiansInput, "Mechanical rotary command delta");
     const deltaRadians = normalizeNearZero(deltaRadiansInput);
     const { constraint } = this.#resolveJoint(relationshipId);
+    const beforeKinematics = this.kinematics(relationshipId);
     const driverEntity = this.session.getEntity(constraint.driver.entityId);
     const followerEntity = this.session.getEntity(constraint.follower.entityId);
     const driverBinding = this.spatial.binding(constraint.driver.entityId);
@@ -157,12 +219,7 @@ export class InventionMechanicalCommandRuntime {
     const driverEndpointLocal = mechanicalPortLocalPosition(driverEntity, constraint.driver.portId);
     const followerEndpointLocal = mechanicalPortLocalPosition(followerEntity, constraint.follower.portId);
     const driverEndpointWorld = mechanicalPortWorldPosition(driverEndpointLocal, driverBinding);
-    const beforeRadians = rotaryJointRelativeAngle(
-      constraint.driverAxisLocal,
-      constraint.followerAxisLocal,
-      driverBinding.rotation,
-      followerBinding.rotation
-    );
+    const beforeRadians = beforeKinematics.principalRadians;
     const plan = planMechanicalRotaryJointStep(
       driverEndpointWorld,
       followerEndpointLocal,
@@ -184,6 +241,11 @@ export class InventionMechanicalCommandRuntime {
       driverBinding.rotation,
       afterBinding.rotation
     ));
+    const afterKinematics = advanceRotaryContinuousState(
+      beforeKinematics.continuousRadians,
+      deltaRadians,
+      afterRadians
+    );
     const changed = Math.abs(deltaRadians) > 1e-12;
     const result: MechanicalRotaryCommandResult = {
       commandId: command.id,
@@ -191,8 +253,12 @@ export class InventionMechanicalCommandRuntime {
       source: command.source,
       driverEntityId: constraint.driver.entityId,
       followerEntityId: constraint.follower.entityId,
-      beforeRadians: normalizeNearZero(beforeRadians),
+      beforeRadians,
       afterRadians,
+      beforeContinuousRadians: beforeKinematics.continuousRadians,
+      afterContinuousRadians: afterKinematics.continuousRadians,
+      beforeRevolutions: beforeKinematics.revolutions,
+      afterRevolutions: afterKinematics.revolutions,
       deltaRadians,
       mode,
       changed,
@@ -218,11 +284,22 @@ export class InventionMechanicalCommandRuntime {
         followerEntityId: result.followerEntityId,
         beforeRadians: result.beforeRadians,
         afterRadians: result.afterRadians,
+        beforeContinuousRadians: result.beforeContinuousRadians,
+        afterContinuousRadians: result.afterContinuousRadians,
+        beforeRevolutions: result.beforeRevolutions,
+        afterRevolutions: result.afterRevolutions,
         deltaRadians: result.deltaRadians,
         mode: result.mode,
         changed: result.changed,
         signature: result.signature
       }
+    });
+  }
+
+  #rotaryEvidence(relationshipId: string): readonly { readonly payload: Record<string, unknown> }[] {
+    return this.session.events.list().flatMap((event) => {
+      if (!rotaryEventType(event.type) || !record(event.payload) || event.payload.relationshipId !== relationshipId) return [];
+      return [{ payload: event.payload }];
     });
   }
 
