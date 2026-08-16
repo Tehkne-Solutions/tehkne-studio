@@ -5,6 +5,7 @@ import type { InventionSpatialScene } from "../../invention-spatial-runtime/src/
 import {
   MECHANICAL_COMMAND_SIGNATURE,
   mechanicalCommandRuntimeFor,
+  validateRotaryDurationSeconds,
   type InventionMechanicalCommandRuntime,
   type MechanicalRotaryCommandResult
 } from "./index.js";
@@ -15,6 +16,10 @@ export const MECHANICAL_ROTARY_CLEAR_HOME_COMMAND = "invention.mechanical.rotary
 
 export interface MechanicalRotaryHomePayload {
   readonly relationshipId: string;
+}
+
+export interface MechanicalRotaryGoHomePayload extends MechanicalRotaryHomePayload {
+  readonly durationSeconds?: number;
 }
 
 export interface MechanicalRotaryHome {
@@ -79,7 +84,7 @@ export class InventionMechanicalRotaryHomeRuntime {
       this.#executeSetHome(command as StudioCommand<MechanicalRotaryHomePayload>)
     );
     this.session.commands.register(MECHANICAL_ROTARY_GO_HOME_COMMAND, (command) =>
-      this.#executeGoHome(command as StudioCommand<MechanicalRotaryHomePayload>)
+      this.#executeGoHome(command as StudioCommand<MechanicalRotaryGoHomePayload>)
     );
     this.session.commands.register(MECHANICAL_ROTARY_CLEAR_HOME_COMMAND, (command) =>
       this.#executeClearHome(command as StudioCommand<MechanicalRotaryHomePayload>)
@@ -101,12 +106,16 @@ export class InventionMechanicalRotaryHomeRuntime {
 
   async goHome(
     relationshipId: string,
-    source: StudioCommand["source"] = "ui"
+    source: StudioCommand["source"] = "ui",
+    durationSeconds?: number
   ): Promise<CommandResult<MechanicalRotaryCommandResult>> {
+    const payload: MechanicalRotaryGoHomePayload = durationSeconds === undefined
+      ? { relationshipId }
+      : { relationshipId, durationSeconds: validateRotaryDurationSeconds(durationSeconds) };
     return this.session.commands.dispatch<MechanicalRotaryCommandResult>({
       id: this.#nextCommandId(),
       type: MECHANICAL_ROTARY_GO_HOME_COMMAND,
-      payload: { relationshipId },
+      payload,
       source,
       issuedAt: new Date().toISOString()
     });
@@ -167,13 +176,17 @@ export class InventionMechanicalRotaryHomeRuntime {
     return result;
   }
 
-  async #executeGoHome(command: StudioCommand<MechanicalRotaryHomePayload>): Promise<MechanicalRotaryCommandResult> {
+  async #executeGoHome(command: StudioCommand<MechanicalRotaryGoHomePayload>): Promise<MechanicalRotaryCommandResult> {
     const home = this.home(command.payload.relationshipId);
     if (!home) throw new Error(`Mechanical rotary home is not authored: ${command.payload.relationshipId}`);
+    const durationSeconds = command.payload.durationSeconds === undefined
+      ? undefined
+      : validateRotaryDurationSeconds(command.payload.durationSeconds);
     const movement = await this.mechanical.setContinuousTarget(
       command.payload.relationshipId,
       home.homeContinuousRadians,
-      command.source
+      command.source,
+      durationSeconds
     );
     if (!movement.ok || !movement.result) {
       throw new Error(movement.error ?? `Mechanical rotary go-home movement failed: ${command.payload.relationshipId}`);
@@ -188,6 +201,8 @@ export class InventionMechanicalRotaryHomeRuntime {
         movementCommandId: movement.result.commandId,
         relationshipId: command.payload.relationshipId,
         homeContinuousRadians: home.homeContinuousRadians,
+        durationSeconds: movement.result.durationSeconds,
+        rateMode: movement.result.rateMode,
         changed: movement.result.changed,
         signature: MECHANICAL_COMMAND_SIGNATURE
       }
