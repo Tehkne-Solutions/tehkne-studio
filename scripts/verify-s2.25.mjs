@@ -129,10 +129,10 @@ for (const token of ["Current baseline", "S2.25", "Rotary Continuous Target", "7
 const pkg = JSON.parse(await readFile("package.json", "utf8"));
 if (pkg.scripts?.["verify:s2.25"] !== "node scripts/verify-s2.25.mjs") throw new Error("S2.25 package verification script missing");
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
-if (!workflow.includes("S2.25 Rotary Continuous Target Gate")) throw new Error("S2.25 workflow identity missing");
+if (!workflow.includes("S2.25 rotary continuous target contract")) throw new Error("S2.25 cumulative CI contract step missing");
 if (!workflow.includes("npm run verify:s2.25")) throw new Error("S2.25 CI contract missing");
+if (!workflow.includes("S2.25 rotary continuous target browser contract")) throw new Error("S2.25 cumulative browser step missing");
 if (!workflow.includes("tests/browser/rotary-continuous-target.spec.ts")) throw new Error("S2.25 dedicated browser gate missing from CI");
-if (!workflow.includes("s2-25-browser-failure")) throw new Error("S2.25 failure artifact identity missing");
 if (workflow.includes("contents: write")) throw new Error("S2.25 CI must remain read-only");
 
-console.log("S2.25 Rotary Continuous Target PASS · absolute multi-turn targets via existing session CommandBus + exact continuous/revolution evidence + atomic follower transform + restore without replay + no parallel state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.25 Rotary Continuous Target PASS · absolute multi-turn targets via existing session CommandBus + exact continuous/revolution evidence + atomic follower transform + restore without replay + cumulative CI contract + no parallel state/no dynamics fiction + Tehkné Solutions");
