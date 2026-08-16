@@ -8,6 +8,7 @@ import {
 } from "../../invention-assembly-runtime/src/index.js";
 import {
   advanceRotaryContinuousState,
+  ROTARY_CONTINUOUS_EPSILON,
   rotaryContinuousState,
   rotaryContinuousTargetDelta,
   type RotaryContinuousState
@@ -22,6 +23,8 @@ import { mechanicalPortLocalPosition, mechanicalPortWorldPosition } from "./port
 export const MECHANICAL_ROTARY_STEP_COMMAND = "invention.mechanical.rotary.step" as const;
 export const MECHANICAL_ROTARY_TARGET_COMMAND = "invention.mechanical.rotary.setTarget" as const;
 export const MECHANICAL_ROTARY_CONTINUOUS_TARGET_COMMAND = "invention.mechanical.rotary.setContinuousTarget" as const;
+export const MECHANICAL_ROTARY_SET_TRAVEL_LIMITS_COMMAND = "invention.mechanical.rotary.setTravelLimits" as const;
+export const MECHANICAL_ROTARY_CLEAR_TRAVEL_LIMITS_COMMAND = "invention.mechanical.rotary.clearTravelLimits" as const;
 export const MECHANICAL_COMMAND_SIGNATURE = "Tehkné Solutions" as const;
 
 export interface MechanicalRotaryStepPayload {
@@ -37,6 +40,34 @@ export interface MechanicalRotaryTargetPayload {
 export interface MechanicalRotaryContinuousTargetPayload {
   readonly relationshipId: string;
   readonly targetContinuousRadians: number;
+}
+
+export interface MechanicalRotaryTravelLimitsPayload {
+  readonly relationshipId: string;
+  readonly minContinuousRadians: number;
+  readonly maxContinuousRadians: number;
+}
+
+export interface MechanicalRotaryClearTravelLimitsPayload {
+  readonly relationshipId: string;
+}
+
+export interface MechanicalRotaryTravelLimits {
+  readonly mode: "continuous";
+  readonly minContinuousRadians: number;
+  readonly maxContinuousRadians: number;
+  readonly signature: typeof MECHANICAL_COMMAND_SIGNATURE;
+}
+
+export interface MechanicalRotaryTravelLimitsResult {
+  readonly commandId: string;
+  readonly relationshipId: string;
+  readonly source: StudioCommand["source"];
+  readonly action: "set" | "clear";
+  readonly previous: MechanicalRotaryTravelLimits | null;
+  readonly current: MechanicalRotaryTravelLimits | null;
+  readonly currentContinuousRadians: number;
+  readonly signature: typeof MECHANICAL_COMMAND_SIGNATURE;
 }
 
 export interface MechanicalRotaryKinematics extends RotaryContinuousState {
@@ -91,6 +122,42 @@ function rotaryEventType(type: string): boolean {
     || type === "MechanicalRotaryContinuousTargetExecuted";
 }
 
+function travelLimitsFromRelationship(relationship: EngineeringRelationship): MechanicalRotaryTravelLimits | null {
+  const value = relationship.metadata.rotaryTravelLimits;
+  if (value === undefined) return null;
+  if (!record(value)) throw new Error(`Mechanical rotary travel limits metadata must be an object: ${relationship.id}`);
+  if (value.mode !== "continuous") throw new Error(`Mechanical rotary travel limits mode must be continuous: ${relationship.id}`);
+  const minContinuousRadians = numeric(value.minContinuousRadians, "Mechanical rotary minimum travel");
+  const maxContinuousRadians = numeric(value.maxContinuousRadians, "Mechanical rotary maximum travel");
+  if (minContinuousRadians > maxContinuousRadians) {
+    throw new Error(`Mechanical rotary travel limits are inverted: ${relationship.id}`);
+  }
+  if (value.signature !== MECHANICAL_COMMAND_SIGNATURE) {
+    throw new Error(`Mechanical rotary travel limits signature mismatch: ${relationship.id}`);
+  }
+  return {
+    mode: "continuous",
+    minContinuousRadians,
+    maxContinuousRadians,
+    signature: MECHANICAL_COMMAND_SIGNATURE
+  };
+}
+
+function assertWithinTravelLimits(
+  relationshipId: string,
+  continuousRadians: number,
+  limits: MechanicalRotaryTravelLimits | null
+): void {
+  if (!limits) return;
+  if (continuousRadians < limits.minContinuousRadians - ROTARY_CONTINUOUS_EPSILON
+    || continuousRadians > limits.maxContinuousRadians + ROTARY_CONTINUOUS_EPSILON) {
+    throw new Error(
+      `Mechanical rotary travel limit exceeded: ${relationshipId} target=${continuousRadians} `
+      + `range=[${limits.minContinuousRadians}, ${limits.maxContinuousRadians}]`
+    );
+  }
+}
+
 export class InventionMechanicalCommandRuntime {
   #sequence: number;
 
@@ -108,6 +175,12 @@ export class InventionMechanicalCommandRuntime {
     );
     this.session.commands.register(MECHANICAL_ROTARY_CONTINUOUS_TARGET_COMMAND, (command) =>
       this.#executeContinuousTarget(command as StudioCommand<MechanicalRotaryContinuousTargetPayload>)
+    );
+    this.session.commands.register(MECHANICAL_ROTARY_SET_TRAVEL_LIMITS_COMMAND, (command) =>
+      this.#executeSetTravelLimits(command as StudioCommand<MechanicalRotaryTravelLimitsPayload>)
+    );
+    this.session.commands.register(MECHANICAL_ROTARY_CLEAR_TRAVEL_LIMITS_COMMAND, (command) =>
+      this.#executeClearTravelLimits(command as StudioCommand<MechanicalRotaryClearTravelLimitsPayload>)
     );
   }
 
@@ -154,6 +227,41 @@ export class InventionMechanicalCommandRuntime {
       source,
       issuedAt: new Date().toISOString()
     });
+  }
+
+  async setTravelLimits(
+    relationshipId: string,
+    minContinuousRadians: number,
+    maxContinuousRadians: number,
+    source: StudioCommand["source"] = "ui"
+  ): Promise<CommandResult<MechanicalRotaryTravelLimitsResult>> {
+    finiteRadians(minContinuousRadians, "Mechanical rotary minimum travel");
+    finiteRadians(maxContinuousRadians, "Mechanical rotary maximum travel");
+    return this.session.commands.dispatch<MechanicalRotaryTravelLimitsResult>({
+      id: this.#nextCommandId(),
+      type: MECHANICAL_ROTARY_SET_TRAVEL_LIMITS_COMMAND,
+      payload: { relationshipId, minContinuousRadians, maxContinuousRadians },
+      source,
+      issuedAt: new Date().toISOString()
+    });
+  }
+
+  async clearTravelLimits(
+    relationshipId: string,
+    source: StudioCommand["source"] = "ui"
+  ): Promise<CommandResult<MechanicalRotaryTravelLimitsResult>> {
+    return this.session.commands.dispatch<MechanicalRotaryTravelLimitsResult>({
+      id: this.#nextCommandId(),
+      type: MECHANICAL_ROTARY_CLEAR_TRAVEL_LIMITS_COMMAND,
+      payload: { relationshipId },
+      source,
+      issuedAt: new Date().toISOString()
+    });
+  }
+
+  travelLimits(relationshipId: string): MechanicalRotaryTravelLimits | null {
+    const { relationship } = this.#resolveJoint(relationshipId);
+    return travelLimitsFromRelationship(relationship);
   }
 
   kinematics(relationshipId: string): MechanicalRotaryKinematics {
@@ -236,6 +344,64 @@ export class InventionMechanicalCommandRuntime {
     return this.#apply(command, command.payload.relationshipId, target.deltaRadians, target.mode);
   }
 
+  #executeSetTravelLimits(command: StudioCommand<MechanicalRotaryTravelLimitsPayload>): MechanicalRotaryTravelLimitsResult {
+    finiteRadians(command.payload.minContinuousRadians, "Mechanical rotary minimum travel");
+    finiteRadians(command.payload.maxContinuousRadians, "Mechanical rotary maximum travel");
+    if (command.payload.minContinuousRadians > command.payload.maxContinuousRadians) {
+      throw new Error("Mechanical rotary travel limits require minContinuousRadians <= maxContinuousRadians");
+    }
+    const { relationship } = this.#resolveJoint(command.payload.relationshipId);
+    const currentContinuousRadians = this.kinematics(command.payload.relationshipId).continuousRadians;
+    const previous = travelLimitsFromRelationship(relationship);
+    const current: MechanicalRotaryTravelLimits = {
+      mode: "continuous",
+      minContinuousRadians: normalizeNearZero(command.payload.minContinuousRadians),
+      maxContinuousRadians: normalizeNearZero(command.payload.maxContinuousRadians),
+      signature: MECHANICAL_COMMAND_SIGNATURE
+    };
+    assertWithinTravelLimits(command.payload.relationshipId, currentContinuousRadians, current);
+    this.session.graph.replaceRelationship({
+      ...relationship,
+      metadata: {
+        ...relationship.metadata,
+        rotaryTravelLimits: current
+      }
+    });
+    const result: MechanicalRotaryTravelLimitsResult = {
+      commandId: command.id,
+      relationshipId: command.payload.relationshipId,
+      source: command.source,
+      action: "set",
+      previous,
+      current,
+      currentContinuousRadians,
+      signature: MECHANICAL_COMMAND_SIGNATURE
+    };
+    this.#recordTravelLimitsEvidence(command, result);
+    return result;
+  }
+
+  #executeClearTravelLimits(command: StudioCommand<MechanicalRotaryClearTravelLimitsPayload>): MechanicalRotaryTravelLimitsResult {
+    const { relationship } = this.#resolveJoint(command.payload.relationshipId);
+    const currentContinuousRadians = this.kinematics(command.payload.relationshipId).continuousRadians;
+    const previous = travelLimitsFromRelationship(relationship);
+    const metadata: Record<string, unknown> = { ...relationship.metadata };
+    delete metadata.rotaryTravelLimits;
+    this.session.graph.replaceRelationship({ ...relationship, metadata });
+    const result: MechanicalRotaryTravelLimitsResult = {
+      commandId: command.id,
+      relationshipId: command.payload.relationshipId,
+      source: command.source,
+      action: "clear",
+      previous,
+      current: null,
+      currentContinuousRadians,
+      signature: MECHANICAL_COMMAND_SIGNATURE
+    };
+    this.#recordTravelLimitsEvidence(command, result);
+    return result;
+  }
+
   #apply(
     command: StudioCommand<MechanicalRotaryStepPayload | MechanicalRotaryTargetPayload | MechanicalRotaryContinuousTargetPayload>,
     relationshipId: string,
@@ -244,8 +410,11 @@ export class InventionMechanicalCommandRuntime {
   ): MechanicalRotaryCommandResult {
     finiteRadians(deltaRadiansInput, "Mechanical rotary command delta");
     const deltaRadians = normalizeNearZero(deltaRadiansInput);
-    const { constraint } = this.#resolveJoint(relationshipId);
+    const { constraint, relationship } = this.#resolveJoint(relationshipId);
     const beforeKinematics = this.kinematics(relationshipId);
+    const limits = travelLimitsFromRelationship(relationship);
+    const intendedContinuousRadians = beforeKinematics.continuousRadians + deltaRadians;
+    assertWithinTravelLimits(relationshipId, intendedContinuousRadians, limits);
     const driverEntity = this.session.getEntity(constraint.driver.entityId);
     const followerEntity = this.session.getEntity(constraint.follower.entityId);
     const driverBinding = this.spatial.binding(constraint.driver.entityId);
@@ -330,6 +499,27 @@ export class InventionMechanicalCommandRuntime {
         deltaRadians: result.deltaRadians,
         mode: result.mode,
         changed: result.changed,
+        signature: result.signature
+      }
+    });
+  }
+
+  #recordTravelLimitsEvidence(
+    command: StudioCommand<MechanicalRotaryTravelLimitsPayload | MechanicalRotaryClearTravelLimitsPayload>,
+    result: MechanicalRotaryTravelLimitsResult
+  ): void {
+    this.session.events.record({
+      id: `event-${this.session.events.list().length + 1}`,
+      type: result.action === "set" ? "MechanicalRotaryTravelLimitsSet" : "MechanicalRotaryTravelLimitsCleared",
+      occurredAt: command.issuedAt,
+      source: command.source,
+      payload: {
+        commandId: command.id,
+        relationshipId: result.relationshipId,
+        action: result.action,
+        previous: result.previous,
+        current: result.current,
+        currentContinuousRadians: result.currentContinuousRadians,
         signature: result.signature
       }
     });

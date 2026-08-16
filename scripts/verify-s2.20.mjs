@@ -121,7 +121,7 @@ for (const token of [
   "Current baseline",
   "Rotary Joint Relative Angle",
   "principal angle",
-  "derived evidence",
+  "derived from",
   "HERO_CANDIDATE",
   "AF-001L",
   "Tehkné Solutions"
