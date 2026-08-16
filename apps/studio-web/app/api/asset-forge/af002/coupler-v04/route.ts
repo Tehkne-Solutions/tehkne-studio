@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { gunzipSync } from "node:zlib";
 import chunk0 from "./lod0/payload-v040-0";
-import chunk1 from "./lod0/payload-v040-1";
+import chunk1a from "./lod0/payload-v040-1a";
+import chunk1b from "./lod0/payload-v040-1b";
 import chunk2 from "./lod0/payload-v040-2";
 
 const EXPECTED_GZIP_BYTES = 11876;
@@ -14,7 +15,7 @@ function sha256(buffer: Buffer) {
 }
 
 export async function GET() {
-  const compressed = Buffer.from(chunk0 + chunk1 + chunk2, "base64");
+  const compressed = Buffer.from(chunk0 + chunk1a + chunk1b + chunk2, "base64");
   const transportSha = sha256(compressed);
   if (compressed.length !== EXPECTED_GZIP_BYTES || transportSha !== EXPECTED_GZIP_SHA256) {
     return Response.json({ stage: "transport", bytes: compressed.length, sha256: transportSha, signature: "Tehkné Solutions" }, { status: 500 });
