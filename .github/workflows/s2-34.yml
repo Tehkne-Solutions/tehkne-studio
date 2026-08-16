@@ -1,0 +1,77 @@
+name: S2.34 Rotary Waypoint Plan-Execution Attestation Gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  s2-34-candidate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - name: Dependency security audit
+        run: npm run security:audit
+      - name: Alpha regression and full domain gate
+        run: |
+          set -o pipefail
+          mkdir -p .ci-evidence
+          npm run verify:s1.12 2>&1 | tee .ci-evidence/s2-34-alpha.log
+      - name: S2.32 canonical execution evidence contract
+        run: npm run verify:s2.32
+      - name: S2.33 AF-002 dual-shaft baseline contract
+        run: npm run verify:s2.33
+      - name: S2.34 plan-execution attestation contract
+        run: npm run verify:s2.34
+      - name: Install Chromium runtime
+        run: npx playwright install --with-deps chromium
+      - name: S2.31 rotary waypoint sequence plan browser contract
+        run: npx playwright test tests/browser/rotary-waypoint-plan.spec.ts --config=playwright.config.ts
+      - name: S2.34 rotary waypoint plan attestation browser contract
+        run: npx playwright test tests/browser/rotary-waypoint-plan-attestation.spec.ts --config=playwright.config.ts
+      - name: Full platform browser smoke
+        run: |
+          set -o pipefail
+          npm run smoke:browser 2>&1 | tee .ci-evidence/s2-34-browser-smoke.log
+      - name: Assert AF-001I deterministic evidence
+        run: |
+          test -f test-results/af001i-evidence/af001i-three-quarter.png
+          test -f test-results/af001i-evidence/af001i-front.png
+          test -f test-results/af001i-evidence/af001i-side.png
+          test -f test-results/af001i-evidence/af001i-rear.png
+          test -f test-results/af001i-evidence/af001i-bearing.png
+          test -f test-results/af001i-evidence/af001i-terminals.png
+          test -f test-results/af001i-evidence/af001i-runtime-context.json
+      - name: Preserve S2.34 logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: s2-34-candidate-logs-${{ github.sha }}
+          path: .ci-evidence
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Preserve AF-001I browser evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: s2-34-af001i-evidence-${{ github.sha }}
+          path: test-results/af001i-evidence
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Preserve S2.34 browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: s2-34-browser-failure
+          path: test-results
+          if-no-files-found: ignore
+          retention-days: 7
