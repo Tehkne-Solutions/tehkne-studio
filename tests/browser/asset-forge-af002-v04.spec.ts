@@ -19,6 +19,9 @@ test("AF-002 v0.4 renders beside the unchanged v0.3 runtime without promotion", 
     page.request.get("/api/asset-forge/af002/coupler-v04")
   ]);
   expect(runtimeResponse.status()).toBe(200);
+  if (candidateResponse.status() !== 200) {
+    console.log(`AF002_V04_ENDPOINT_FAILURE status=${candidateResponse.status()} body=${await candidateResponse.text()}`);
+  }
   expect(candidateResponse.status()).toBe(200);
   const runtimeBody = await runtimeResponse.body();
   const candidateBody = await candidateResponse.body();
