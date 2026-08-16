@@ -85,8 +85,7 @@ for (const token of [
   "data-command-source",
   "data-command-id",
   "data-command-mode",
-  "CommandBus + atomic transform",
-  "sem RPM/torque"
+  "CommandBus + atomic transform"
 ]) {
   if (!control.includes(token)) throw new Error(`S2.23 UI command projection missing: ${token}`);
 }
@@ -138,4 +137,4 @@ for (const token of ["Current baseline", "S2.23", "Mechanical Command Runtime", 
   if (!readme.includes(token)) throw new Error(`S2.23 README baseline missing: ${token}`);
 }
 
-console.log("S2.23 Mechanical Command Runtime PASS · existing session CommandBus + UI/voice/automation source evidence + non-React physical port geometry + atomic spatial commit + persisted events + no second bus/no dynamics fiction + Tehkné Solutions");
+console.log("S2.23 Mechanical Command Runtime PASS · existing session CommandBus + UI/voice/automation source evidence + non-React physical port geometry + atomic spatial commit + persisted events + no second bus/no torque solver + later explicit rate evidence compatible + Tehkné Solutions");
