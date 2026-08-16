@@ -4,7 +4,7 @@ Virtual Engineering Atelier by **Tehkné Solutions**.
 
 ## Current baseline
 
-`0.1.0-alpha.1 · S1.12 + S2.23`
+`0.1.0-alpha.1 · S1.12 + S2.24`
 
 Tehkné Studio is an executable engineering workspace where products, components, experiments and spatial assemblies share the same engineering state instead of being disconnected demos.
 
@@ -24,26 +24,29 @@ Tehkné Studio is an executable engineering workspace where products, components
 - rigid assembly translation and RX/RY/RZ rotation;
 - axial alignment for `mechanical.rotary-shaft` joints;
 - **Rotary Joint DOF**: follower-only rotation around an already snapped and aligned shaft while the driver remains fixed;
-- **Rotary Joint Relative Angle**: signed principal angle in `[-π, π]` derived directly from the existing driver/follower transforms and authored shaft axes, with no duplicate joint-angle state;
-- **Rotary Joint Target Angle**: absolute principal positioning using a `principal-shortest` delta derived from the current transform evidence;
-- **Atomic Spatial Transform**: `transformBatch(...)` validates every position/rotation/entity in a mechanical transform set before committing any binding;
-- **Mechanical Command Runtime**: rotary step/target operations are dispatched through the existing `EngineeringSession.commands` `CommandBus`, preserving command source (`ui`, `voice`, `automation`, `simulation`, `system`) while reusing the same authoritative graph, planners and atomic spatial commit.
+- **Rotary Joint Relative Angle**: signed principal angle in `[-π, π]` derived directly from driver/follower transforms and authored shaft axes; it remains derived evidence, not duplicated joint state;
+- **Rotary Joint Target Angle**: absolute principal positioning using a `principal-shortest` delta derived from current transform evidence;
+- **Atomic Spatial Transform**: `transformBatch(...)` validates the complete mechanical transform set before any binding is committed;
+- **Mechanical Command Runtime (S2.23)**: rotary step/target operations run through the existing `EngineeringSession.commands` `CommandBus`, preserving source (`ui`, `voice`, `automation`, `simulation`, `system`) and reusing the same authoritative graph, planners and atomic spatial commit;
+- **Multi-turn Rotary Kinematics (S2.24)**: principal angle, continuous angle and integer revolutions are reconciled from the current `inventionSpatial` transform plus persisted `session.events`, without replaying commands or introducing a parallel kinematics document.
 
 ## Engineering invariants
 
-`connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints and rotary controls are projections of that same graph; Tehkné Studio does not maintain a parallel assembly, rotation or joint graph.
+`connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints and rotary controls are projections of that same graph; Tehkné Studio does not maintain a parallel assembly, rotation, joint or revolution graph.
 
-The `inventionSpatial` document remains the only persisted spatial source of truth. `transformBatch(...)` prepares and validates the complete mutation set first and writes to the canonical binding map only after every entry passes. Mechanical commands do not introduce a shadow transform map, command graph or second joint state.
+The `inventionSpatial` document remains the only persisted physical spatial source of truth. `transformBatch(...)` prepares and validates the complete mutation set before committing. Mechanical commands do not introduce a shadow transform map or second joint state.
 
-S2.23 deliberately reuses the **existing session CommandBus** instead of creating a mechanical bus. The semantic command types are `invention.mechanical.rotary.step` and `invention.mechanical.rotary.setTarget`. UI controls are now projections of those commands rather than owners of mechanical planning. The same runtime accepts `voice` and `automation` origins, so future Studio Intelligence and automation surfaces can invoke the exact same validated operation.
+S2.23 deliberately reuses the **existing session CommandBus**. The semantic command types remain `invention.mechanical.rotary.step` and `invention.mechanical.rotary.setTarget`. UI, voice and automation therefore invoke the same validated mechanical operations rather than separate implementations.
 
-Successful mechanical commands record evidence in the existing `session.events` stream with command ID, source, relationship, driver/follower, before/after angle and signed delta. That event stream is already part of the normal persistence snapshot, so restore preserves command evidence. New mechanical command IDs resume monotonically from persisted `mechanical-cmd-N` evidence instead of resetting or requiring a separate mechanical history store.
+Successful mechanical commands record audit evidence in the existing `session.events` stream with command ID, source, relationship, driver/follower, before/after principal angle, signed delta and, from S2.24 onward, before/after continuous angle and revolutions. That stream is already part of the normal persistence snapshot. Restore reads evidence to reconstruct kinematics; it does not replay commands or reapply transforms.
 
-Mechanical endpoint resolution is also runtime-safe outside React. Canonical mechanical local positions come from authored component metadata or explicit proxy anchors; AF-001 `shaft-out` is `[0, 0, 0.03185] m`, matching the AF-001M socket-transform QA for `SOCKET_MECH_AXIS_OUT`. React socket evidence remains a rendering concern, not a requirement for command execution.
+S2.24 continuous state is derived by reconciling the persisted command evidence with the current principal transform evidence. With no prior evidence, continuous angle starts from the principal angle and revolutions are zero. Legacy S2.23 events remain compatible through their `beforeRadians + deltaRadians` evidence. Tampered continuous evidence fails closed instead of silently changing revolution count.
 
-The S2.20 joint angle remains **derived evidence**, not mutable joint state. S2.21 target values remain commands, not persisted mechanical state. Multi-turn revolution counting remains intentionally deferred until it can be introduced as an explicit kinematics contract on top of the CommandBus/atomic-transform foundation.
+The S2.24 stabilization deliberately avoids using an exact `±π` target as a directional test because `+π` and `-π` are equivalent shortest representatives. The canonical wrap proof uses `170° → -170°`, which has an unambiguous shortest delta of `+20°`: after one full turn, the sequence reaches `530°` continuous and then `550°` continuous / two revolutions while the principal angle wraps to `-170°`.
 
-Physics and simulation remain fail-closed. S2.23 does **not** claim RPM, angular velocity, acceleration or torque dynamics.
+Mechanical endpoint resolution remains runtime-safe outside React. Canonical mechanical local positions come from authored component metadata or explicit proxy anchors; AF-001 `shaft-out` is `[0, 0, 0.03185] m`, matching the AF-001M socket-transform QA for `SOCKET_MECH_AXIS_OUT`.
+
+Physics and simulation remain fail-closed. S2.24 is **kinematics only**: it does not claim RPM, angular velocity, acceleration, torque or time integration.
 
 ## Asset Forge · AF-001
 
@@ -56,7 +59,7 @@ Current motor candidate: `TS_ELEC_MOTOR_DC_A v0.6.6-hero-candidate`.
 - physical electrical, shaft and mount sockets are materialized in the runtime;
 - AF-001L target hardware validation remains the only blocker before any `GOLDEN_ASSET` promotion.
 
-The AF-001L gate is intentionally fail-closed: hosted CI validates its contract, while the physical benchmark requires an explicit target-hardware run and real hardware attestation.
+The AF-001L gate remains intentionally fail-closed: hosted CI validates its contract while the physical benchmark requires explicit target-hardware execution and real hardware attestation.
 
 ## Verification
 
@@ -64,11 +67,11 @@ The AF-001L gate is intentionally fail-closed: hosted CI validates its contract,
 npm ci --ignore-scripts
 npm run security:audit
 npm run verify:s1.12
-npm run verify:s2.23
+npm run verify:s2.24
 npm run smoke:browser
 ```
 
-The cumulative S2.23 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform before validating the S2.23 Mechanical Command Runtime, followed by the complete browser smoke and AF-001I deterministic evidence.
+The cumulative S2.24 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform → S2.23 Mechanical Command Runtime before validating S2.24 Multi-turn Rotary Kinematics, followed by the complete Chromium smoke and AF-001I deterministic evidence.
 
 ## Repository structure
 
