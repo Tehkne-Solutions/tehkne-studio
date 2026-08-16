@@ -67,14 +67,14 @@ for (const token of [
   "axialConstraintMap",
   "planMechanicalAxialAlignment",
   "followerEndpoint.localPosition",
-  "spatial.rotate(plan.entityId, plan.toRotation)",
-  "spatial.move(plan.entityId, plan.toPosition)",
+  "spatial.transformBatch([{ entityId: plan.entityId, position: plan.toPosition, rotation: plan.toRotation }])",
   'data-mechanical-axial-joints={axialConstraints.length}',
   'data-axial-state={axialState}',
   "data-driver-axis={driverAxis ? formatAxis(driverAxis) : \"\"}",
   "data-follower-axis={followerAxis ? formatAxis(followerAxis) : \"\"}",
   "mechanicalAssemblyMembers(mechanicalConstraints, selectedEntityId)",
   "planMechanicalAssemblyRotation",
+  'data-spatial-transform-mode="atomic-batch"',
   "inventionSpatial: runtime.spatial.document()"
 ]) {
   if (!workbench.includes(token)) throw new Error(`S2.18 semantic Workbench contract missing: ${token}`);
@@ -118,4 +118,4 @@ if (!workflow.includes("npm run verify:s2.18")) throw new Error("S2.18 CI contra
 if (!workflow.includes("tests/browser/axial-joint-alignment.spec.ts")) throw new Error("S2.18 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.18 CI must remain read-only");
 
-console.log("S2.18 Axial Joint Alignment PASS · semantic connectedTo-derived rotary axis contract + atomic orientation/position planner + rigid-rotation composition + no torque fiction + Tehkné Solutions");
+console.log("S2.18 Axial Joint Alignment PASS · semantic connectedTo-derived rotary axis contract + atomic spatial batch commit + rigid-rotation composition + no torque fiction + Tehkné Solutions");

@@ -197,10 +197,13 @@ function MechanicalConstraintSynchronizer({ constraint, axialConstraint, sourceE
           sourceBinding,
           targetBinding
         );
-        spatial.rotate(plan.entityId, plan.toRotation);
-        spatial.move(plan.entityId, plan.toPosition);
+        spatial.transformBatch([{ entityId: plan.entityId, position: plan.toPosition, rotation: plan.toRotation }]);
       } else {
-        spatial.move(constraint.follower.entityId, coincidentFollowerPosition(driverEndpoint.position, followerEndpoint.position, targetBinding));
+        spatial.transformBatch([{
+          entityId: constraint.follower.entityId,
+          position: coincidentFollowerPosition(driverEndpoint.position, followerEndpoint.position, targetBinding),
+          rotation: targetBinding.rotation
+        }]);
       }
       onSnapped(constraint);
     } catch (cause) { onBlocked(constraint, cause); }
@@ -254,8 +257,12 @@ export function Invention3DWorkbench() {
     try {
       const { min, max } = INVENTION_SPATIAL_BOUNDS; const clamped = clamp(selectedBinding.position[axis] + requestedDelta, min[axis], max[axis]); const deltaValue = clamped - selectedBinding.position[axis];
       const delta: SpatialVector3 = { x: 0, y: 0, z: 0, [axis]: deltaValue }; const members = mechanicalAssemblyMembers(mechanicalConstraints, selectedEntityId); const plan = planMechanicalAssemblyTranslation(bindings, members, delta);
-      for (const move of plan) runtime.spatial.move(move.entityId, move.to);
-      const moved = runtime.spatial.binding(selectedEntityId); changed(`Transform 3D · ${selectedEntity?.name ?? selectedEntityId} · x ${format(moved.position.x)} · y ${format(moved.position.y)} · z ${format(moved.position.z)} · assembly ${members.length} peça(s).`);
+      runtime.spatial.transformBatch(plan.map((move) => {
+        const current = bindingMap.get(move.entityId);
+        if (!current) throw new Error(`Mechanical assembly missing spatial binding at atomic commit: ${move.entityId}`);
+        return { entityId: move.entityId, position: move.to, rotation: current.rotation };
+      }));
+      const moved = runtime.spatial.binding(selectedEntityId); changed(`Transform 3D · ${selectedEntity?.name ?? selectedEntityId} · x ${format(moved.position.x)} · y ${format(moved.position.y)} · z ${format(moved.position.z)} · assembly ${members.length} peça(s) · atomic batch.`);
     } catch (cause) { blocked(cause); }
   };
   const rotateSelected = (axis: MechanicalRotationAxis, radians: number): void => {
@@ -263,12 +270,9 @@ export function Invention3DWorkbench() {
     try {
       const members = mechanicalAssemblyMembers(mechanicalConstraints, selectedEntityId);
       const plan = planMechanicalAssemblyRotation(bindings, members, selectedEntityId, axis, radians);
-      for (const entry of plan) {
-        runtime.spatial.move(entry.entityId, entry.toPosition);
-        runtime.spatial.rotate(entry.entityId, entry.toRotation);
-      }
+      runtime.spatial.transformBatch(plan.map((entry) => ({ entityId: entry.entityId, position: entry.toPosition, rotation: entry.toRotation })));
       const rotated = runtime.spatial.binding(selectedEntityId);
-      changed(`Rotate 3D · ${selectedEntity?.name ?? selectedEntityId} · rx ${format(rotated.rotation.x)} · ry ${format(rotated.rotation.y)} · rz ${format(rotated.rotation.z)} · pivot ${selectedEntityId} · assembly ${members.length} peça(s).`);
+      changed(`Rotate 3D · ${selectedEntity?.name ?? selectedEntityId} · rx ${format(rotated.rotation.x)} · ry ${format(rotated.rotation.y)} · rz ${format(rotated.rotation.z)} · pivot ${selectedEntityId} · assembly ${members.length} peça(s) · atomic batch.`);
     } catch (cause) { blocked(cause); }
   };
   const validateMechanicalConnection = (from: InventionPortRef, to: InventionPortRef): boolean => {
@@ -301,9 +305,9 @@ export function Invention3DWorkbench() {
 
   return <><button type="button" className={styles.trigger} data-testid="invention-3d-trigger" onClick={openWorkbench}>3D INVENTION WORKBENCH</button>
     {open ? <section className={styles.overlay} aria-label="3D Invention Workbench"><div className={styles.shell}>
-      <header className={styles.header}><div><span>TEHKNÉ SOLUTIONS · S2.19 · S2.18 LINEAGE</span><strong>Rotary Joint DOF · Axial Joint Alignment · Rigid Assembly Rotation · Mechanical Assembly · Direct Socket Wiring · 3D Invention Workbench</strong></div><div className={styles.actions}><button type="button" onClick={newProject}>Novo projeto</button><button type="button" onClick={save}>Guardar 3D</button>{saved ? <button type="button" onClick={restore}>Restaurar 3D</button> : null}<button type="button" onClick={() => setOpen(false)} aria-label="Fechar 3D Invention Workbench">Fechar</button></div></header>
-      <div className={styles.status} data-testid="invention-3d-status" data-real-assets={assetBackedCount} data-proxies={proxyCount} data-socket-aware-wires={socketAwareWireCount} data-direct-socket-mode={sourceRef ? "armed" : "idle"} data-direct-socket-source={sourceKey} data-mechanical-assemblies={mechanicalConstraints.length} data-mechanical-axial-joints={axialConstraints.length} data-rotary-joint-dof={axialConstraints.length} data-rigid-assembly-rotation="enabled">
-        <strong>INVENTION 3D · {components.length} COMPONENTES · {connections.length} RELAÇÕES</strong><span>MESMO ENGINEERING GRAPH · {bindings.length} BINDINGS · SIMULAÇÃO {document.simulationStatus.toUpperCase()}</span><span>VISUAL · {assetBackedCount} REAL ASSET · {proxyCount} PROXY · {socketAwareWireCount} SOCKET-AWARE · {mechanicalConstraints.length} ASSEMBLY · {axialConstraints.length} AXIAL · {axialConstraints.length} ROTARY DOF</span><span>SOCKET AUTHORING · {sourceRef ? `ORIGEM ${sourceKey} · ${compatibleTargetKeys.size} ALVOS` : "IDLE · CLIQUE UM SOCKET REAL"}</span>
+      <header className={styles.header}><div><span>TEHKNÉ SOLUTIONS · S2.22</span><strong>Atomic Spatial Transform · Rotary Joint Target Angle · Rotary Joint DOF · Axial Joint Alignment · Rigid Assembly Rotation · Mechanical Assembly · Direct Socket Wiring · 3D Invention Workbench</strong></div><div className={styles.actions}><button type="button" onClick={newProject}>Novo projeto</button><button type="button" onClick={save}>Guardar 3D</button>{saved ? <button type="button" onClick={restore}>Restaurar 3D</button> : null}<button type="button" onClick={() => setOpen(false)} aria-label="Fechar 3D Invention Workbench">Fechar</button></div></header>
+      <div className={styles.status} data-testid="invention-3d-status" data-real-assets={assetBackedCount} data-proxies={proxyCount} data-socket-aware-wires={socketAwareWireCount} data-direct-socket-mode={sourceRef ? "armed" : "idle"} data-direct-socket-source={sourceKey} data-mechanical-assemblies={mechanicalConstraints.length} data-mechanical-axial-joints={axialConstraints.length} data-rotary-joint-dof={axialConstraints.length} data-rigid-assembly-rotation="enabled" data-spatial-transform-mode="atomic-batch">
+        <strong>INVENTION 3D · {components.length} COMPONENTES · {connections.length} RELAÇÕES</strong><span>MESMO ENGINEERING GRAPH · {bindings.length} BINDINGS · SIMULAÇÃO {document.simulationStatus.toUpperCase()}</span><span>VISUAL · {assetBackedCount} REAL ASSET · {proxyCount} PROXY · {socketAwareWireCount} SOCKET-AWARE · {mechanicalConstraints.length} ASSEMBLY · {axialConstraints.length} AXIAL · {axialConstraints.length} ROTARY DOF</span><span>TRANSFORM · ATOMIC BATCH · VALIDATE ALL BEFORE COMMIT</span><span>SOCKET AUTHORING · {sourceRef ? `ORIGEM ${sourceKey} · ${compatibleTargetKeys.size} ALVOS` : "IDLE · CLIQUE UM SOCKET REAL"}</span>
       </div>
       <div className={styles.body}>
         <aside className={styles.library}><label>Componente canônico<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="battery, regulator, motor, wheel, bracket..." /></label><select aria-label="Definição 3D" value={selectedDefinition?.definitionId ?? ""} onChange={(event) => setSelectedDefinitionId(event.target.value)}>{definitions.map((definition: ComponentDefinition) => <option key={definition.definitionId} value={definition.definitionId}>{definition.name} · {definition.domain}</option>)}</select><button type="button" onClick={addSelected} disabled={!selectedDefinition}>Adicionar ao 3D</button><span>ENTIDADES</span><div className={styles.entityList}>{components.map((entity) => { const visual = visualAssetForEntity(entity); const proxy = spatialProxyForEntity(entity); return <button type="button" key={entity.id} data-selected={selectedEntityId === entity.id} data-visual-source={visual ? "asset" : "proxy"} data-proxy-kind={proxy?.kind ?? ""} onClick={() => setSelectedEntityId(runtime.spatial.select(entity.id).entity.id)}><strong>{entity.name}</strong><small>{entity.id} · {visual ? "REAL ASSET" : proxy ? `PROXY ${proxy.kind.toUpperCase()}` : "PROXY"}</small></button>; })}</div></aside>

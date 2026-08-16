@@ -36,6 +36,12 @@ export interface InventionSpatialConnectionSegment {
   readonly sharedInterfaces: readonly string[];
 }
 
+export interface InventionSpatialTransformMutation {
+  readonly entityId: EntityId;
+  readonly position: SpatialVector3;
+  readonly rotation: SpatialVector3;
+}
+
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -177,21 +183,44 @@ export class InventionSpatialScene {
   }
 
   move(entityId: EntityId, position: SpatialVector3): SpatialEntityBinding {
-    assertFinitePosition(position);
     const binding = this.#bindings.get(entityId);
     if (!binding) throw new Error(`Unknown invention spatial binding: ${entityId}`);
-    const next: SpatialEntityBinding = { ...binding, position: clone(position) };
-    this.#bindings.set(entityId, next);
-    return clone(next);
+    return this.transform(entityId, position, binding.rotation);
   }
 
   rotate(entityId: EntityId, rotation: SpatialVector3): SpatialEntityBinding {
-    assertFiniteRotation(rotation);
     const binding = this.#bindings.get(entityId);
     if (!binding) throw new Error(`Unknown invention spatial binding: ${entityId}`);
-    const next: SpatialEntityBinding = { ...binding, rotation: clone(rotation) };
-    this.#bindings.set(entityId, next);
-    return clone(next);
+    return this.transform(entityId, binding.position, rotation);
+  }
+
+  transform(entityId: EntityId, position: SpatialVector3, rotation: SpatialVector3): SpatialEntityBinding {
+    const transformed = this.transformBatch([{ entityId, position, rotation }]);
+    const next = transformed[0];
+    if (!next) throw new Error(`Spatial transform did not produce a binding: ${entityId}`);
+    return next;
+  }
+
+  transformBatch(mutations: readonly InventionSpatialTransformMutation[]): readonly SpatialEntityBinding[] {
+    if (!Array.isArray(mutations)) throw new Error("Spatial transform batch must be an array");
+    const seen = new Set<EntityId>();
+    const prepared = mutations.map((mutation) => {
+      if (!mutation || typeof mutation.entityId !== "string" || !mutation.entityId) throw new Error("Spatial transform requires entityId");
+      if (seen.has(mutation.entityId)) throw new Error(`Duplicate spatial transform entity: ${mutation.entityId}`);
+      seen.add(mutation.entityId);
+      const binding = this.#bindings.get(mutation.entityId);
+      if (!binding) throw new Error(`Unknown invention spatial binding: ${mutation.entityId}`);
+      assertFinitePosition(mutation.position);
+      assertFiniteRotation(mutation.rotation);
+      return {
+        ...binding,
+        position: clone(mutation.position),
+        rotation: clone(mutation.rotation)
+      } satisfies SpatialEntityBinding;
+    });
+
+    for (const next of prepared) this.#bindings.set(next.entityId, next);
+    return prepared.map(clone);
   }
 
   binding(entityId: EntityId): SpatialEntityBinding {

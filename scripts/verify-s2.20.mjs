@@ -118,14 +118,14 @@ for (const token of [
 const readme = await readFile("README.md", "utf8");
 for (const token of [
   "Current baseline",
-  "S2.20",
   "Rotary Joint Relative Angle",
-  "principal relative angle",
+  "principal angle",
+  "derived evidence",
   "HERO_CANDIDATE",
   "AF-001L",
   "Tehkné Solutions"
 ]) {
-  if (!readme.includes(token)) throw new Error(`S2.20 README baseline missing: ${token}`);
+  if (!readme.includes(token)) throw new Error(`S2.20 README semantic baseline missing: ${token}`);
 }
 
 const pkg = JSON.parse(await readFile("package.json", "utf8"));
@@ -137,4 +137,4 @@ if (!workflow.includes("npm run verify:s2.20")) throw new Error("S2.20 CI contra
 if (!workflow.includes("tests/browser/rotary-joint-relative-angle.spec.ts")) throw new Error("S2.20 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.20 CI must remain read-only");
 
-console.log("S2.20 Rotary Joint Relative Angle PASS · signed principal angle derived from persisted transforms + rigid-invariant + no joint state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.20 Rotary Joint Relative Angle PASS · signed principal angle derived from persisted transforms + rigid-invariant + semantic README contract + no joint state/no dynamics fiction + Tehkné Solutions");

@@ -14,7 +14,8 @@ const spatial = await readFile("packages/invention-spatial-runtime/src/index.ts"
 for (const token of [
   "assertFiniteRotation",
   "rotate(entityId: EntityId, rotation: SpatialVector3)",
-  "rotation: clone(rotation)",
+  "transformBatch(mutations: readonly InventionSpatialTransformMutation[])",
+  "rotation: clone(mutation.rotation)",
   "parseInventionSpatialDocument",
   "candidate.rotation"
 ]) {
@@ -45,9 +46,12 @@ for (const token of [
   "ROTATE_STEP_RAD = Math.PI / 12",
   "planMechanicalAssemblyRotation",
   "const rotateSelected = (axis: MechanicalRotationAxis, radians: number): void =>",
-  "runtime.spatial.rotate(entry.entityId, entry.toRotation)",
+  "runtime.spatial.transformBatch(plan.map((entry)",
+  "entry.toPosition",
+  "entry.toRotation",
   "Rotate 3D",
   'data-rigid-assembly-rotation="enabled"',
+  'data-spatial-transform-mode="atomic-batch"',
   "data-rx={format(selectedBinding.rotation.x)}",
   "data-ry={format(selectedBinding.rotation.y)}",
   "data-rz={format(selectedBinding.rotation.z)}",
@@ -99,4 +103,4 @@ if (!workflow.includes("npm run verify:s2.17")) throw new Error("S2.17 CI contra
 if (!workflow.includes("tests/browser/rigid-assembly-rotation.spec.ts")) throw new Error("S2.17 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.17 CI must remain read-only");
 
-console.log("S2.17 Rigid Mechanical Assembly Rotation PASS · semantic rigid-rotation contract + pure quaternion planner + pivot orbit + persisted XYZ orientation + same connectedTo assembly + no torque fiction · Tehkné Solutions");
+console.log("S2.17 Rigid Mechanical Assembly Rotation PASS · semantic rigid-rotation contract + pure quaternion planner + atomic spatial batch + pivot orbit + same connectedTo assembly + no torque fiction · Tehkné Solutions");

@@ -46,8 +46,9 @@ for (const token of [
   "JOINT −",
   "JOINT +",
   "disabled={!ready}",
-  "spatial.rotate(plan.entityId, plan.toRotation)",
-  "spatial.move(plan.entityId, plan.toPosition)",
+  "commitRotaryPlan",
+  "spatial.transformBatch",
+  'data-transform-mode="atomic-batch"',
   "sem RPM/torque"
 ]) {
   if (!control.includes(token)) throw new Error(`S2.19 control contract missing: ${token}`);
@@ -111,4 +112,4 @@ if (workflow.includes("contents: write")) throw new Error("S2.19 CI must remain 
 const sourceWorkflow = await readFile(".github/workflows/asset-forge-af001i-v065-contract.yml", "utf8");
 if (!sourceWorkflow.includes("actions/setup-node@v6") || !sourceWorkflow.includes('node-version: "24"')) throw new Error("S2.19 workflow housekeeping must align AF-001I source contract to Node 24/actions v6");
 
-console.log("S2.19 Rotary Joint DOF PASS · semantic follower-only shaft rotation + coincident endpoint preservation + axial/rigid composition + no dynamics fiction · Tehkné Solutions");
+console.log("S2.19 Rotary Joint DOF PASS · semantic follower-only shaft rotation + coincident endpoint preservation + atomic spatial commit + axial/rigid composition + no dynamics fiction · Tehkné Solutions");
