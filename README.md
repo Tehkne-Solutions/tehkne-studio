@@ -8,6 +8,8 @@ Virtual Engineering Atelier by **Tehkné Solutions**.
 
 Previous validated baseline: `0.1.0-alpha.1 · S1.12 + S2.30`.
 
+Historical validated baseline: `0.1.0-alpha.1 · S1.12 + S2.29`.
+
 Tehkné Studio is an executable engineering workspace where products, components, experiments and spatial assemblies share the same engineering state instead of being disconnected demos.
 
 ### Implemented platform foundation
