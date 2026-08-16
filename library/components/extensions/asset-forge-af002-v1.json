@@ -41,6 +41,29 @@
           "sha256": "48e8363cdc38b5ae93ace0b975c42498663e03c922970fb2b60e80c65d26b50e",
           "status": "RUNTIME_CANDIDATE"
         },
+        "visualAsset": {
+          "kind": "gltf",
+          "assetId": "TS_MECH_SHAFT_COUPLER_A",
+          "version": "0.3.0-dcc-candidate",
+          "status": "RUNTIME_CANDIDATE",
+          "lod": "LOD0",
+          "runtimeUrl": "/api/asset-forge/af002/coupler",
+          "triangles": 1792,
+          "bytes": 22600,
+          "sha256": "48e8363cdc38b5ae93ace0b975c42498663e03c922970fb2b60e80c65d26b50e"
+        },
+        "portSocketMap": {
+          "axis-in": "SOCKET_MECH_AXIS_IN",
+          "axis-out": "SOCKET_MECH_AXIS_OUT"
+        },
+        "mechanicalPortPositionMap": {
+          "axis-in": [0, 0, -0.0175],
+          "axis-out": [0, 0, 0.0175]
+        },
+        "mechanicalPortAxisMap": {
+          "axis-in": [0, 0, -1],
+          "axis-out": [0, 0, 1]
+        },
         "physicalClaims": {
           "geometry": true,
           "physicalSockets": true,
