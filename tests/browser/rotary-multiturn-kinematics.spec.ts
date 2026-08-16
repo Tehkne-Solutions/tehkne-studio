@@ -32,9 +32,10 @@ test("S2.24 derives continuous multi-turn angle across repeated steps targets an
   await expect(joint).toHaveAttribute("data-kinematics-evidence", "24");
 
   const target = joint.getByLabel("Rotary joint target angle degrees");
-  await target.fill("180");
+  await target.fill("170");
   await joint.getByRole("button", { name: "SET ANGLE", exact: true }).click();
-  await expect(joint).toHaveAttribute("data-continuous-angle-rad", "9.425");
+  await expect(joint).toHaveAttribute("data-angle-rad", "2.967");
+  await expect(joint).toHaveAttribute("data-continuous-angle-rad", "9.250");
   await expect(joint).toHaveAttribute("data-revolutions", "1");
 
   await target.fill("-170");
