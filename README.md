@@ -4,7 +4,7 @@ Virtual Engineering Atelier by **Tehkné Solutions**.
 
 ## Current baseline
 
-`0.1.0-alpha.1 · S1.12 + S2.21`
+`0.1.0-alpha.1 · S1.12 + S2.22`
 
 Tehkné Studio is an executable engineering workspace where products, components, experiments and spatial assemblies share the same engineering state instead of being disconnected demos.
 
@@ -25,19 +25,22 @@ Tehkné Studio is an executable engineering workspace where products, components
 - axial alignment for `mechanical.rotary-shaft` joints;
 - **Rotary Joint DOF**: follower-only rotation around an already snapped and aligned shaft while the driver remains fixed;
 - **Rotary Joint Relative Angle**: signed principal angle in `[-π, π]` derived directly from the existing driver/follower transforms and authored shaft axes, with no duplicate joint-angle state;
-- **Rotary Joint Target Angle**: absolute principal positioning using a `principal-shortest` delta derived from the current transform evidence, then applied through the existing follower-only physical planner.
+- **Rotary Joint Target Angle**: absolute principal positioning using a `principal-shortest` delta derived from the current transform evidence, then applied through the existing follower-only physical planner;
+- **Atomic Spatial Transform**: `transformBatch(...)` validates every position/rotation/entity in a mechanical transform set before committing any binding, so axial snap, assembly translation, rigid rotation and rotary target changes are observed as one spatial transaction.
 
 ## Engineering invariants
 
 `connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints and rotary controls are projections of that same graph; Tehkné Studio does not maintain a parallel assembly, rotation or joint graph.
 
-The S2.20 joint angle is **derived evidence**, not new mutable state. It is reconstructed from the persisted `inventionSpatial` transforms, remains invariant when the whole assembly receives a rigid transform, and intentionally reports only the principal relative angle.
+The `inventionSpatial` document remains the only persisted spatial source of truth. S2.22 does not add a transaction graph, shadow binding map or pending-transform state. `transformBatch(...)` prepares and validates the complete mutation set first and writes to the canonical binding map only after every entry passes. Existing `move()` and `rotate()` APIs remain backward-compatible delegates to the same atomic transform primitive.
 
-S2.21 adds an absolute positioning command without adding a second source of truth. The requested target is normalized to the principal interval, the shortest signed delta is calculated from the current derived angle, and that delta is executed by the same S2.19 follower-only planner. The target value itself is not persisted as mechanical state; save/reload reconstructs the resulting angle from `inventionSpatial`.
+Mechanical paths now use the atomic primitive end-to-end: automatic coincident/axial snap, multi-member assembly translation, rigid assembly rotation, incremental rotary-joint steps and absolute target-angle positioning. A rejected batch cannot expose a partially moved or partially rotated assembly.
+
+The S2.20 joint angle remains **derived evidence**, not mutable joint state. S2.21 target values remain commands, not persisted mechanical state. Save/reload reconstructs the resulting geometry from the signed `inventionSpatial` transforms.
 
 Multi-turn revolution counting requires an explicit future kinematics contract rather than being inferred from principal transforms.
 
-Physics and simulation remain fail-closed. S2.21 does **not** claim RPM, angular velocity, acceleration or torque dynamics. Those require later explicitly modeled state/solver evidence.
+Physics and simulation remain fail-closed. S2.22 does **not** claim RPM, angular velocity, acceleration or torque dynamics. Those require later explicitly modeled state/solver evidence.
 
 ## Asset Forge · AF-001
 
@@ -58,11 +61,11 @@ The AF-001L gate is intentionally fail-closed: hosted CI validates its contract,
 npm ci --ignore-scripts
 npm run security:audit
 npm run verify:s1.12
-npm run verify:s2.21
+npm run verify:s2.22
 npm run smoke:browser
 ```
 
-The cumulative S2.21 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle before validating the S2.21 Target Angle, followed by the complete browser smoke and AF-001I deterministic evidence.
+The cumulative S2.22 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle before validating atomic spatial commit semantics, followed by the complete browser smoke and AF-001I deterministic evidence.
 
 ## Repository structure
 
