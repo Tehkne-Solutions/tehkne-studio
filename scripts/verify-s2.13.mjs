@@ -26,8 +26,8 @@ for (const token of ["GltfVisualAssetDescriptor", "visualAssetForEntity", 'raw.k
   if (!visualRuntime.includes(token)) throw new Error(`S2.13 visual runtime contract missing: ${token}`);
 }
 const workbench = await readFile("apps/studio-web/components/Invention3DWorkbench.tsx", "utf8");
-for (const token of ["assetForgeExtension", "applyComponentCatalogExtension(tabletCatalog, assetForgeExtension)", "visualAssetForEntity", "AssetBackedComponent", "AssetLoadingPlaceholder", "ComponentProxy", 'data-testid="invention-3d-visual-source"', 'data-source={selectedVisual ? "asset" : "proxy"}', "PROXY EXPLÍCITO", "REAL ASSET", "frameloop=\"demand\"", "runtime.spatial.connectionSegments(connections)", "runtime.spatial.move", "runtime.builder.connect", "runtime.builder.disconnect", "inventionSpatial: runtime.spatial.document()"] ) {
-  if (!workbench.includes(token)) throw new Error(`S2.13 workbench contract missing: ${token}`);
+for (const token of ["assetForgeExtension", "applyComponentCatalogExtension(tabletCatalog, assetForgeExtension)", "visualAssetForEntity", "AssetBackedComponent", "AssetLoadingPlaceholder", "ComponentProxy", 'data-testid="invention-3d-visual-source"', 'data-source={selectedVisual ? "asset" : "proxy"}', "PROXY EXPLÍCITO", "REAL ASSET", "frameloop=\"demand\"", "runtime.spatial.connectionSegments(connections)", "runtime.spatial.transformBatch", "runtime.builder.connect", "runtime.builder.disconnect", "inventionSpatial: runtime.spatial.document()"] ) {
+  if (!workbench.includes(token)) throw new Error(`S2.13 semantic workbench contract missing: ${token}`);
 }
 for (const forbidden of ['status: "GOLDEN_ASSET"', "parallelGraph", "inventionGraph3d", "runFunctionalBoot("]) if (workbench.includes(forbidden)) throw new Error(`S2.13 forbidden workbench behavior: ${forbidden}`);
 const browser = await readFile("tests/browser/asset-backed-invention.spec.ts", "utf8");
@@ -36,4 +36,4 @@ const rootPackage = JSON.parse(await readFile("package.json", "utf8"));
 if (rootPackage.scripts?.["verify:s2.13"] !== "node scripts/verify-s2.13.mjs") throw new Error("S2.13 package verification script missing");
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
 if (!workflow.includes("npm run verify:s2.13") || workflow.includes("contents: write")) throw new Error("S2.13 CI contract mismatch");
-console.log("S2.13 Asset-Backed Invention Rendering PASS · semantic asset-backed contract + AF-001 v0.6.6 physical sockets + explicit proxy fallback + same Engineering Graph/spatial persistence · Tehkné Solutions");
+console.log("S2.13 Asset-Backed Invention Rendering PASS · semantic asset-backed contract + AF-001 v0.6.6 physical sockets + atomic spatial manipulation + explicit proxy fallback + same Engineering Graph/spatial persistence · Tehkné Solutions");
