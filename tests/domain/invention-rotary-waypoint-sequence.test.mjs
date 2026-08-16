@@ -77,7 +77,9 @@ test("S2.30 authors normalized ordered waypoint sequences on connectedTo metadat
   assert.equal(sequences.sequence(connection.id, "INSPECT CYCLE")?.steps[0]?.positionKey, "load");
 
   await assert.rejects(() => sequences.saveSequence(connection.id, "Empty", [], "ui"), /requires 1 to 32 steps/);
-  await assert.rejects(() => sequences.saveSequence(connection.id, "Missing", [{ positionName: "Unknown" }], "ui"), /position is not authored/);
+  const missing = await sequences.saveSequence(connection.id, "Missing", [{ positionName: "Unknown" }], "ui");
+  assert.equal(missing.ok, false);
+  assert.match(missing.error ?? "", /position is not authored/);
   await assert.rejects(() => sequences.saveSequence(connection.id, "Bad duration", [{ positionName: "Inspect", durationSeconds: 0 }], "ui"), /greater than zero/);
 });
 
