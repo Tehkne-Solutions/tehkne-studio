@@ -6,7 +6,7 @@ import { Object3D } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 const BASELINE_URL = "/api/asset-forge/af002/coupler";
-const CANDIDATE_URL = "/api/asset-forge/af002/coupler-v040-candidate";
+const CANDIDATE_URL = "/api/asset-forge/af002/coupler-v04";
 
 function Asset({ url, onReady }: { readonly url: string; readonly onReady: (socketOk: boolean) => void }) {
   const gltf = useLoader(GLTFLoader, url);
