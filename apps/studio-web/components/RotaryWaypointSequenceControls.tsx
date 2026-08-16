@@ -188,7 +188,8 @@ export function RotaryWaypointSequenceControls({
     data-sequence-receipt-actual-travel-rad={receipt === null ? "" : receipt.actualCumulativeAbsoluteTravelRadians.toFixed(3)}
     data-sequence-receipt-match={receipt === null ? "" : String(receipt.allSegmentsMatched)}
     data-command-bus="session"
-    data-sequence-execution="canonical-continuous-targets+verified-receipt"
+    data-sequence-execution="canonical-continuous-targets"
+    data-sequence-receipt-mode="verified-post-run"
     data-sequence-preflight="shared-read-only-plan"
     data-sequence-plan-mutation="none"
     data-sequence-receipt-persistence="session-events"
