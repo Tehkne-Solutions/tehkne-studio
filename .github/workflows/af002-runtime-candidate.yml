@@ -1,0 +1,22 @@
+name: AF-002 Runtime Candidate Gate
+
+on:
+  pull_request:
+    paths:
+      - "apps/studio-web/app/api/asset-forge/af002/**"
+      - "library/components/extensions/asset-forge-af002-v1.json"
+      - "tools/asset_forge/af002_v02/verify_runtime_candidate.mjs"
+      - ".github/workflows/af002-runtime-candidate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-af002-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify AF-002 runtime candidate payload and metadata
+        run: node tools/asset_forge/af002_v02/verify_runtime_candidate.mjs
