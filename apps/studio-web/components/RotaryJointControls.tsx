@@ -24,6 +24,7 @@ import {
 import type { InventionSpatialScene } from "../../../packages/invention-spatial-runtime/src/index";
 import type { SpatialEntityBinding } from "../../../packages/spatial-runtime/src/index";
 import { useSpatialPortEndpoint } from "./InventionAssetVisual";
+import { RotaryWaypointSequenceControls } from "./RotaryWaypointSequenceControls";
 import styles from "./Invention3DWorkbench.module.css";
 
 const JOINT_STEP_RAD = Math.PI / 12;
@@ -348,5 +349,12 @@ export function RotaryJointControls({
     <div className={styles.axisGrid}>
       <button type="button" onClick={() => void deleteNamedPosition()} disabled={!ready || !selectedPosition}>DELETE POSITION</button>
     </div>
+    <RotaryWaypointSequenceControls
+      relationshipId={constraint.relationshipId}
+      spatial={spatial}
+      ready={ready}
+      onChanged={onChanged}
+      onBlocked={onBlocked}
+    />
   </div>;
 }
