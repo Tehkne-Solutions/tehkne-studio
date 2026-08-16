@@ -5,9 +5,9 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parent
 GLB=ROOT/"generated/AF-002_TS_MECH_SHAFT_COUPLER_A_v0.5.0-hero-quality.glb"
 EVIDENCE=ROOT/"generated/hero_quality_evidence.json"
-EXPECTED_BYTES=138136
+EXPECTED_BYTES=138120
 EXPECTED_TRIANGLES=19520
-EXPECTED_SHA256="b48f38c2c6d4e1d084c7c2fc1ae2cc8c09bf91dcd52cfcbf95c059f8caea3fda"
+EXPECTED_SHA256="2eda04ec02fb31c65c2d1ecb342c18bc4d7eaedd02af9a93b676b8a66d1fc6e6"
 EXPECTED_SOCKETS={
  "SOCKET_MECH_AXIS_IN":[0,0,-.0175],
  "SOCKET_MECH_AXIS_OUT":[0,0,.0175],
@@ -21,6 +21,8 @@ if not GLB.exists() or not EVIDENCE.exists(): fail("generated payload/evidence m
 data=GLB.read_bytes(); evidence=json.loads(EVIDENCE.read_text())
 if len(data)!=EXPECTED_BYTES: fail(f"bytes {len(data)} != {EXPECTED_BYTES}")
 if hashlib.sha256(data).hexdigest()!=EXPECTED_SHA256: fail("sha256 mismatch")
+if evidence.get("bytes")!=EXPECTED_BYTES: fail("evidence bytes mismatch")
+if evidence.get("sha256")!=EXPECTED_SHA256: fail("evidence sha256 mismatch")
 if evidence.get("triangles")!=EXPECTED_TRIANGLES: fail("triangle count mismatch")
 if evidence.get("socketTranslations")!=EXPECTED_SOCKETS: fail("socket transforms changed")
 if not REQUIRED_FEATURES.issubset(set(evidence.get("qualityFeatures",[]))): fail("quality feature missing")
