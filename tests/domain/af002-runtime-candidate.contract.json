@@ -1,0 +1,9 @@
+{
+  "assetId": "AF-002",
+  "definitionId": "mechanical.coupler.shaft-a-v1",
+  "runtimeUrl": "/api/asset-forge/af002/coupler",
+  "glbSha256": "48e8363cdc38b5ae93ace0b975c42498663e03c922970fb2b60e80c65d26b50e",
+  "axisIn": [0, 0, -0.0175],
+  "axisOut": [0, 0, 0.0175],
+  "signature": "Tehkné Solutions"
+}
