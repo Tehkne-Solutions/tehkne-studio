@@ -23,7 +23,7 @@ test("S2.28 authors multiple rotary named positions navigates them through conti
   const joint = page.getByTestId(`rotary-joint-${relationshipId}`);
   const continuous = joint.getByLabel("Rotary joint continuous target degrees");
   const name = joint.getByLabel("Rotary named position name");
-  const selector = joint.getByLabel("Rotary named position");
+  const selector = joint.getByLabel("Rotary named position", { exact: true });
   await expect(joint).toHaveAttribute("data-named-position-count", "0");
   await expect(selector).toBeDisabled();
 
@@ -81,7 +81,7 @@ test("S2.28 authors multiple rotary named positions navigates them through conti
   await page.reload({ waitUntil: "networkidle" });
   await page.getByTestId("invention-3d-trigger").click();
   const restored = page.getByTestId(`rotary-joint-${relationshipId}`);
-  const restoredSelector = restored.getByLabel("Rotary named position");
+  const restoredSelector = restored.getByLabel("Rotary named position", { exact: true });
   await expect(restored).toHaveAttribute("data-named-position-count", "2", { timeout: 20_000 });
   await expect(restored).toHaveAttribute("data-continuous-angle-rad", "1.571");
   await expect(restored).toHaveAttribute("data-kinematics-evidence", "5");
