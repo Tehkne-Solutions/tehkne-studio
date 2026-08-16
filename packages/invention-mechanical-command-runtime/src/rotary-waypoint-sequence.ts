@@ -5,6 +5,7 @@ import { ROTARY_CONTINUOUS_EPSILON } from "../../invention-assembly-runtime/src/
 import type { InventionSpatialScene } from "../../invention-spatial-runtime/src/index.js";
 import {
   MECHANICAL_COMMAND_SIGNATURE,
+  deriveRotarySegmentRate,
   mechanicalCommandRuntimeFor,
   validateRotaryDurationSeconds,
   type InventionMechanicalCommandRuntime,
@@ -65,6 +66,40 @@ export interface MechanicalRotaryWaypointSequenceAuthoringResult {
   readonly action: "created" | "updated" | "deleted";
   readonly previous: MechanicalRotaryWaypointSequence | null;
   readonly current: MechanicalRotaryWaypointSequence | null;
+  readonly signature: typeof MECHANICAL_COMMAND_SIGNATURE;
+}
+
+export interface MechanicalRotaryWaypointPlanSegment {
+  readonly index: number;
+  readonly positionKey: string;
+  readonly positionName: string;
+  readonly fromContinuousRadians: number;
+  readonly targetContinuousRadians: number;
+  readonly deltaRadians: number;
+  readonly durationSeconds: number | null;
+  readonly averageAngularVelocityRadPerSec: number | null;
+  readonly averageRpm: number | null;
+  readonly rateMode: MechanicalRotaryCommandResult["rateMode"];
+  readonly withinTravelLimits: boolean;
+  readonly signature: typeof MECHANICAL_COMMAND_SIGNATURE;
+}
+
+export interface MechanicalRotaryWaypointSequencePlan {
+  readonly relationshipId: string;
+  readonly sequenceKey: string;
+  readonly sequenceName: string;
+  readonly beforeContinuousRadians: number;
+  readonly afterContinuousRadians: number;
+  readonly totalDeltaRadians: number;
+  readonly cumulativeAbsoluteTravelRadians: number;
+  readonly timedSteps: number;
+  readonly untimedSteps: number;
+  readonly explicitDurationSeconds: number;
+  readonly totalDurationSeconds: number | null;
+  readonly durationMode: "complete-explicit" | "partial-explicit" | "unresolved-no-duration";
+  readonly travelLimitsActive: boolean;
+  readonly admissible: boolean;
+  readonly segments: readonly MechanicalRotaryWaypointPlanSegment[];
   readonly signature: typeof MECHANICAL_COMMAND_SIGNATURE;
 }
 
@@ -254,6 +289,15 @@ export class InventionMechanicalRotaryWaypointSequenceRuntime {
     return this.sequences(relationshipId).find((entry) => entry.key === normalized.key) ?? null;
   }
 
+  planSequence(relationshipId: string, name: string): MechanicalRotaryWaypointSequencePlan {
+    const normalized = normalizeName(name, "Mechanical rotary waypoint sequence name");
+    const sequence = this.sequence(relationshipId, normalized.name);
+    if (!sequence) throw new Error(`Mechanical rotary waypoint sequence is not authored: ${normalized.name}`);
+    const resolved = this.#resolveWaypoints(relationshipId, sequence);
+    const beforeContinuousRadians = this.mechanical.kinematics(relationshipId).continuousRadians;
+    return this.#buildPlan(relationshipId, sequence, resolved, beforeContinuousRadians);
+  }
+
   #resolveRelationship(relationshipId: string): EngineeringRelationship {
     this.mechanical.kinematics(relationshipId);
     const relationship = this.session.graph.snapshot().relationships.find((entry) => entry.id === relationshipId);
@@ -271,19 +315,82 @@ export class InventionMechanicalRotaryWaypointSequenceRuntime {
     });
   }
 
-  #preflightTravel(relationshipId: string, resolved: readonly ResolvedWaypoint[]): void {
+  #buildPlan(
+    relationshipId: string,
+    sequence: MechanicalRotaryWaypointSequence,
+    resolved: readonly ResolvedWaypoint[],
+    beforeContinuousRadians: number
+  ): MechanicalRotaryWaypointSequencePlan {
     const limits = this.mechanical.travelLimits(relationshipId);
-    if (!limits) return;
-    for (const entry of resolved) {
-      const target = entry.position.continuousRadians;
-      if (target < limits.minContinuousRadians - ROTARY_CONTINUOUS_EPSILON
-        || target > limits.maxContinuousRadians + ROTARY_CONTINUOUS_EPSILON) {
-        throw new Error(
-          `Mechanical rotary waypoint sequence travel limit exceeded: ${relationshipId} `
-          + `${entry.position.name}=${target} range=[${limits.minContinuousRadians}, ${limits.maxContinuousRadians}]`
-        );
+    let cursor = beforeContinuousRadians;
+    let explicitDurationSeconds = 0;
+    let timedSteps = 0;
+    let cumulativeAbsoluteTravelRadians = 0;
+    const segments = resolved.map((entry, index): MechanicalRotaryWaypointPlanSegment => {
+      const targetContinuousRadians = entry.position.continuousRadians;
+      const deltaRadians = targetContinuousRadians - cursor;
+      const durationSeconds = entry.step.durationSeconds;
+      const rate = durationSeconds === null ? null : deriveRotarySegmentRate(deltaRadians, durationSeconds);
+      const withinTravelLimits = !limits
+        || (targetContinuousRadians >= limits.minContinuousRadians - ROTARY_CONTINUOUS_EPSILON
+          && targetContinuousRadians <= limits.maxContinuousRadians + ROTARY_CONTINUOUS_EPSILON);
+      if (durationSeconds !== null) {
+        timedSteps += 1;
+        explicitDurationSeconds += durationSeconds;
       }
-    }
+      cumulativeAbsoluteTravelRadians += Math.abs(deltaRadians);
+      const segment: MechanicalRotaryWaypointPlanSegment = {
+        index,
+        positionKey: entry.position.key,
+        positionName: entry.position.name,
+        fromContinuousRadians: cursor,
+        targetContinuousRadians,
+        deltaRadians,
+        durationSeconds,
+        averageAngularVelocityRadPerSec: rate?.averageAngularVelocityRadPerSec ?? null,
+        averageRpm: rate?.averageRpm ?? null,
+        rateMode: rate?.mode ?? "unresolved-no-duration",
+        withinTravelLimits,
+        signature: MECHANICAL_COMMAND_SIGNATURE
+      };
+      cursor = targetContinuousRadians;
+      return segment;
+    });
+    const untimedSteps = segments.length - timedSteps;
+    const durationMode = untimedSteps === 0
+      ? "complete-explicit"
+      : timedSteps === 0
+        ? "unresolved-no-duration"
+        : "partial-explicit";
+    return {
+      relationshipId,
+      sequenceKey: sequence.key,
+      sequenceName: sequence.name,
+      beforeContinuousRadians,
+      afterContinuousRadians: cursor,
+      totalDeltaRadians: cursor - beforeContinuousRadians,
+      cumulativeAbsoluteTravelRadians,
+      timedSteps,
+      untimedSteps,
+      explicitDurationSeconds,
+      totalDurationSeconds: untimedSteps === 0 ? explicitDurationSeconds : null,
+      durationMode,
+      travelLimitsActive: limits !== null,
+      admissible: segments.every((entry) => entry.withinTravelLimits),
+      segments,
+      signature: MECHANICAL_COMMAND_SIGNATURE
+    };
+  }
+
+  #assertPlanAdmissible(plan: MechanicalRotaryWaypointSequencePlan): void {
+    const blocked = plan.segments.find((entry) => !entry.withinTravelLimits);
+    if (!blocked) return;
+    const limits = this.mechanical.travelLimits(plan.relationshipId);
+    if (!limits) throw new Error(`Mechanical rotary waypoint sequence plan became inconsistent: ${plan.relationshipId}`);
+    throw new Error(
+      `Mechanical rotary waypoint sequence travel limit exceeded: ${plan.relationshipId} `
+      + `${blocked.positionName}=${blocked.targetContinuousRadians} range=[${limits.minContinuousRadians}, ${limits.maxContinuousRadians}]`
+    );
   }
 
   #executeSave(command: StudioCommand<MechanicalRotarySaveWaypointSequencePayload>): MechanicalRotaryWaypointSequenceAuthoringResult {
@@ -344,9 +451,10 @@ export class InventionMechanicalRotaryWaypointSequenceRuntime {
     const sequence = this.sequence(command.payload.relationshipId, normalized.name);
     if (!sequence) throw new Error(`Mechanical rotary waypoint sequence is not authored: ${normalized.name}`);
     const resolved = this.#resolveWaypoints(command.payload.relationshipId, sequence);
-    this.#preflightTravel(command.payload.relationshipId, resolved);
-
     const beforeContinuousRadians = this.mechanical.kinematics(command.payload.relationshipId).continuousRadians;
+    const plan = this.#buildPlan(command.payload.relationshipId, sequence, resolved, beforeContinuousRadians);
+    this.#assertPlanAdmissible(plan);
+
     const movementResults: MechanicalRotaryCommandResult[] = [];
     for (const waypoint of resolved) {
       const movement = await this.mechanical.setContinuousTarget(
