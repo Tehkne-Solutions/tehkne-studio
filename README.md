@@ -72,7 +72,7 @@ S2.27 stores HOME in `relationship.metadata.rotaryHome`. `SET HOME` and `CLEAR H
 
 ### Named Positions authority
 
-S2.28 stores multiple normalized bookmarks under `relationship.metadata.rotaryNamedPositions`. `SAVE POSITION` and `DELETE POSITION` are metadata-only. `GO POSITION` resolves the current bookmark and delegates to `setContinuousTarget`.
+S2.28 stores multiple normalized bookmarks under `relationship.metadata.rotaryNamedPositions`. `SAVE POSITION` and `DELETE POSITION` are metadata-only. `GO POSITION` resolves the current bookmark and delegates to `setContinuousTarget`. `MechanicalRotaryNamedPositionRequested` links each successful GO POSITION request to the canonical movement command for auditability, while remaining outside the movement/rate fold.
 
 Named Positions are live references for S2.30. If an existing bookmark is updated to a new continuous coordinate, a sequence that references its normalized key follows that new coordinate without rewriting the sequence. If the bookmark is removed, sequence execution fails closed before movement rather than retaining a copied coordinate as shadow truth.
 
