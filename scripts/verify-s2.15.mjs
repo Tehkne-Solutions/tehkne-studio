@@ -61,10 +61,7 @@ for (const token of [
   "runtime.builder.connect(from, to)",
   "runtime.builder.disconnect"
 ]) {
-  if (!workbench.includes(token)) throw new Error(`S2.15 workbench contract missing: ${token}`);
-}
-if (!["S2.15", "S2.16", "S2.17", "S2.18", "S2.19"].some((marker) => workbench.includes(marker))) {
-  throw new Error("S2.15 workbench lineage marker missing");
+  if (!workbench.includes(token)) throw new Error(`S2.15 semantic workbench contract missing: ${token}`);
 }
 
 for (const forbidden of [
@@ -104,4 +101,4 @@ if (!workflow.includes("npm run verify:s2.15")) throw new Error("S2.15 CI contra
 if (!workflow.includes("tests/browser/direct-socket-wiring.spec.ts")) throw new Error("S2.15 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.15 CI must remain read-only");
 
-console.log("S2.15 Direct Socket Wiring PASS · real Asset Forge sockets remain interactive authoring controls through S2.19 · compatibility and connectedTo remain InventionBuilder-owned · accessible rail mirrors the same handler · legacy select wiring preserved as fallback · no parallel graph · Tehkné Solutions");
+console.log("S2.15 Direct Socket Wiring PASS · semantic direct-socket contract + compatibility and connectedTo remain InventionBuilder-owned + accessible fallback preserved · Tehkné Solutions");

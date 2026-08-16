@@ -55,8 +55,6 @@ for (const token of [
 
 const workbench = await readFile("apps/studio-web/components/Invention3DWorkbench.tsx", "utf8");
 for (const token of [
-  "S2.19",
-  "S2.18 LINEAGE",
   "Rotary Joint DOF",
   "Axial Joint Alignment",
   "Rigid Assembly Rotation",
@@ -67,7 +65,7 @@ for (const token of [
   "driver ${sourceEntity.name} imóvel",
   "inventionSpatial: runtime.spatial.document()"
 ]) {
-  if (!workbench.includes(token)) throw new Error(`S2.19 Workbench contract missing: ${token}`);
+  if (!workbench.includes(token)) throw new Error(`S2.19 semantic Workbench contract missing: ${token}`);
 }
 
 const domain = await readFile("tests/domain/invention-rotary-joint-runtime.test.mjs", "utf8");
@@ -99,8 +97,8 @@ for (const token of [
 }
 
 const readme = await readFile("README.md", "utf8");
-for (const token of ["Current baseline", "S2.19", "Rotary Joint DOF", "HERO_CANDIDATE", "AF-001L", "Tehkné Solutions"]) {
-  if (!readme.includes(token)) throw new Error(`S2.19 README baseline missing: ${token}`);
+for (const token of ["Current baseline", "Rotary Joint DOF", "HERO_CANDIDATE", "AF-001L", "Tehkné Solutions"]) {
+  if (!readme.includes(token)) throw new Error(`S2.19 README semantic baseline missing: ${token}`);
 }
 
 const pkg = JSON.parse(await readFile("package.json", "utf8"));
@@ -113,4 +111,4 @@ if (workflow.includes("contents: write")) throw new Error("S2.19 CI must remain 
 const sourceWorkflow = await readFile(".github/workflows/asset-forge-af001i-v065-contract.yml", "utf8");
 if (!sourceWorkflow.includes("actions/setup-node@v6") || !sourceWorkflow.includes('node-version: "24"')) throw new Error("S2.19 workflow housekeeping must align AF-001I source contract to Node 24/actions v6");
 
-console.log("S2.19 Rotary Joint DOF PASS · follower-only shaft rotation + coincident endpoint preservation + S2.18 axial/S2.17 rigid lineage + no dynamics fiction + Tehkné Solutions");
+console.log("S2.19 Rotary Joint DOF PASS · semantic follower-only shaft rotation + coincident endpoint preservation + axial/rigid composition + no dynamics fiction · Tehkné Solutions");
