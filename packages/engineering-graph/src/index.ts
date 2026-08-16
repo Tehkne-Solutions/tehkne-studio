@@ -57,6 +57,15 @@ export class EngineeringGraph {
     this.#relationships.set(relationship.id, relationship);
   }
 
+  replaceRelationship(relationship: EngineeringRelationship): void {
+    if (!this.#relationships.has(relationship.id)) {
+      throw new Error(`Unknown relationship: ${relationship.id}`);
+    }
+    this.getEntity(relationship.source);
+    this.getEntity(relationship.target);
+    this.#relationships.set(relationship.id, relationship);
+  }
+
   disconnect(relationshipId: string): void {
     if (!this.#relationships.delete(relationshipId)) {
       throw new Error(`Unknown relationship: ${relationshipId}`);
