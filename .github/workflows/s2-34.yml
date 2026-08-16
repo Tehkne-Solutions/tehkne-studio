@@ -25,6 +25,7 @@ jobs:
         run: node tools/asset_forge/af002_v02/verify_engineering_reference.mjs
       - name: Generate first deterministic candidate
         run: |
+          set -o pipefail
           rm -rf tools/asset_forge/af002_v02/generated .ci-evidence/af002-first
           python tools/asset_forge/af002_v02/generate_dcc_candidate.py
           python tools/asset_forge/af002_v02/verify_dcc_candidate.py | tee /tmp/af002-first-verification.json
@@ -35,6 +36,7 @@ jobs:
           sha256sum .ci-evidence/af002-first/candidate.glb | cut -d' ' -f1 > .ci-evidence/af002-first/sha256.txt
       - name: Generate second deterministic candidate
         run: |
+          set -o pipefail
           rm -rf tools/asset_forge/af002_v02/generated
           python tools/asset_forge/af002_v02/generate_dcc_candidate.py
           python tools/asset_forge/af002_v02/verify_dcc_candidate.py | tee /tmp/af002-second-verification.json
