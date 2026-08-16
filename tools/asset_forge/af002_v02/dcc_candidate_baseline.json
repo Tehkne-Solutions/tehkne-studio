@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "assetId": "AF-002",
+  "sku": "TS_MECH_SHAFT_COUPLER_A",
+  "stage": "DCC_CANDIDATE",
+  "version": "0.3.0-dcc-candidate",
+  "generator": "trimesh-procedural-reference",
+  "bytes": 22792,
+  "triangles": 1792,
+  "requiredNodeCount": 11,
+  "socketCountValidated": 2,
+  "sha256": "0024b3c9a6f1bd3186e4f358ca287409d1f14c229bf24f339cfb4425822f91a6",
+  "verdict": "DCC_CANDIDATE_PASS",
+  "signature": "Tehkné Solutions"
+}
