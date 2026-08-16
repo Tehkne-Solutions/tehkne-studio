@@ -5,6 +5,7 @@ import type { InventionSpatialScene } from "../../invention-spatial-runtime/src/
 import {
   MECHANICAL_COMMAND_SIGNATURE,
   mechanicalCommandRuntimeFor,
+  validateRotaryDurationSeconds,
   type InventionMechanicalCommandRuntime,
   type MechanicalRotaryCommandResult
 } from "./index.js";
@@ -16,6 +17,7 @@ export const MECHANICAL_ROTARY_DELETE_NAMED_POSITION_COMMAND = "invention.mechan
 export interface MechanicalRotaryNamedPositionPayload {
   readonly relationshipId: string;
   readonly name: string;
+  readonly durationSeconds?: number;
 }
 
 export interface MechanicalRotaryNamedPosition {
@@ -142,13 +144,17 @@ export class InventionMechanicalRotaryNamedPositionsRuntime {
   async goToPosition(
     relationshipId: string,
     name: string,
-    source: StudioCommand["source"] = "ui"
+    source: StudioCommand["source"] = "ui",
+    durationSeconds?: number
   ): Promise<CommandResult<MechanicalRotaryCommandResult>> {
     const normalized = normalizePositionName(name);
+    const payload: MechanicalRotaryNamedPositionPayload = durationSeconds === undefined
+      ? { relationshipId, name: normalized.name }
+      : { relationshipId, name: normalized.name, durationSeconds: validateRotaryDurationSeconds(durationSeconds) };
     return this.session.commands.dispatch<MechanicalRotaryCommandResult>({
       id: this.#nextCommandId(),
       type: MECHANICAL_ROTARY_GO_TO_NAMED_POSITION_COMMAND,
-      payload: { relationshipId, name: normalized.name },
+      payload,
       source,
       issuedAt: new Date().toISOString()
     });
@@ -232,10 +238,14 @@ export class InventionMechanicalRotaryNamedPositionsRuntime {
     const normalized = normalizePositionName(command.payload.name);
     const position = this.position(command.payload.relationshipId, normalized.name);
     if (!position) throw new Error(`Mechanical rotary named position is not authored: ${normalized.name}`);
+    const durationSeconds = command.payload.durationSeconds === undefined
+      ? undefined
+      : validateRotaryDurationSeconds(command.payload.durationSeconds);
     const movement = await this.mechanical.setContinuousTarget(
       command.payload.relationshipId,
       position.continuousRadians,
-      command.source
+      command.source,
+      durationSeconds
     );
     if (!movement.ok || !movement.result) {
       throw new Error(movement.error ?? `Mechanical rotary named position movement failed: ${normalized.name}`);
@@ -253,6 +263,8 @@ export class InventionMechanicalRotaryNamedPositionsRuntime {
         name: position.name,
         continuousRadians: position.continuousRadians,
         changed: movement.result.changed,
+        durationSeconds: movement.result.durationSeconds,
+        rateMode: movement.result.rateMode,
         signature: MECHANICAL_COMMAND_SIGNATURE
       }
     });
