@@ -15,12 +15,14 @@ function sha256(buffer: Buffer) {
 
 export async function GET() {
   const compressed = Buffer.from(chunk0 + chunk1 + chunk2, "base64");
-  if (compressed.length !== EXPECTED_GZIP_BYTES || sha256(compressed) !== EXPECTED_GZIP_SHA256) {
-    return new Response("AF-002 v0.4 review transport integrity failure", { status: 500 });
+  const transportSha = sha256(compressed);
+  if (compressed.length !== EXPECTED_GZIP_BYTES || transportSha !== EXPECTED_GZIP_SHA256) {
+    return Response.json({ stage: "transport", bytes: compressed.length, sha256: transportSha, signature: "Tehkné Solutions" }, { status: 500 });
   }
   const glb = gunzipSync(compressed);
-  if (glb.length !== EXPECTED_GLB_BYTES || sha256(glb) !== EXPECTED_GLB_SHA256) {
-    return new Response("AF-002 v0.4 review GLB integrity failure", { status: 500 });
+  const glbSha = sha256(glb);
+  if (glb.length !== EXPECTED_GLB_BYTES || glbSha !== EXPECTED_GLB_SHA256) {
+    return Response.json({ stage: "glb", bytes: glb.length, sha256: glbSha, signature: "Tehkné Solutions" }, { status: 500 });
   }
   return new Response(glb, {
     status: 200,
