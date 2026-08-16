@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 const required = [
   "packages/invention-assembly-runtime/src/rotary-relative-angle.ts",
   "packages/invention-assembly-runtime/src/index.ts",
+  "packages/invention-mechanical-command-runtime/src/index.ts",
   "apps/studio-web/components/RotaryJointControls.tsx",
   "apps/studio-web/components/Invention3DWorkbench.tsx",
   "tests/domain/invention-rotary-relative-angle.test.mjs",
@@ -57,13 +58,22 @@ for (const forbidden of ["assemblyGraph", "mechanicalGraph", "rotationGraph", "a
   if (assembly.includes(forbidden)) throw new Error(`S2.20 must preserve single topology/no dynamics: ${forbidden}`);
 }
 
+const commandRuntime = await readFile("packages/invention-mechanical-command-runtime/src/index.ts", "utf8");
+for (const token of [
+  "kinematics(relationshipId: string)",
+  "rotaryJointRelativeAngle(",
+  "principalRadians",
+  'derivedFrom: "session-events+spatial"'
+]) {
+  if (!commandRuntime.includes(token)) throw new Error(`S2.20 derived-angle command lineage missing: ${token}`);
+}
+
 const control = await readFile("apps/studio-web/components/RotaryJointControls.tsx", "utf8");
 for (const token of [
-  "rotaryJointRelativeAngle",
-  "relativeAngle = ready ?",
-  'data-angle-rad={relativeAngle === null ? "" : relativeAngle.toFixed(3)}',
+  "commands.kinematics(constraint.relationshipId)",
+  'data-angle-rad={kinematics === null ? "" : kinematics.principalRadians.toFixed(3)}',
   'data-angle-mode="principal-derived"',
-  "formatAngle(relativeAngle)",
+  "formatAngle(kinematics.principalRadians)",
   "JOINT −",
   "JOINT +",
   "sem RPM/torque"
@@ -83,7 +93,7 @@ for (const token of [
   if (!workbench.includes(token)) throw new Error(`S2.20 Workbench lineage missing: ${token}`);
 }
 for (const forbidden of ["jointAngleState", "jointAngleMap", "rpmSolver", "torqueSolver", "angularVelocitySolver", 'status: "GOLDEN_ASSET"']) {
-  if (workbench.includes(forbidden) || control.includes(forbidden)) throw new Error(`S2.20 forbidden premature/parallel behavior: ${forbidden}`);
+  if (workbench.includes(forbidden) || control.includes(forbidden) || commandRuntime.includes(forbidden)) throw new Error(`S2.20 forbidden premature/parallel behavior: ${forbidden}`);
 }
 
 const domain = await readFile("tests/domain/invention-rotary-relative-angle.test.mjs", "utf8");
@@ -137,4 +147,4 @@ if (!workflow.includes("npm run verify:s2.20")) throw new Error("S2.20 CI contra
 if (!workflow.includes("tests/browser/rotary-joint-relative-angle.spec.ts")) throw new Error("S2.20 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.20 CI must remain read-only");
 
-console.log("S2.20 Rotary Joint Relative Angle PASS · signed principal angle derived from persisted transforms + rigid-invariant + semantic README contract + no joint state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.20 Rotary Joint Relative Angle PASS · signed principal angle derived from persisted transforms and projected through command kinematics + rigid-invariant + semantic README contract + no joint state/no dynamics fiction + Tehkné Solutions");
