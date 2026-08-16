@@ -4,7 +4,7 @@ Virtual Engineering Atelier by **Tehkné Solutions**.
 
 ## Current baseline
 
-`0.1.0-alpha.1 · S1.12 + S2.25`
+`0.1.0-alpha.1 · S1.12 + S2.26`
 
 Tehkné Studio is an executable engineering workspace where products, components, experiments and spatial assemblies share the same engineering state instead of being disconnected demos.
 
@@ -24,38 +24,58 @@ Tehkné Studio is an executable engineering workspace where products, components
 - rigid assembly translation and RX/RY/RZ rotation;
 - axial alignment for `mechanical.rotary-shaft` joints;
 - **Rotary Joint DOF**: follower-only rotation around an already snapped and aligned shaft while the driver remains fixed;
-- **Rotary Joint Relative Angle**: signed principal angle in `[-π, π]` derived directly from driver/follower transforms and authored shaft axes; it remains derived evidence, not duplicated joint state;
-- **Rotary Joint Target Angle**: absolute principal positioning using a `principal-shortest` delta derived from current transform evidence;
+- **Rotary Joint Relative Angle**: signed principal angle in `[-π, π]` derived from driver/follower transforms and authored shaft axes;
+- **Rotary Joint Target Angle**: absolute principal positioning using a `principal-shortest` delta;
 - **Atomic Spatial Transform**: `transformBatch(...)` validates the complete mechanical transform set before any binding is committed;
-- **Mechanical Command Runtime (S2.23)**: rotary operations run through the existing `EngineeringSession.commands` `CommandBus`, preserving source (`ui`, `voice`, `automation`, `simulation`, `system`) and reusing the same authoritative graph, planners and atomic spatial commit;
-- **Multi-turn Rotary Kinematics (S2.24)**: principal angle, continuous angle and integer revolutions are reconciled from the current `inventionSpatial` transform plus persisted `session.events`, without replaying commands or introducing a parallel kinematics document;
-- **Rotary Continuous Target (S2.25)**: a rotary joint can now receive an absolute multi-turn target such as `720°` or `−450°`; the runtime computes the exact continuous delta, dispatches it through the same CommandBus and records the resulting principal angle, continuous angle and revolutions as auditable evidence.
+- **Mechanical Command Runtime (S2.23)**: rotary operations run through the existing `EngineeringSession.commands` CommandBus;
+- **Multi-turn Rotary Kinematics (S2.24)**: principal angle, continuous angle and integer revolutions are reconciled from `inventionSpatial + session.events` without replay;
+- **Rotary Continuous Target (S2.25)**: absolute multi-turn targets such as `720°` and `−450°` use `continuous-absolute` semantics through the same CommandBus;
+- **Rotary Travel Limits (S2.26)**: an optional continuous travel envelope can be authored on the authoritative `connectedTo` relationship. Incremental, principal and continuous targets are rejected fail closed before planning or spatial mutation if they would leave that envelope; a shaft with no envelope remains unlimited.
 
 ## Engineering invariants
 
-`connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints and rotary controls are projections of that same graph; Tehkné Studio does not maintain a parallel assembly, rotation, joint or revolution graph.
+`connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints, rotary controls and S2.26 travel limits are projections or metadata of that same graph; Tehkné Studio does not maintain a parallel assembly, rotation, joint, limit or revolution graph.
 
 The `inventionSpatial` document remains the only persisted physical spatial source of truth. `transformBatch(...)` prepares and validates the complete mutation set before committing. Mechanical commands do not introduce a shadow transform map or second joint state.
 
 The mechanical runtime deliberately reuses the **existing session CommandBus**. Its rotary semantic command types are:
 
 - `invention.mechanical.rotary.step` — signed incremental kinematic step;
-- `invention.mechanical.rotary.setTarget` — absolute **principal** target using `principal-shortest`;
-- `invention.mechanical.rotary.setContinuousTarget` — absolute **continuous** multi-turn target using `continuous-absolute`.
+- `invention.mechanical.rotary.setTarget` — absolute principal target using `principal-shortest`;
+- `invention.mechanical.rotary.setContinuousTarget` — absolute continuous multi-turn target using `continuous-absolute`;
+- `invention.mechanical.rotary.setTravelLimits` — author or replace an optional continuous travel envelope;
+- `invention.mechanical.rotary.clearTravelLimits` — remove that envelope and restore unlimited travel.
 
-UI, voice and automation therefore invoke the same validated mechanical operations rather than separate implementations.
+UI, voice and automation therefore invoke the same validated operations rather than separate implementations.
 
-Successful mechanical commands record audit evidence in the existing `session.events` stream with command ID, source, relationship, driver/follower, before/after principal angle, signed delta, before/after continuous angle and revolutions. That stream is already part of the normal persistence snapshot. Restore reads evidence to reconstruct kinematics; it does not replay commands or reapply transforms.
+### Travel-limit authority and persistence
 
-S2.24 continuous state is derived by reconciling persisted command evidence with current principal transform evidence. With no prior evidence, continuous angle starts from the principal angle and revolutions are zero. Legacy S2.23 events remain compatible through their `beforeRadians + deltaRadians` evidence. Tampered continuous evidence fails closed instead of silently changing revolution count.
+S2.26 stores limits directly in the authoritative connection metadata under `rotaryTravelLimits`:
 
-The S2.24 stabilization canonicalizes numerical zero within the established rotary epsilon. The canonical wrap proof uses `170° → -170°`, whose shortest delta is unambiguously `+20°`; the exact `180°` boundary remains covered in domain regression.
+```text
+mode = continuous
+minContinuousRadians = authored minimum
+maxContinuousRadians = authored maximum
+signature = Tehkné Solutions
+```
 
-S2.25 does **not** reinterpret a continuous target as a shortest principal target. If the joint is at `0°` continuous and receives `720°`, its command delta is `+720°` and the resulting state is principal `0°`, continuous `720°`, revolutions `2`. From there, an absolute target of `−450°` commands `−1170°`, ending at principal `−90°`, continuous `−450°`, revolutions `−1`. This is an exact kinematic state change, not a time-resolved motor simulation.
+The graph now exposes a safe `replaceRelationship(...)` primitive so relationship metadata can be updated without disconnecting/reconnecting the authored topology. Save/restore persists these limits naturally because they are part of the canonical Engineering Graph snapshot; no `travelLimitMap`, limit document or project-global state exists.
 
-Mechanical endpoint resolution remains runtime-safe outside React. Canonical mechanical local positions come from authored component metadata or explicit proxy anchors; AF-001 `shaft-out` is `[0, 0, 0.03185] m`, matching the AF-001M socket-transform QA for `SOCKET_MECH_AXIS_OUT`.
+Limit authoring is itself dispatched through the session CommandBus and recorded as `MechanicalRotaryTravelLimitsSet` or `MechanicalRotaryTravelLimitsCleared`. Those events are audit evidence only and are intentionally excluded from the S2.24 kinematic fold, so setting or clearing a limit cannot manufacture angle, continuous travel or revolutions.
 
-Physics and simulation remain fail-closed. S2.25 is **kinematics only**: it does not claim elapsed time, RPM, angular velocity, angular acceleration, torque, swept-path collision or motor dynamics.
+For any movement command, the runtime derives current continuous kinematics first, calculates the intended continuous result, reads the optional relationship envelope and applies the travel-limit check **before** `planMechanicalRotaryJointStep(...)` and before `transformBatch(...)`. Out-of-range commands are rejected rather than clamped. They produce no spatial mutation and no false movement-success event.
+
+An authored envelope must contain the joint's current continuous position at the moment it is set. Inverted bounds and bounds that exclude the current state fail closed. Removing an envelope restores unlimited rotary travel; shafts without `rotaryTravelLimits` preserve all S2.25 behavior, including multi-turn targets such as 1080°.
+
+Successful mechanical movement commands continue recording audit evidence in `session.events` with command ID, source, relationship, driver/follower, before/after principal angle, signed delta, continuous angle and revolutions. Restore reconstructs kinematics from evidence and current transforms; it does not replay commands or reapply transforms.
+
+The S2.24 stabilization continues canonicalizing numerical zero within the established rotary epsilon. Its canonical wrap proof uses `170° → -170°`, while the exact `180°` boundary remains covered in domain regression.
+
+S2.25 continuous targets remain exact kinematic state changes rather than time-resolved motor simulations. S2.26 adds an authored admissible envelope around those exact states; it still does not simulate the swept path between them.
+
+Mechanical endpoint resolution remains runtime-safe outside React. Canonical mechanical local positions come from authored component metadata or explicit proxy anchors; AF-001 `shaft-out` is `[0, 0, 0.03185] m`, matching AF-001M socket-transform QA for `SOCKET_MECH_AXIS_OUT`.
+
+Physics and simulation remain fail-closed. S2.26 is **kinematics and authored constraints only**: it does not claim elapsed time, RPM, angular velocity, angular acceleration, torque, collision sweep, inertia, backlash or motor dynamics.
 
 ## Asset Forge · AF-001
 
@@ -76,11 +96,11 @@ The AF-001L gate remains intentionally fail-closed: hosted CI validates its cont
 npm ci --ignore-scripts
 npm run security:audit
 npm run verify:s1.12
-npm run verify:s2.25
+npm run verify:s2.26
 npm run smoke:browser
 ```
 
-The cumulative S2.25 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform → S2.23 Mechanical Command Runtime → S2.24 Multi-turn Rotary Kinematics before validating S2.25 Rotary Continuous Target, followed by the complete Chromium smoke and AF-001I deterministic evidence.
+The cumulative S2.26 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform → S2.23 Mechanical Command Runtime → S2.24 Multi-turn Rotary Kinematics → S2.25 Rotary Continuous Target before validating S2.26 Rotary Travel Limits, followed by complete Chromium smoke and AF-001I deterministic evidence.
 
 ## Repository structure
 
