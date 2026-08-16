@@ -1,4 +1,4 @@
-name: S2.23 Mechanical Command Runtime Gate
+name: S2.24 Multi-turn Rotary Kinematics Gate
 
 on:
   pull_request:
@@ -81,6 +81,8 @@ jobs:
         run: npm run verify:s2.22
       - name: S2.23 mechanical command runtime contract
         run: npm run verify:s2.23
+      - name: S2.24 multi-turn rotary kinematics contract
+        run: npm run verify:s2.24
       - name: Install Chromium runtime
         run: npx playwright install --with-deps chromium
       - name: S2.14 socket-aware browser contract
@@ -103,6 +105,8 @@ jobs:
         run: npx playwright test tests/browser/atomic-spatial-transform.spec.ts --config=playwright.config.ts
       - name: S2.23 mechanical CommandBus browser contract
         run: npx playwright test tests/browser/mechanical-command-runtime.spec.ts --config=playwright.config.ts
+      - name: S2.24 multi-turn rotary kinematics browser contract
+        run: npx playwright test tests/browser/rotary-multiturn-kinematics.spec.ts --config=playwright.config.ts
       - name: Alpha and platform browser smoke
         run: |
           set -o pipefail
@@ -137,7 +141,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: s2-23-browser-failure
+          name: s2-24-browser-failure
           path: test-results
           if-no-files-found: ignore
           retention-days: 7

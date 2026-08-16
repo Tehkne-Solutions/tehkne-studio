@@ -58,16 +58,32 @@ test("S2.24 principal target commands preserve shortest-path semantics while adv
   const { spatial, connection } = await rotaryRuntime("multiturn-targets");
   const commands = mechanicalCommandRuntimeFor(spatial);
   for (let index = 0; index < 24; index += 1) await commands.step(connection.id, 15 * DEG, "ui");
-  const to180 = await commands.setTarget(connection.id, 180 * DEG, "voice");
-  assert.equal(to180.ok, true, to180.error);
-  close(to180.result.afterContinuousRadians, 540 * DEG);
-  assert.equal(to180.result.afterRevolutions, 1);
+  const to170 = await commands.setTarget(connection.id, 170 * DEG, "voice");
+  assert.equal(to170.ok, true, to170.error);
+  close(to170.result.deltaRadians, 170 * DEG);
+  close(to170.result.afterRadians, 170 * DEG);
+  close(to170.result.afterContinuousRadians, 530 * DEG);
+  assert.equal(to170.result.afterRevolutions, 1);
   const toMinus170 = await commands.setTarget(connection.id, -170 * DEG, "voice");
   assert.equal(toMinus170.ok, true, toMinus170.error);
-  close(toMinus170.result.deltaRadians, 10 * DEG);
+  close(toMinus170.result.deltaRadians, 20 * DEG);
   close(toMinus170.result.afterRadians, -170 * DEG);
   close(toMinus170.result.afterContinuousRadians, 550 * DEG);
   assert.equal(toMinus170.result.afterRevolutions, 2);
+});
+
+test("S2.24 canonicalizes near-zero principal residue before an exact pi target", async () => {
+  const { spatial, connection } = await rotaryRuntime("multiturn-pi-boundary");
+  const commands = mechanicalCommandRuntimeFor(spatial);
+  for (let index = 0; index < 24; index += 1) await commands.step(connection.id, 15 * DEG, "ui");
+  const before = commands.kinematics(connection.id);
+  close(before.principalRadians, 0);
+  close(before.continuousRadians, 360 * DEG);
+  const outcome = await commands.setTarget(connection.id, 180 * DEG, "ui");
+  assert.equal(outcome.ok, true, outcome.error);
+  close(outcome.result.deltaRadians, Math.PI);
+  close(outcome.result.afterContinuousRadians, 540 * DEG);
+  assert.equal(outcome.result.afterRevolutions, 1);
 });
 
 test("S2.24 restore reconstructs multi-turn state from persisted session events plus spatial evidence without command replay", async () => {
