@@ -9,6 +9,15 @@ export interface RotaryContinuousState {
   readonly revolutions: number;
 }
 
+export interface RotaryContinuousTargetDelta {
+  readonly currentContinuousRadians: number;
+  readonly targetContinuousRadians: number;
+  readonly targetPrincipalRadians: number;
+  readonly targetRevolutions: number;
+  readonly deltaRadians: number;
+  readonly mode: "continuous-absolute";
+}
+
 function finite(value: number, label: string): void {
   if (!Number.isFinite(value)) throw new Error(`${label} must be finite`);
 }
@@ -45,4 +54,26 @@ export function advanceRotaryContinuousState(
   finite(afterPrincipalRadians, "Rotary principal after angle");
   const continuousRadians = beforeContinuousRadians + commandedDeltaRadians;
   return rotaryContinuousState(afterPrincipalRadians, continuousRadians, epsilon);
+}
+
+export function rotaryContinuousTargetDelta(
+  currentContinuousRadiansInput: number,
+  targetContinuousRadiansInput: number,
+  epsilon = ROTARY_CONTINUOUS_EPSILON
+): RotaryContinuousTargetDelta {
+  finite(currentContinuousRadiansInput, "Rotary current continuous angle");
+  finite(targetContinuousRadiansInput, "Rotary continuous target angle");
+  const currentContinuousRadians = Math.abs(currentContinuousRadiansInput) <= Number.EPSILON ? 0 : currentContinuousRadiansInput;
+  const targetPrincipalRadians = normalizePrincipalAngle(targetContinuousRadiansInput);
+  const target = rotaryContinuousState(targetPrincipalRadians, targetContinuousRadiansInput, epsilon);
+  const deltaInput = target.continuousRadians - currentContinuousRadians;
+  const deltaRadians = Math.abs(deltaInput) <= Number.EPSILON ? 0 : deltaInput;
+  return {
+    currentContinuousRadians,
+    targetContinuousRadians: target.continuousRadians,
+    targetPrincipalRadians: target.principalRadians,
+    targetRevolutions: target.revolutions,
+    deltaRadians,
+    mode: "continuous-absolute"
+  };
 }
