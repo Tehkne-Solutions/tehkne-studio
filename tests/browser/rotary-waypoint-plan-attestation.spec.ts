@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("S2.33 attests the consumed plan against S2.32 execution evidence and preserves history after bookmark edits", async ({ page }) => {
+test("S2.34 attests the consumed plan against S2.32 execution evidence and preserves history after bookmark edits", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
