@@ -1,0 +1,48 @@
+name: AF-002 v0.4 Chromium Review Gate
+
+on:
+  pull_request:
+    paths:
+      - 'apps/studio-web/app/api/asset-forge/af002/coupler-v04/**'
+      - 'apps/studio-web/app/asset-forge/af002/visual-quality-v04/**'
+      - 'apps/studio-web/components/Af002VisualQualityReview.tsx'
+      - 'tests/browser/asset-forge-af002-v04.spec.ts'
+      - '.github/workflows/af002-v04-browser-review.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  chromium-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - name: Dependency security audit
+        run: npm run security:audit
+      - name: Preserve current AF-002 runtime contract
+        run: |
+          grep -q 'EXPECTED_GLB_BYTES = 22600' apps/studio-web/app/api/asset-forge/af002/coupler/route.ts
+          grep -q '48e8363cdc38b5ae93ace0b975c42498663e03c922970fb2b60e80c65d26b50e' apps/studio-web/app/api/asset-forge/af002/coupler/route.ts
+      - name: Build Studio web
+        run: npm run build:web
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: AF-002 v0.4 browser comparison
+        run: npx playwright test tests/browser/asset-forge-af002-v04.spec.ts --config=playwright.config.ts
+      - name: Preserve AF-002 v0.4 comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: af002-v04-chromium-review-${{ github.sha }}
+          path: test-results
+          if-no-files-found: ignore
+          retention-days: 14
