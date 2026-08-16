@@ -1,0 +1,57 @@
+name: S2.34 AF-002 DCC Candidate Deterministic Gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  PYTHONHASHSEED: "0"
+
+jobs:
+  af002-dcc-candidate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: tools/asset_forge/af002_v02/requirements.lock.txt
+      - name: Install pinned DCC generator dependencies
+        run: python -m pip install -r tools/asset_forge/af002_v02/requirements.lock.txt
+      - name: Verify AF-002 engineering reference
+        run: node tools/asset_forge/af002_v02/verify_engineering_reference.mjs
+      - name: Generate first deterministic candidate
+        run: |
+          rm -rf tools/asset_forge/af002_v02/generated .ci-evidence/af002-first
+          python tools/asset_forge/af002_v02/generate_dcc_candidate.py
+          python tools/asset_forge/af002_v02/verify_dcc_candidate.py | tee /tmp/af002-first-verification.json
+          mkdir -p .ci-evidence/af002-first
+          cp tools/asset_forge/af002_v02/generated/AF-002_TS_MECH_SHAFT_COUPLER_A_v0.3.0-dcc-candidate.glb .ci-evidence/af002-first/candidate.glb
+          cp tools/asset_forge/af002_v02/generated/dcc_candidate_evidence.json .ci-evidence/af002-first/generator-evidence.json
+          cp /tmp/af002-first-verification.json .ci-evidence/af002-first/verification.json
+          sha256sum .ci-evidence/af002-first/candidate.glb | cut -d' ' -f1 > .ci-evidence/af002-first/sha256.txt
+      - name: Generate second deterministic candidate
+        run: |
+          rm -rf tools/asset_forge/af002_v02/generated
+          python tools/asset_forge/af002_v02/generate_dcc_candidate.py
+          python tools/asset_forge/af002_v02/verify_dcc_candidate.py | tee /tmp/af002-second-verification.json
+          FIRST_SHA=$(cat .ci-evidence/af002-first/sha256.txt)
+          SECOND_SHA=$(sha256sum tools/asset_forge/af002_v02/generated/AF-002_TS_MECH_SHAFT_COUPLER_A_v0.3.0-dcc-candidate.glb | cut -d' ' -f1)
+          test "$FIRST_SHA" = "$SECOND_SHA"
+          cmp .ci-evidence/af002-first/candidate.glb tools/asset_forge/af002_v02/generated/AF-002_TS_MECH_SHAFT_COUPLER_A_v0.3.0-dcc-candidate.glb
+          mkdir -p .ci-evidence/af002-final
+          cp tools/asset_forge/af002_v02/generated/AF-002_TS_MECH_SHAFT_COUPLER_A_v0.3.0-dcc-candidate.glb .ci-evidence/af002-final/
+          cp tools/asset_forge/af002_v02/generated/dcc_candidate_evidence.json .ci-evidence/af002-final/
+          cp /tmp/af002-second-verification.json .ci-evidence/af002-final/verification.json
+          printf '%s\n' "$SECOND_SHA" > .ci-evidence/af002-final/sha256.txt
+      - name: Preserve AF-002 DCC candidate evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: af002-dcc-candidate-${{ github.sha }}
+          path: .ci-evidence/af002-final
+          if-no-files-found: error
+          retention-days: 14
