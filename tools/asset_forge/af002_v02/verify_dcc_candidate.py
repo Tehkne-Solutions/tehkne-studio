@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 BASE = ROOT / "tools" / "asset_forge" / "af002_v02"
 REFERENCE_PATH = BASE / "engineering_reference.json"
+BASELINE_PATH = BASE / "dcc_candidate_baseline.json"
 GLB_PATH = BASE / "generated" / "AF-002_TS_MECH_SHAFT_COUPLER_A_v0.3.0-dcc-candidate.glb"
 EVIDENCE_PATH = BASE / "generated" / "dcc_candidate_evidence.json"
 SIGNATURE = "Tehkné Solutions"
@@ -43,7 +44,6 @@ def node_translation(node: dict) -> list[float]:
         matrix = node["matrix"]
         if not isinstance(matrix, list) or len(matrix) != 16:
             raise RuntimeError("AF-002 glTF node matrix must contain sixteen values")
-        # glTF matrices are column-major; translation occupies indices 12..14.
         return [float(matrix[12]), float(matrix[13]), float(matrix[14])]
     return [0.0, 0.0, 0.0]
 
@@ -71,22 +71,27 @@ def triangle_count(document: dict) -> int:
 
 
 reference = json.loads(REFERENCE_PATH.read_text(encoding="utf-8"))
+baseline = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
 evidence = json.loads(EVIDENCE_PATH.read_text(encoding="utf-8"))
 document, payload_bytes = read_glb_json(GLB_PATH)
 sha256 = hashlib.sha256(GLB_PATH.read_bytes()).hexdigest()
 
-if reference.get("assetId") != "AF-002" or evidence.get("assetId") != "AF-002":
+if reference.get("assetId") != "AF-002" or evidence.get("assetId") != "AF-002" or baseline.get("assetId") != "AF-002":
     raise RuntimeError("AF-002 identity mismatch")
-if reference.get("sku") != "TS_MECH_SHAFT_COUPLER_A" or evidence.get("sku") != reference.get("sku"):
+if reference.get("sku") != "TS_MECH_SHAFT_COUPLER_A" or evidence.get("sku") != reference.get("sku") or baseline.get("sku") != reference.get("sku"):
     raise RuntimeError("AF-002 SKU mismatch")
-if reference.get("signature") != SIGNATURE or evidence.get("signature") != SIGNATURE:
+if reference.get("signature") != SIGNATURE or evidence.get("signature") != SIGNATURE or baseline.get("signature") != SIGNATURE:
     raise RuntimeError("AF-002 signature mismatch")
-if evidence.get("stage") != "DCC_CANDIDATE":
+if evidence.get("stage") != "DCC_CANDIDATE" or baseline.get("stage") != "DCC_CANDIDATE":
     raise RuntimeError("AF-002 generated stage must remain DCC_CANDIDATE")
-if evidence.get("generator") != "trimesh-procedural-reference":
+if baseline.get("version") != "0.3.0-dcc-candidate":
+    raise RuntimeError("AF-002 canonical DCC candidate version mismatch")
+if evidence.get("generator") != "trimesh-procedural-reference" or baseline.get("generator") != evidence.get("generator"):
     raise RuntimeError("AF-002 generator provenance mismatch")
 if evidence.get("bytes") != payload_bytes or evidence.get("sha256") != sha256:
     raise RuntimeError("AF-002 generated fingerprint evidence mismatch")
+if baseline.get("bytes") != payload_bytes or baseline.get("sha256") != sha256:
+    raise RuntimeError("AF-002 generated GLB does not match the canonical DCC candidate fingerprint")
 
 nodes = document.get("nodes", [])
 node_by_name = {node.get("name"): node for node in nodes if isinstance(node.get("name"), str)}
@@ -96,6 +101,8 @@ if missing:
     raise RuntimeError(f"AF-002 GLB missing required nodes: {missing}")
 if sorted(evidence.get("requiredNodes", [])) != sorted(required_nodes):
     raise RuntimeError("AF-002 evidence required-node list diverges from engineering reference")
+if baseline.get("requiredNodeCount") != len(required_nodes):
+    raise RuntimeError("AF-002 canonical required-node count mismatch")
 
 for socket_name in ("SOCKET_MECH_AXIS_IN", "SOCKET_MECH_AXIS_OUT"):
     expected_socket = next((entry for entry in reference.get("sockets", []) if entry.get("name") == socket_name), None)
@@ -112,6 +119,8 @@ if not lod0:
     raise RuntimeError("AF-002 LOD0 budget missing")
 if triangles <= 0 or triangles > int(lod0["maxTriangles"]):
     raise RuntimeError(f"AF-002 LOD0 triangle budget exceeded: {triangles} > {lod0['maxTriangles']}")
+if baseline.get("triangles") != triangles or baseline.get("socketCountValidated") != 2:
+    raise RuntimeError("AF-002 generated topology does not match canonical DCC candidate baseline")
 
 extras = document.get("asset", {}).get("extras", {})
 scene_extras = document.get("scenes", [{}])[document.get("scene", 0)].get("extras", {}) if document.get("scenes") else {}
@@ -123,6 +132,7 @@ result = {
     "assetId": "AF-002",
     "sku": reference["sku"],
     "stage": "DCC_CANDIDATE",
+    "version": baseline["version"],
     "bytes": payload_bytes,
     "sha256": sha256,
     "triangles": triangles,
