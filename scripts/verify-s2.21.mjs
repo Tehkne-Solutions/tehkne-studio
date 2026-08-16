@@ -5,8 +5,10 @@ const required = [
   "packages/invention-assembly-runtime/src/rotary-relative-angle.ts",
   "packages/invention-assembly-runtime/src/index.ts",
   "apps/studio-web/components/RotaryJointControls.tsx",
+  "apps/studio-web/components/GoldenMotorPbrReviewGateV065ContractAligned.tsx",
   "tests/domain/invention-rotary-target-angle.test.mjs",
   "tests/browser/rotary-joint-target-angle.spec.ts",
+  "tests/browser/asset-forge-af001i.spec.ts",
   "README.md"
 ];
 for (const path of required) await access(resolve(path));
@@ -76,6 +78,27 @@ for (const forbidden of ["jointAngleState", "jointAngleMap", "targetAngleState",
   if (control.includes(forbidden)) throw new Error(`S2.21 control must not persist duplicate/dynamic state: ${forbidden}`);
 }
 
+const af001iSurface = await readFile("apps/studio-web/components/GoldenMotorPbrReviewGateV065ContractAligned.tsx", "utf8");
+for (const token of [
+  'frameloop="demand"',
+  "const { camera, invalidate } = useThree()",
+  "camera.updateProjectionMatrix()",
+  "invalidate()",
+  "MAX_AVERAGE_FRAME_MS = 100",
+  "MAX_P95_FRAME_MS = 150",
+  "WARMUP_MS = 1_500",
+  "BENCHMARK_WINDOW_MS = 8_000",
+  'data-render-policy="static-pbr-key-fill-no-realtime-shadow-map"'
+]) {
+  if (!af001iSurface.includes(token)) throw new Error(`S2.21 AF-001I static runtime stabilization missing: ${token}`);
+}
+if (af001iSurface.includes("MAX_AVERAGE_FRAME_MS = 105") || af001iSurface.includes("MAX_P95_FRAME_MS = 155")) throw new Error("S2.21 must not relax AF-001I performance thresholds");
+
+const af001iBrowser = await readFile("tests/browser/asset-forge-af001i.spec.ts", "utf8");
+for (const token of ["toBeLessThan(100)", "toBeLessThan(150)", "MIN_BENCHMARK_SAMPLES", "AF001I_METRICS"]) {
+  if (!af001iBrowser.includes(token)) throw new Error(`S2.21 AF-001I browser threshold evidence missing: ${token}`);
+}
+
 const domain = await readFile("tests/domain/invention-rotary-target-angle.test.mjs", "utf8");
 for (const token of [
   "absolute principal angle without storing joint state",
@@ -125,4 +148,4 @@ if (!workflow.includes("npm run verify:s2.21")) throw new Error("S2.21 CI contra
 if (!workflow.includes("tests/browser/rotary-joint-target-angle.spec.ts")) throw new Error("S2.21 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.21 CI must remain read-only");
 
-console.log("S2.21 Rotary Joint Target Angle PASS · absolute principal target + shortest transform-derived delta + follower-only physical planner + no duplicate state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.21 Rotary Joint Target Angle PASS · absolute principal target + shortest transform-derived delta + follower-only physical planner + demand-driven AF-001I runtime stability + no duplicate state/no dynamics fiction + Tehkné Solutions");
