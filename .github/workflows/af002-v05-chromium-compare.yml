@@ -1,0 +1,48 @@
+name: AF-002 v0.5 Chromium Compare Gate
+
+on:
+  pull_request:
+    paths:
+      - 'apps/studio-web/app/asset-forge/af002/compare-v05/**'
+      - 'apps/studio-web/components/Af002HeroCompare.tsx'
+      - 'tests/browser/asset-forge-af002-v05-compare.spec.ts'
+      - 'tools/asset_forge/af002_v05/**'
+      - '.github/workflows/af002-v05-chromium-compare.yml'
+  workflow_dispatch:
+
+jobs:
+  compare-af002-v04-v05:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install workspace dependencies
+        run: npm ci
+      - name: Install deterministic geometry dependencies
+        run: pip install numpy==2.3.5 trimesh==4.11.1
+      - name: Generate and verify AF-002 v0.5 candidate
+        run: |
+          python tools/asset_forge/af002_v05/generate_hero_quality_candidate.py
+          python tools/asset_forge/af002_v05/verify_hero_quality_candidate.py
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Build Studio web
+        run: npm run build:web
+      - name: Run AF-002 v0.4 vs v0.5 Chromium comparison
+        run: npx playwright test tests/browser/asset-forge-af002-v05-compare.spec.ts --config=playwright.config.ts --project=chromium
+      - name: Preserve hero A/B visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: af002-v04-v05-chromium-compare
+          path: test-results/
+          retention-days: 14
