@@ -117,15 +117,39 @@ for (const token of [
 }
 
 const readme = await readFile("README.md", "utf8");
-for (const token of ["Current baseline", "S2.24", "Multi-turn Rotary Kinematics", "session.events", "continuous", "revolutions", "HERO_CANDIDATE", "AF-001L", "Tehkné Solutions"]) {
+for (const token of [
+  "Current baseline",
+  "`0.1.0-alpha.1 · S1.12 + S2.24`",
+  "Multi-turn Rotary Kinematics",
+  "session.events",
+  "inventionSpatial",
+  "continuous",
+  "revolutions",
+  "HERO_CANDIDATE",
+  "AF-001L",
+  "Tehkné Solutions"
+]) {
   if (!readme.includes(token)) throw new Error(`S2.24 README baseline missing: ${token}`);
+}
+if (readme.includes("Multi-turn revolution counting remains intentionally deferred")) {
+  throw new Error("S2.24 README must not claim multi-turn remains deferred after promotion");
+}
+if (!readme.includes("S2.24 does **not** claim RPM, angular velocity, acceleration, torque or time integration")) {
+  throw new Error("S2.24 README must preserve the explicit no-dynamics guardrail");
 }
 
 const pkg = JSON.parse(await readFile("package.json", "utf8"));
 if (pkg.scripts?.["verify:s2.24"] !== "node scripts/verify-s2.24.mjs") throw new Error("S2.24 package verification script missing");
+
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
-if (!workflow.includes("npm run verify:s2.24")) throw new Error("S2.24 CI contract missing");
-if (!workflow.includes("tests/browser/rotary-multiturn-kinematics.spec.ts")) throw new Error("S2.24 browser gate missing from CI");
+for (const token of [
+  "name: S2.24 Multi-turn Rotary Kinematics Gate",
+  "npm run verify:s2.24",
+  "tests/browser/rotary-multiturn-kinematics.spec.ts",
+  "s2-24-browser-failure"
+]) {
+  if (!workflow.includes(token)) throw new Error(`S2.24 CI promotion contract missing: ${token}`);
+}
 if (workflow.includes("contents: write")) throw new Error("S2.24 CI must remain read-only");
 
-console.log("S2.24 Multi-turn Rotary Kinematics PASS · continuous angle + integer revolutions derived from persisted session.events and spatial principal evidence + CommandBus/atomic lineage + no global state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.24 Multi-turn Rotary Kinematics PASS · continuous angle + integer revolutions derived from persisted session.events and spatial principal evidence + CommandBus/atomic lineage + promotion baseline wired + no global state/no dynamics fiction + Tehkné Solutions");
