@@ -4,6 +4,13 @@ export const ROTARY_RELATIVE_ANGLE_EPSILON = 0.00001;
 
 interface Quaternion { readonly x: number; readonly y: number; readonly z: number; readonly w: number; }
 
+export interface RotaryJointTargetDelta {
+  readonly currentRadians: number;
+  readonly targetRadians: number;
+  readonly deltaRadians: number;
+  readonly mode: "principal-shortest";
+}
+
 function finiteVector(value: SpatialVector3, label: string): void {
   if (![value.x, value.y, value.z].every(Number.isFinite)) throw new Error(`${label} must be finite`);
 }
@@ -97,4 +104,19 @@ export function rotaryJointRelativeAngle(
   const cosine = Math.max(-1, Math.min(1, dot(driverTangentWorld, followerTangentWorld)));
   const sine = dot(driverAxisWorld, cross(driverTangentWorld, followerTangentWorld));
   return normalizePrincipalAngle(Math.atan2(sine, cosine));
+}
+
+export function rotaryJointTargetDelta(
+  driverAxisLocal: SpatialVector3,
+  followerAxisLocal: SpatialVector3,
+  driverRotation: SpatialVector3,
+  followerRotation: SpatialVector3,
+  targetRadiansInput: number,
+  epsilon = ROTARY_RELATIVE_ANGLE_EPSILON
+): RotaryJointTargetDelta {
+  if (!Number.isFinite(targetRadiansInput)) throw new Error("Rotary target angle must be finite");
+  const currentRadians = rotaryJointRelativeAngle(driverAxisLocal, followerAxisLocal, driverRotation, followerRotation, epsilon);
+  const targetRadians = normalizePrincipalAngle(targetRadiansInput);
+  const deltaRadians = normalizePrincipalAngle(targetRadians - currentRadians);
+  return { currentRadians, targetRadians, deltaRadians, mode: "principal-shortest" };
 }
