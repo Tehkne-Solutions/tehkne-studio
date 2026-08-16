@@ -56,6 +56,10 @@ The mechanical runtime deliberately reuses the **existing session CommandBus**. 
 
 UI, voice and automation therefore invoke the same validated operations rather than separate implementations.
 
+### Multi-turn evidence
+
+S2.24 reconstructs continuous angle and integer revolutions from the current principal transform plus persisted successful movement evidence; restore does not replay commands. Its canonical wrap proof remains `170° → -170°`, an unambiguous shortest `+20°` transition across the principal boundary. The exact `180°` boundary remains covered separately by deterministic domain regression.
+
 ### Travel-limit authority
 
 S2.26 stores an optional continuous envelope in `relationship.metadata.rotaryTravelLimits`. Movement outside the envelope is rejected before planner and spatial mutation; there is no silent clamp. Shafts without this metadata remain unlimited.
