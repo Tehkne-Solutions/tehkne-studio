@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "assetId": "AF-002",
+  "sku": "TS_MECH_SHAFT_COUPLER_A",
+  "stage": "ENGINEERING_REFERENCE",
+  "version": "0.2.0-engineering-reference",
+  "signature": "Tehkné Solutions",
+  "units": "m",
+  "coordinateSystem": {
+    "handedness": "right",
+    "upAxis": "+Y",
+    "rotaryAxis": "+Z",
+    "origin": "geometric-centre-between-interface-planes"
+  },
+  "envelope": {
+    "overallDiameter": 0.03,
+    "overallLength": 0.035,
+    "nominalBoreIn": 0.01,
+    "nominalBoreOut": 0.01
+  },
+  "requiredNodes": [
+    "COUPLER_HALF_IN",
+    "COUPLER_HALF_OUT",
+    "ELASTIC_INSERT",
+    "CLAMP_SCREW_IN_A",
+    "CLAMP_SCREW_IN_B",
+    "CLAMP_SCREW_OUT_A",
+    "CLAMP_SCREW_OUT_B",
+    "SOCKET_MECH_AXIS_IN",
+    "SOCKET_MECH_AXIS_OUT",
+    "SOCKET_MECH_INSPECT_A",
+    "SOCKET_MECH_INSPECT_B"
+  ],
+  "sockets": [
+    {
+      "name": "SOCKET_MECH_AXIS_IN",
+      "type": "mechanical.rotary-shaft",
+      "role": "input",
+      "position": [0, 0, -0.0175],
+      "outwardAxis": [0, 0, -1],
+      "nominalDiameter": 0.01
+    },
+    {
+      "name": "SOCKET_MECH_AXIS_OUT",
+      "type": "mechanical.rotary-shaft",
+      "role": "output",
+      "position": [0, 0, 0.0175],
+      "outwardAxis": [0, 0, 1],
+      "nominalDiameter": 0.01
+    },
+    {
+      "name": "SOCKET_MECH_INSPECT_A",
+      "type": "mechanical.inspect",
+      "role": "inspection",
+      "transmission": false
+    },
+    {
+      "name": "SOCKET_MECH_INSPECT_B",
+      "type": "mechanical.inspect",
+      "role": "inspection",
+      "transmission": false
+    }
+  ],
+  "lods": [
+    { "name": "LOD0", "role": "HERO", "maxTriangles": 7500 },
+    { "name": "LOD1", "role": "HIGH", "maxTriangles": 3500 },
+    { "name": "LOD2", "role": "MEDIUM", "maxTriangles": 1500 },
+    { "name": "LOD3", "role": "LOW", "maxTriangles": 600 }
+  ],
+  "materials": [
+    "MAT_COUPLER_BODY",
+    "MAT_FASTENER_STEEL",
+    "MAT_ELASTIC_INSERT"
+  ],
+  "claims": {
+    "geometry": true,
+    "physicalSockets": true,
+    "coaxialAssembly": true,
+    "torqueCapacity": false,
+    "maxRpm": false,
+    "misalignmentCapacity": false,
+    "stiffness": false,
+    "damping": false,
+    "manufacturingCertification": false
+  }
+}
