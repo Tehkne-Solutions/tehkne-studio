@@ -17,6 +17,10 @@ export interface RotaryKinematicsDocument {
   readonly entries: readonly RotaryKinematicsEntry[];
 }
 
+const stateBySession = new WeakMap<EngineeringSession, RotaryKinematicsState>();
+const latestStateByProject = new Map<string, RotaryKinematicsState>();
+const stagedDocumentByProject = new Map<string, RotaryKinematicsDocument>();
+
 function finite(value: number, label: string): number {
   if (!Number.isFinite(value)) throw new Error(`${label} must be finite`);
   return value;
@@ -123,10 +127,9 @@ export class RotaryKinematicsState {
   }
 
   document(): RotaryKinematicsDocument {
-    const entries = [...this.#revolutions.entries()].map(([relationshipId, revolutions]) => {
-      this.#assertRotaryRelationship(relationshipId);
-      return { relationshipId, revolutions };
-    }).sort((left, right) => left.relationshipId.localeCompare(right.relationshipId));
+    this.pruneDisconnected();
+    const entries = [...this.#revolutions.entries()].map(([relationshipId, revolutions]) => ({ relationshipId, revolutions }))
+      .sort((left, right) => left.relationshipId.localeCompare(right.relationshipId));
     return {
       version: ROTARY_MULTITURN_VERSION,
       signature: ROTARY_MULTITURN_SIGNATURE,
@@ -135,12 +138,50 @@ export class RotaryKinematicsState {
     };
   }
 
-  #assertRotaryRelationship(relationshipId: string): void {
-    const relationship = this.session.graph.snapshot().relationships.find((entry) => entry.id === relationshipId);
-    if (!relationship || relationship.type !== "connectedTo" || relationship.metadata.inventionRuntime !== true) {
-      throw new Error(`Rotary kinematics requires an authoritative invention connectedTo relationship: ${relationshipId}`);
+  pruneDisconnected(): void {
+    for (const relationshipId of this.#revolutions.keys()) {
+      if (!this.#isRotaryRelationship(relationshipId)) this.#revolutions.delete(relationshipId);
     }
-    const interfaces = Array.isArray(relationship.metadata.sharedInterfaces) ? relationship.metadata.sharedInterfaces.map(String) : [];
-    if (!interfaces.includes("mechanical.rotary-shaft")) throw new Error(`Rotary kinematics requires mechanical.rotary-shaft: ${relationshipId}`);
   }
+
+  #isRotaryRelationship(relationshipId: string): boolean {
+    const relationship = this.session.graph.snapshot().relationships.find((entry) => entry.id === relationshipId);
+    if (!relationship || relationship.type !== "connectedTo" || relationship.metadata.inventionRuntime !== true) return false;
+    const interfaces = Array.isArray(relationship.metadata.sharedInterfaces) ? relationship.metadata.sharedInterfaces.map(String) : [];
+    return interfaces.includes("mechanical.rotary-shaft");
+  }
+
+  #assertRotaryRelationship(relationshipId: string): void {
+    if (!this.#isRotaryRelationship(relationshipId)) {
+      throw new Error(`Rotary kinematics requires an authoritative mechanical.rotary-shaft connectedTo relationship: ${relationshipId}`);
+    }
+  }
+}
+
+export function stageRotaryKinematicsDocument(value: unknown): RotaryKinematicsDocument {
+  const document = parseRotaryKinematicsDocument(value);
+  stagedDocumentByProject.set(document.projectId, document);
+  return document;
+}
+
+export function rotaryKinematicsStateForSession(session: EngineeringSession): RotaryKinematicsState {
+  const existing = stateBySession.get(session);
+  if (existing) return existing;
+  const staged = stagedDocumentByProject.get(session.project.projectId);
+  const state = new RotaryKinematicsState(session, staged);
+  stateBySession.set(session, state);
+  latestStateByProject.set(session.project.projectId, state);
+  stagedDocumentByProject.delete(session.project.projectId);
+  return state;
+}
+
+export function rotaryKinematicsDocumentForProject(projectId: string): RotaryKinematicsDocument | null {
+  const state = latestStateByProject.get(projectId);
+  if (state) return state.document();
+  return stagedDocumentByProject.get(projectId) ?? null;
+}
+
+export function clearRotaryKinematicsProject(projectId: string): void {
+  latestStateByProject.delete(projectId);
+  stagedDocumentByProject.delete(projectId);
 }
