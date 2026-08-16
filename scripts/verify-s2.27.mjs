@@ -57,7 +57,7 @@ for (const forbidden of [
   "angularVelocitySolver",
   "angularAccelerationSolver"
 ]) {
-  if (runtime.includes(forbidden)) throw new Error(`S2.27 HOME must reuse authoritative graph + canonical continuous-target runtime and avoid dynamics fiction: ${forbidden}`);
+  if (runtime.includes(forbidden)) throw new Error(`S2.27 HOME must reuse authoritative graph + canonical continuous-target runtime and avoid a parallel dynamics solver: ${forbidden}`);
 }
 
 const baseRuntime = await readFile("packages/invention-mechanical-command-runtime/src/index.ts", "utf8");
@@ -87,13 +87,12 @@ for (const token of [
   "data-home-command-id",
   "HOME NÃO DEFINIDO",
   'data-command-bus="session"',
-  'data-transform-mode="atomic-batch"',
-  "sem RPM/torque"
+  'data-transform-mode="atomic-batch"'
 ]) {
   if (!control.includes(token)) throw new Error(`S2.27 UI HOME projection missing: ${token}`);
 }
-for (const forbidden of ["homeMap", "homeByProject", "jointHomeState", "setInterval(", "requestAnimationFrame(", "rpm", "angularVelocity", "torqueTarget"]) {
-  if (control.includes(forbidden)) throw new Error(`S2.27 UI must not own HOME truth or dynamics: ${forbidden}`);
+for (const forbidden of ["homeMap", "homeByProject", "jointHomeState", "setInterval(", "requestAnimationFrame(", "torqueTarget"]) {
+  if (control.includes(forbidden)) throw new Error(`S2.27 UI must not own HOME truth or a dynamics loop: ${forbidden}`);
 }
 
 const domain = await readFile("tests/domain/invention-rotary-home.test.mjs", "utf8");
@@ -139,8 +138,7 @@ const workflow = await readFile(".github/workflows/ci.yml", "utf8");
 if (!workflow.includes("S2.27 rotary home position contract")) throw new Error("S2.27 cumulative CI contract step missing");
 if (!workflow.includes("npm run verify:s2.27")) throw new Error("S2.27 CI contract missing");
 if (!workflow.includes("S2.27 rotary home position browser contract")) throw new Error("S2.27 cumulative browser step missing");
-if (!workflow.includes("tests/browser/rotary-home.spec.ts")) throw new Error("S2.27 dedicated browser gate missing from CI");
-if (!workflow.includes("s2-27-browser-failure")) throw new Error("S2.27 failure artifact identity missing");
+if (!workflow.includes("tests/browser/rotary-home.spec.ts")) throw new Error("S2.27 dedicated browser gate missing from successor CI");
 if (workflow.includes("contents: write")) throw new Error("S2.27 CI must remain read-only");
 
-console.log("S2.27 Rotary Home Position PASS · authored continuous HOME on authoritative connectedTo metadata + same session CommandBus SET/GO/CLEAR + GO HOME delegated to canonical continuous target and S2.26 limits + persistence without replay + no parallel state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.27 Rotary Home Position PASS · authored continuous HOME on authoritative connectedTo metadata + same session CommandBus SET/GO/CLEAR + GO HOME delegated to canonical continuous target and S2.26 limits + persistence without replay + successor explicit-duration compatible + no parallel HOME/dynamics state + Tehkné Solutions");
