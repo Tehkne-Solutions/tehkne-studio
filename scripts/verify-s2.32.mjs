@@ -5,7 +5,8 @@ for (const path of [
   "packages/invention-mechanical-command-runtime/src/rotary-waypoint-execution-evidence.ts",
   "tests/domain/invention-rotary-waypoint-execution-evidence.test.mjs",
   "docs/platform/s2-32-waypoint-execution-evidence.md",
-  ".github/workflows/s2-32.yml"
+  ".github/workflows/ci.yml",
+  "README.md"
 ]) await access(resolve(path));
 
 const source = await readFile("packages/invention-mechanical-command-runtime/src/rotary-waypoint-execution-evidence.ts", "utf8");
@@ -30,15 +31,41 @@ for (const token of ["immutable execution evidence", "evidence projection must n
 
 const pkg = JSON.parse(await readFile("package.json", "utf8"));
 if (pkg.scripts?.["verify:s2.32"] !== "node scripts/verify-s2.32.mjs") throw new Error("S2.32 package verification script missing");
-const workflow = await readFile(".github/workflows/s2-32.yml", "utf8");
-for (const token of ["S2.32 Rotary Waypoint Sequence Execution Evidence Gate", "npm run verify:s2.31", "npm run verify:s2.32", "s2-32-browser-failure"]) {
-  if (!workflow.includes(token)) throw new Error(`S2.32 candidate CI contract missing: ${token}`);
+
+const workflow = await readFile(".github/workflows/ci.yml", "utf8");
+for (const token of [
+  "S2.32 Rotary Waypoint Sequence Execution Evidence Gate",
+  "S2.31 rotary waypoint sequence plan contract",
+  "npm run verify:s2.31",
+  "S2.32 rotary waypoint execution evidence contract",
+  "npm run verify:s2.32",
+  "s2-31-browser-failure",
+  "s2-32-browser-failure"
+]) {
+  if (!workflow.includes(token)) throw new Error(`S2.32 canonical CI contract missing: ${token}`);
 }
 if (workflow.includes("contents: write")) throw new Error("S2.32 CI must remain read-only");
 
 const doc = await readFile("docs/platform/s2-32-waypoint-execution-evidence.md", "utf8");
 for (const token of ["S2.32", "Rotary Waypoint Sequence Execution Evidence", "session-events", "HERO_CANDIDATE", "AF-001L", "Tehkné Solutions"]) {
-  if (!doc.includes(token)) throw new Error(`S2.32 candidate documentation missing: ${token}`);
+  if (!doc.includes(token)) throw new Error(`S2.32 documentation missing: ${token}`);
 }
 
-console.log("S2.32 Rotary Waypoint Sequence Execution Evidence PASS · read-only session-events projection · canonical signature authority · Tehkné Solutions");
+const readme = await readFile("README.md", "utf8");
+for (const token of [
+  "`0.1.0-alpha.1 · S1.12 + S2.32`",
+  "Previous validated baseline: `0.1.0-alpha.1 · S1.12 + S2.31`.",
+  "Rotary Waypoint Sequence Execution Evidence (S2.32)",
+  "rotaryWaypointExecutionEvidence",
+  "latestRotaryWaypointExecutionEvidence",
+  "session.events",
+  "read-only",
+  "npm run verify:s2.32",
+  "HERO_CANDIDATE",
+  "AF-001L",
+  "Tehkné Solutions"
+]) {
+  if (!readme.includes(token)) throw new Error(`S2.32 README baseline missing: ${token}`);
+}
+
+console.log("S2.32 Rotary Waypoint Sequence Execution Evidence PASS · canonical cumulative CI + baseline README + read-only session-events projection + canonical signature authority + Tehkné Solutions");
