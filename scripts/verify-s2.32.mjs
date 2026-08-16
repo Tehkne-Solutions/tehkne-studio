@@ -16,8 +16,8 @@ for (const token of [
   "cumulativeAbsoluteTravelRadians",
   "explicitDurationSeconds",
   "latestRotaryWaypointExecutionEvidence",
-  'derivedFrom: "session-events"',
-  "Tehkné Solutions"
+  'derivedFrom: \"session-events\"',
+  "MECHANICAL_COMMAND_SIGNATURE"
 ]) if (!source.includes(token)) throw new Error(`S2.32 execution evidence contract missing: ${token}`);
 for (const forbidden of ["events.record(", "commands.dispatch", "graph.replaceRelationship", "setContinuousTarget(", "setTimeout(", "setInterval(", "requestAnimationFrame(", "Date.now", "performance.now"]) {
   if (source.includes(forbidden)) throw new Error(`S2.32 evidence must remain read-only: ${forbidden}`);
@@ -41,4 +41,4 @@ for (const token of ["S2.32", "Rotary Waypoint Sequence Execution Evidence", "se
   if (!doc.includes(token)) throw new Error(`S2.32 candidate documentation missing: ${token}`);
 }
 
-console.log("S2.32 Rotary Waypoint Sequence Execution Evidence PASS · read-only session-events projection · Tehkné Solutions");
+console.log("S2.32 Rotary Waypoint Sequence Execution Evidence PASS · read-only session-events projection · canonical signature authority · Tehkné Solutions");
