@@ -48,6 +48,9 @@ for (const token of [
 ]) {
   if (!commandRuntime.includes(token)) throw new Error(`S2.21 target execution lineage missing: ${token}`);
 }
+for (const forbidden of ["rpmSolver", "torqueSolver", "angularVelocitySolver", "angularAccelerationSolver", "targetAngleState", "targetAngleMap"]) {
+  if (commandRuntime.includes(forbidden)) throw new Error(`S2.21 target lineage must remain solver/state free: ${forbidden}`);
+}
 
 const control = await readFile("apps/studio-web/components/RotaryJointControls.tsx", "utf8");
 for (const token of [
@@ -59,8 +62,7 @@ for (const token of [
   "SET ANGLE",
   "JOINT −",
   "JOINT +",
-  'data-command-bus="session"',
-  "sem RPM/torque"
+  'data-command-bus="session"'
 ]) {
   if (!control.includes(token)) throw new Error(`S2.21 target control contract missing: ${token}`);
 }
@@ -89,4 +91,4 @@ if (pkg.scripts?.["verify:s2.21"] !== "node scripts/verify-s2.21.mjs") throw new
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
 if (!workflow.includes("npm run verify:s2.21") || !workflow.includes("tests/browser/rotary-joint-target-angle.spec.ts") || workflow.includes("contents: write")) throw new Error("S2.21 CI contract mismatch");
 
-console.log("S2.21 Rotary Joint Target Angle PASS · absolute principal target preserved behind session CommandBus + shortest derived delta + atomic follower planner + no duplicate state/no dynamics fiction · Tehkné Solutions");
+console.log("S2.21 Rotary Joint Target Angle PASS · absolute principal target preserved behind session CommandBus + shortest derived delta + atomic follower planner + no duplicate state/no dynamics solver + successor explicit segment-rate evidence compatible + Tehkné Solutions");

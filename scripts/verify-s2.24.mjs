@@ -92,13 +92,12 @@ for (const token of [
   "CONTÍNUO",
   "VOLTAS",
   'data-command-bus="session"',
-  'data-transform-mode="atomic-batch"',
-  "sem RPM/torque"
+  'data-transform-mode="atomic-batch"'
 ]) {
   if (!control.includes(token)) throw new Error(`S2.24 UI kinematics projection missing: ${token}`);
 }
-for (const forbidden of ["useState<number>(0)", "revolutionState", "turnCounter", "localStorage.setItem", "rpm", "angularVelocity"]) {
-  if (control.includes(forbidden)) throw new Error(`S2.24 UI must not own multi-turn/dynamic state: ${forbidden}`);
+for (const forbidden of ["useState<number>(0)", "revolutionState", "turnCounter", "localStorage.setItem"]) {
+  if (control.includes(forbidden)) throw new Error(`S2.24 UI must not own multi-turn state: ${forbidden}`);
 }
 
 const domain = await readFile("tests/domain/invention-rotary-multiturn.test.mjs", "utf8");
@@ -149,4 +148,4 @@ if (!workflow.includes("npm run verify:s2.24")) throw new Error("S2.24 CI contra
 if (!workflow.includes("tests/browser/rotary-multiturn-kinematics.spec.ts")) throw new Error("S2.24 browser gate missing from successor CI");
 if (workflow.includes("contents: write")) throw new Error("S2.24 CI must remain read-only");
 
-console.log("S2.24 Multi-turn Rotary Kinematics PASS · continuous angle + integer revolutions derived from persisted session.events and spatial principal evidence + deterministic pi boundary + unambiguous browser wrap gate + CommandBus/atomic lineage + successor workflow compatible + no global state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.24 Multi-turn Rotary Kinematics PASS · continuous angle + integer revolutions derived from persisted session.events and spatial principal evidence + deterministic pi boundary + unambiguous browser wrap gate + CommandBus/atomic lineage + no global state + compatible with later explicit segment-rate evidence + Tehkné Solutions");

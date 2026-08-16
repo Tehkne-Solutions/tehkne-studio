@@ -68,12 +68,12 @@ for (const token of [
 ]) {
   if (!commandRuntime.includes(token)) throw new Error(`S2.22 rotary atomic execution missing behind CommandBus: ${token}`);
 }
-for (const forbidden of ["spatial.rotate(plan.entityId", "spatial.move(plan.entityId", "jointGraph", "rpmSolver", "torqueSolver"]) {
-  if (commandRuntime.includes(forbidden)) throw new Error(`S2.22 rotary execution must remain atomic/no dynamics: ${forbidden}`);
+for (const forbidden of ["spatial.rotate(plan.entityId", "spatial.move(plan.entityId", "jointGraph", "rpmSolver", "torqueSolver", "angularVelocitySolver", "angularAccelerationSolver"]) {
+  if (commandRuntime.includes(forbidden)) throw new Error(`S2.22 rotary execution must remain atomic/no dynamics solver: ${forbidden}`);
 }
 
 const rotary = await readFile("apps/studio-web/components/RotaryJointControls.tsx", "utf8");
-for (const token of ['data-transform-mode="atomic-batch"', 'data-command-bus="session"', "mechanicalCommandRuntimeFor", "sem RPM/torque"]) {
+for (const token of ['data-transform-mode="atomic-batch"', 'data-command-bus="session"', "mechanicalCommandRuntimeFor"]) {
   if (!rotary.includes(token)) throw new Error(`S2.22 UI atomic/command projection missing: ${token}`);
 }
 if (rotary.includes("spatial.transformBatch([{") || rotary.includes("spatial.rotate(plan.entityId") || rotary.includes("spatial.move(plan.entityId")) throw new Error("S2.22 UI must not bypass command-backed atomic execution");
@@ -98,4 +98,4 @@ if (pkg.scripts?.["verify:s2.22"] !== "node scripts/verify-s2.22.mjs") throw new
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
 if (!workflow.includes("npm run verify:s2.22") || !workflow.includes("tests/browser/atomic-spatial-transform.spec.ts") || workflow.includes("contents: write")) throw new Error("S2.22 CI contract mismatch");
 
-console.log("S2.22 Atomic Spatial Transform PASS · validate-all-before-commit core + command-backed rotary atomic commit + atomic translation/rotation/alignment + same signed inventionSpatial + no parallel state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.22 Atomic Spatial Transform PASS · validate-all-before-commit core + command-backed rotary atomic commit + atomic translation/rotation/alignment + same signed inventionSpatial + no parallel state/no dynamics solver + successor explicit segment-rate evidence compatible + Tehkné Solutions");

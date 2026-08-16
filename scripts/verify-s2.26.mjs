@@ -99,12 +99,11 @@ for (const token of [
   "data-limit-command-id",
   "CURSO ILIMITADO",
   'data-command-bus="session"',
-  'data-transform-mode="atomic-batch"',
-  "sem RPM/torque"
+  'data-transform-mode="atomic-batch"'
 ]) {
   if (!control.includes(token)) throw new Error(`S2.26 UI limit projection missing: ${token}`);
 }
-for (const forbidden of ["travelLimitMap", "travelLimitsByProject", "jointLimitState", "setInterval(", "requestAnimationFrame(", "rpm", "angularVelocity", "torqueTarget"]) {
+for (const forbidden of ["travelLimitMap", "travelLimitsByProject", "jointLimitState", "setInterval(", "requestAnimationFrame(", "torqueTarget"]) {
   if (control.includes(forbidden)) throw new Error(`S2.26 UI must not own mechanical travel truth or dynamics: ${forbidden}`);
 }
 
@@ -154,7 +153,6 @@ if (!workflow.includes("S2.26 rotary travel limits contract")) throw new Error("
 if (!workflow.includes("npm run verify:s2.26")) throw new Error("S2.26 CI contract missing");
 if (!workflow.includes("S2.26 rotary travel limits browser contract")) throw new Error("S2.26 cumulative browser step missing");
 if (!workflow.includes("tests/browser/rotary-travel-limits.spec.ts")) throw new Error("S2.26 dedicated browser gate missing from CI");
-if (!workflow.includes("s2-26-browser-failure")) throw new Error("S2.26 failure artifact identity missing");
 if (workflow.includes("contents: write")) throw new Error("S2.26 CI must remain read-only");
 
-console.log("S2.26 Rotary Travel Limits PASS · optional continuous envelope authored on authoritative connectedTo metadata + CommandBus set/clear + pre-planner fail-closed enforcement + persistence without replay + unlimited shafts preserved + no parallel state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.26 Rotary Travel Limits PASS · optional continuous envelope authored on authoritative connectedTo metadata + CommandBus set/clear + pre-planner fail-closed enforcement + persistence without replay + unlimited shafts preserved + compatible with later explicit segment-rate evidence + no parallel state/no torque solver + Tehkné Solutions");

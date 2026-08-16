@@ -19,6 +19,18 @@ import {
 } from "../../invention-assembly-runtime/src/rotary-relative-angle.js";
 import type { InventionSpatialScene } from "../../invention-spatial-runtime/src/index.js";
 import { mechanicalPortLocalPosition, mechanicalPortWorldPosition } from "./port-geometry.js";
+import {
+  deriveRotarySegmentRate,
+  validateRotaryDurationSeconds,
+  type RotarySegmentRateEvidence
+} from "./rotary-segment-rate.js";
+
+export {
+  ROTARY_SEGMENT_RATE_SIGNATURE,
+  deriveRotarySegmentRate,
+  validateRotaryDurationSeconds,
+  type RotarySegmentRateEvidence
+} from "./rotary-segment-rate.js";
 
 export const MECHANICAL_ROTARY_STEP_COMMAND = "invention.mechanical.rotary.step" as const;
 export const MECHANICAL_ROTARY_TARGET_COMMAND = "invention.mechanical.rotary.setTarget" as const;
@@ -30,16 +42,19 @@ export const MECHANICAL_COMMAND_SIGNATURE = "Tehkné Solutions" as const;
 export interface MechanicalRotaryStepPayload {
   readonly relationshipId: string;
   readonly radians: number;
+  readonly durationSeconds?: number;
 }
 
 export interface MechanicalRotaryTargetPayload {
   readonly relationshipId: string;
   readonly targetRadians: number;
+  readonly durationSeconds?: number;
 }
 
 export interface MechanicalRotaryContinuousTargetPayload {
   readonly relationshipId: string;
   readonly targetContinuousRadians: number;
+  readonly durationSeconds?: number;
 }
 
 export interface MechanicalRotaryTravelLimitsPayload {
@@ -76,6 +91,17 @@ export interface MechanicalRotaryKinematics extends RotaryContinuousState {
   readonly derivedFrom: "session-events+spatial";
 }
 
+export interface MechanicalRotaryRateEvidence {
+  readonly relationshipId: string;
+  readonly commandId: string | null;
+  readonly durationSeconds: number | null;
+  readonly averageAngularVelocityRadPerSec: number | null;
+  readonly averageRpm: number | null;
+  readonly mode: "segment-average" | "unresolved-no-duration";
+  readonly derivedFrom: "session-events-explicit-duration";
+  readonly signature: typeof MECHANICAL_COMMAND_SIGNATURE;
+}
+
 export interface MechanicalRotaryCommandResult {
   readonly commandId: string;
   readonly relationshipId: string;
@@ -89,6 +115,10 @@ export interface MechanicalRotaryCommandResult {
   readonly beforeRevolutions: number;
   readonly afterRevolutions: number;
   readonly deltaRadians: number;
+  readonly durationSeconds: number | null;
+  readonly averageAngularVelocityRadPerSec: number | null;
+  readonly averageRpm: number | null;
+  readonly rateMode: "segment-average" | "unresolved-no-duration";
   readonly mode: "incremental" | "principal-shortest" | "continuous-absolute";
   readonly changed: boolean;
   readonly signature: typeof MECHANICAL_COMMAND_SIGNATURE;
@@ -116,10 +146,19 @@ function numeric(value: unknown, label: string): number {
   return value;
 }
 
+function textual(value: unknown, label: string): string {
+  if (typeof value !== "string" || value.length === 0) throw new Error(`${label} must be string evidence`);
+  return value;
+}
+
 function rotaryEventType(type: string): boolean {
   return type === "MechanicalRotaryStepExecuted"
     || type === "MechanicalRotaryTargetExecuted"
     || type === "MechanicalRotaryContinuousTargetExecuted";
+}
+
+function rateMatches(recorded: number, expected: number): boolean {
+  return Math.abs(recorded - expected) <= Math.max(0.000001, Math.abs(expected) * 0.000001);
 }
 
 function travelLimitsFromRelationship(relationship: EngineeringRelationship): MechanicalRotaryTravelLimits | null {
@@ -187,13 +226,17 @@ export class InventionMechanicalCommandRuntime {
   async step(
     relationshipId: string,
     radians: number,
-    source: StudioCommand["source"] = "ui"
+    source: StudioCommand["source"] = "ui",
+    durationSeconds?: number
   ): Promise<CommandResult<MechanicalRotaryCommandResult>> {
     finiteRadians(radians, "Mechanical rotary step");
+    const payload: MechanicalRotaryStepPayload = durationSeconds === undefined
+      ? { relationshipId, radians }
+      : { relationshipId, radians, durationSeconds: validateRotaryDurationSeconds(durationSeconds) };
     return this.session.commands.dispatch<MechanicalRotaryCommandResult>({
       id: this.#nextCommandId(),
       type: MECHANICAL_ROTARY_STEP_COMMAND,
-      payload: { relationshipId, radians },
+      payload,
       source,
       issuedAt: new Date().toISOString()
     });
@@ -202,13 +245,17 @@ export class InventionMechanicalCommandRuntime {
   async setTarget(
     relationshipId: string,
     targetRadians: number,
-    source: StudioCommand["source"] = "ui"
+    source: StudioCommand["source"] = "ui",
+    durationSeconds?: number
   ): Promise<CommandResult<MechanicalRotaryCommandResult>> {
     finiteRadians(targetRadians, "Mechanical rotary target");
+    const payload: MechanicalRotaryTargetPayload = durationSeconds === undefined
+      ? { relationshipId, targetRadians }
+      : { relationshipId, targetRadians, durationSeconds: validateRotaryDurationSeconds(durationSeconds) };
     return this.session.commands.dispatch<MechanicalRotaryCommandResult>({
       id: this.#nextCommandId(),
       type: MECHANICAL_ROTARY_TARGET_COMMAND,
-      payload: { relationshipId, targetRadians },
+      payload,
       source,
       issuedAt: new Date().toISOString()
     });
@@ -217,13 +264,17 @@ export class InventionMechanicalCommandRuntime {
   async setContinuousTarget(
     relationshipId: string,
     targetContinuousRadians: number,
-    source: StudioCommand["source"] = "ui"
+    source: StudioCommand["source"] = "ui",
+    durationSeconds?: number
   ): Promise<CommandResult<MechanicalRotaryCommandResult>> {
     finiteRadians(targetContinuousRadians, "Mechanical rotary continuous target");
+    const payload: MechanicalRotaryContinuousTargetPayload = durationSeconds === undefined
+      ? { relationshipId, targetContinuousRadians }
+      : { relationshipId, targetContinuousRadians, durationSeconds: validateRotaryDurationSeconds(durationSeconds) };
     return this.session.commands.dispatch<MechanicalRotaryCommandResult>({
       id: this.#nextCommandId(),
       type: MECHANICAL_ROTARY_CONTINUOUS_TARGET_COMMAND,
-      payload: { relationshipId, targetContinuousRadians },
+      payload,
       source,
       issuedAt: new Date().toISOString()
     });
@@ -301,6 +352,70 @@ export class InventionMechanicalCommandRuntime {
     return { ...state, relationshipId, evidenceCommands: evidence.length, derivedFrom: "session-events+spatial" };
   }
 
+  rate(relationshipId: string): MechanicalRotaryRateEvidence {
+    this.#resolveJoint(relationshipId);
+    const evidence = this.#rotaryEvidence(relationshipId);
+    const latest = evidence[evidence.length - 1];
+    if (!latest) {
+      return {
+        relationshipId,
+        commandId: null,
+        durationSeconds: null,
+        averageAngularVelocityRadPerSec: null,
+        averageRpm: null,
+        mode: "unresolved-no-duration",
+        derivedFrom: "session-events-explicit-duration",
+        signature: MECHANICAL_COMMAND_SIGNATURE
+      };
+    }
+
+    const commandId = textual(latest.payload.commandId, "Mechanical rotary rate commandId");
+    if (latest.payload.durationSeconds === undefined || latest.payload.durationSeconds === null) {
+      if (latest.payload.rateMode !== undefined && latest.payload.rateMode !== "unresolved-no-duration") {
+        throw new Error(`Mechanical rotary unresolved rate-mode evidence mismatch: ${relationshipId}`);
+      }
+      return {
+        relationshipId,
+        commandId,
+        durationSeconds: null,
+        averageAngularVelocityRadPerSec: null,
+        averageRpm: null,
+        mode: "unresolved-no-duration",
+        derivedFrom: "session-events-explicit-duration",
+        signature: MECHANICAL_COMMAND_SIGNATURE
+      };
+    }
+
+    const deltaRadians = numeric(latest.payload.deltaRadians, "Mechanical rotary rate deltaRadians");
+    const durationSeconds = numeric(latest.payload.durationSeconds, "Mechanical rotary rate durationSeconds");
+    const derived = deriveRotarySegmentRate(deltaRadians, durationSeconds);
+    if (latest.payload.rateMode !== undefined && latest.payload.rateMode !== "segment-average") {
+      throw new Error(`Mechanical rotary rate-mode evidence mismatch: ${relationshipId}`);
+    }
+    if (latest.payload.averageAngularVelocityRadPerSec !== undefined && latest.payload.averageAngularVelocityRadPerSec !== null) {
+      const recorded = numeric(latest.payload.averageAngularVelocityRadPerSec, "Mechanical rotary recorded angular rate");
+      if (!rateMatches(recorded, derived.averageAngularVelocityRadPerSec)) {
+        throw new Error(`Mechanical rotary angular-rate evidence mismatch: ${relationshipId}`);
+      }
+    }
+    if (latest.payload.averageRpm !== undefined && latest.payload.averageRpm !== null) {
+      const recorded = numeric(latest.payload.averageRpm, "Mechanical rotary recorded RPM");
+      if (!rateMatches(recorded, derived.averageRpm)) {
+        throw new Error(`Mechanical rotary RPM evidence mismatch: ${relationshipId}`);
+      }
+    }
+    return {
+      relationshipId,
+      commandId,
+      durationSeconds: derived.durationSeconds,
+      averageAngularVelocityRadPerSec: derived.averageAngularVelocityRadPerSec,
+      averageRpm: derived.averageRpm,
+      mode: derived.mode,
+      derivedFrom: "session-events-explicit-duration",
+      signature: MECHANICAL_COMMAND_SIGNATURE
+    };
+  }
+
   #relationships(): readonly EngineeringRelationship[] {
     return this.session.graph.snapshot().relationships;
   }
@@ -319,11 +434,13 @@ export class InventionMechanicalCommandRuntime {
 
   #executeStep(command: StudioCommand<MechanicalRotaryStepPayload>): MechanicalRotaryCommandResult {
     finiteRadians(command.payload.radians, "Mechanical rotary step");
+    if (command.payload.durationSeconds !== undefined) validateRotaryDurationSeconds(command.payload.durationSeconds);
     return this.#apply(command, command.payload.relationshipId, command.payload.radians, "incremental");
   }
 
   #executeTarget(command: StudioCommand<MechanicalRotaryTargetPayload>): MechanicalRotaryCommandResult {
     finiteRadians(command.payload.targetRadians, "Mechanical rotary target");
+    if (command.payload.durationSeconds !== undefined) validateRotaryDurationSeconds(command.payload.durationSeconds);
     const { constraint } = this.#resolveJoint(command.payload.relationshipId);
     const driverBinding = this.spatial.binding(constraint.driver.entityId);
     const followerBinding = this.spatial.binding(constraint.follower.entityId);
@@ -339,6 +456,7 @@ export class InventionMechanicalCommandRuntime {
 
   #executeContinuousTarget(command: StudioCommand<MechanicalRotaryContinuousTargetPayload>): MechanicalRotaryCommandResult {
     finiteRadians(command.payload.targetContinuousRadians, "Mechanical rotary continuous target");
+    if (command.payload.durationSeconds !== undefined) validateRotaryDurationSeconds(command.payload.durationSeconds);
     const before = this.kinematics(command.payload.relationshipId);
     const target = rotaryContinuousTargetDelta(before.continuousRadians, command.payload.targetContinuousRadians);
     return this.#apply(command, command.payload.relationshipId, target.deltaRadians, target.mode);
@@ -410,11 +528,17 @@ export class InventionMechanicalCommandRuntime {
   ): MechanicalRotaryCommandResult {
     finiteRadians(deltaRadiansInput, "Mechanical rotary command delta");
     const deltaRadians = normalizeNearZero(deltaRadiansInput);
+    const durationSeconds = command.payload.durationSeconds === undefined
+      ? null
+      : validateRotaryDurationSeconds(command.payload.durationSeconds);
     const { constraint, relationship } = this.#resolveJoint(relationshipId);
     const beforeKinematics = this.kinematics(relationshipId);
     const limits = travelLimitsFromRelationship(relationship);
     const intendedContinuousRadians = beforeKinematics.continuousRadians + deltaRadians;
     assertWithinTravelLimits(relationshipId, intendedContinuousRadians, limits);
+    const rate: RotarySegmentRateEvidence | null = durationSeconds === null
+      ? null
+      : deriveRotarySegmentRate(deltaRadians, durationSeconds);
     const driverEntity = this.session.getEntity(constraint.driver.entityId);
     const followerEntity = this.session.getEntity(constraint.follower.entityId);
     const driverBinding = this.spatial.binding(constraint.driver.entityId);
@@ -463,6 +587,10 @@ export class InventionMechanicalCommandRuntime {
       beforeRevolutions: beforeKinematics.revolutions,
       afterRevolutions: afterKinematics.revolutions,
       deltaRadians,
+      durationSeconds,
+      averageAngularVelocityRadPerSec: rate?.averageAngularVelocityRadPerSec ?? null,
+      averageRpm: rate?.averageRpm ?? null,
+      rateMode: rate?.mode ?? "unresolved-no-duration",
       mode,
       changed,
       signature: MECHANICAL_COMMAND_SIGNATURE
@@ -497,6 +625,10 @@ export class InventionMechanicalCommandRuntime {
         beforeRevolutions: result.beforeRevolutions,
         afterRevolutions: result.afterRevolutions,
         deltaRadians: result.deltaRadians,
+        durationSeconds: result.durationSeconds,
+        averageAngularVelocityRadPerSec: result.averageAngularVelocityRadPerSec,
+        averageRpm: result.averageRpm,
+        rateMode: result.rateMode,
         mode: result.mode,
         changed: result.changed,
         signature: result.signature

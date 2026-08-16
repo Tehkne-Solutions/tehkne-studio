@@ -78,12 +78,11 @@ for (const token of [
   'data-continuous-target-mode="continuous-absolute"',
   'data-target-mode="principal-shortest"',
   'data-command-bus="session"',
-  'data-transform-mode="atomic-batch"',
-  "sem RPM/torque"
+  'data-transform-mode="atomic-batch"'
 ]) {
   if (!control.includes(token)) throw new Error(`S2.25 UI projection missing: ${token}`);
 }
-for (const forbidden of ["setInterval(", "requestAnimationFrame(", "rpm", "angularVelocity", "torqueTarget", "continuousTargetMap"]) {
+for (const forbidden of ["setInterval(", "requestAnimationFrame(", "torqueTarget", "continuousTargetMap"]) {
   if (control.includes(forbidden)) throw new Error(`S2.25 UI must remain command projection without dynamics/local target state: ${forbidden}`);
 }
 
@@ -135,4 +134,4 @@ if (!workflow.includes("S2.25 rotary continuous target browser contract")) throw
 if (!workflow.includes("tests/browser/rotary-continuous-target.spec.ts")) throw new Error("S2.25 dedicated browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.25 CI must remain read-only");
 
-console.log("S2.25 Rotary Continuous Target PASS · absolute multi-turn targets via existing session CommandBus + exact continuous/revolution evidence + atomic follower transform + restore without replay + cumulative CI contract + no parallel state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.25 Rotary Continuous Target PASS · absolute multi-turn targets via existing session CommandBus + exact continuous/revolution evidence + atomic follower transform + restore without replay + cumulative CI contract + compatible with later explicit segment-rate evidence + no parallel state/no torque solver + Tehkné Solutions");
