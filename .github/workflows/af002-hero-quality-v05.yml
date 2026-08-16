@@ -1,0 +1,31 @@
+name: AF-002 Hero Quality v0.5 Gate
+
+on:
+  pull_request:
+    paths:
+      - 'tools/asset_forge/af002_v05/**'
+      - '.github/workflows/af002-hero-quality-v05.yml'
+  workflow_dispatch:
+
+jobs:
+  verify-af002-hero-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deterministic geometry dependencies
+        run: pip install numpy==2.3.5 trimesh==4.11.1
+      - name: Generate AF-002 v0.5 candidate
+        run: python tools/asset_forge/af002_v05/generate_hero_quality_candidate.py
+      - name: Verify AF-002 v0.5 contract
+        run: python tools/asset_forge/af002_v05/verify_hero_quality_candidate.py
+      - name: Preserve AF-002 v0.5 candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: af002-v05-hero-quality-candidate
+          path: tools/asset_forge/af002_v05/generated/
+          retention-days: 14
