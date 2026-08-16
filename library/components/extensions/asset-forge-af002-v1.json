@@ -1,0 +1,60 @@
+{
+  "extensionId": "asset-forge-af002-v1",
+  "extensionVersion": "1",
+  "signature": "Tehkné Solutions",
+  "components": [
+    {
+      "definitionId": "mechanical.coupler.shaft-a-v1",
+      "version": "1",
+      "name": "AF-002 Shaft Coupler A",
+      "type": "ShaftCoupler",
+      "domain": "structural",
+      "productFamilies": ["robotics", "embedded", "generic"],
+      "tags": ["coupler", "shaft", "mechanical", "rotary", "transmission", "af-002"],
+      "defaultState": "ready",
+      "properties": {
+        "overallDiameterM": { "id": "overallDiameterM", "value": 0.03, "unit": "m", "source": "studio", "confidence": 1, "min": 0.03, "max": 0.03 },
+        "overallLengthM": { "id": "overallLengthM", "value": 0.035, "unit": "m", "source": "studio", "confidence": 1, "min": 0.035, "max": 0.035 },
+        "nominalBoreInM": { "id": "nominalBoreInM", "value": 0.01, "unit": "m", "source": "studio", "confidence": 1, "min": 0.01, "max": 0.01 },
+        "nominalBoreOutM": { "id": "nominalBoreOutM", "value": 0.01, "unit": "m", "source": "studio", "confidence": 1, "min": 0.01, "max": 0.01 }
+      },
+      "ports": {
+        "axis-in": { "id": "axis-in", "kind": "mechanical", "direction": "in", "compatibility": ["mechanical.rotary-shaft"], "state": "available" },
+        "axis-out": { "id": "axis-out", "kind": "mechanical", "direction": "out", "compatibility": ["mechanical.rotary-shaft"], "state": "available" }
+      },
+      "capabilities": [
+        { "id": "inspect", "label": "Inspecionar" },
+        { "id": "explain", "label": "Explicar" },
+        { "id": "assemble", "label": "Montar" }
+      ],
+      "metadata": {
+        "assetForgeId": "AF-002",
+        "assetForgeSku": "TS_MECH_SHAFT_COUPLER_A",
+        "assetForgeVersion": "0.2.0-engineering-reference",
+        "assetForgeStage": "ENGINEERING_REFERENCE",
+        "provenance": "tools/asset_forge/af002_v02/engineering-reference.json",
+        "signature": "Tehkné Solutions",
+        "physicalClaims": {
+          "geometry": true,
+          "physicalSockets": true,
+          "coaxialAssembly": true,
+          "torqueCapacity": false,
+          "maxRpm": false,
+          "misalignmentCapacity": false,
+          "stiffness": false,
+          "damping": false,
+          "manufacturingCertification": false
+        },
+        "spatialProxy": {
+          "kind": "shaft-coupler",
+          "status": "PROXY_EXPLICIT_ENGINEERING_REFERENCE",
+          "dimensionsM": { "radius": 0.015, "length": 0.035, "boreRadius": 0.005 },
+          "portAnchors": {
+            "axis-in": { "name": "SOCKET_MECH_AXIS_IN", "position": [0, 0, -0.0175], "axis": [0, 0, -1] },
+            "axis-out": { "name": "SOCKET_MECH_AXIS_OUT", "position": [0, 0, 0.0175], "axis": [0, 0, 1] }
+          }
+        }
+      }
+    }
+  ]
+}
