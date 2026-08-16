@@ -21,6 +21,8 @@ if not GLB.exists() or not EVIDENCE.exists(): fail("generated payload/evidence m
 data=GLB.read_bytes(); evidence=json.loads(EVIDENCE.read_text())
 if len(data)!=EXPECTED_BYTES: fail(f"bytes {len(data)} != {EXPECTED_BYTES}")
 if hashlib.sha256(data).hexdigest()!=EXPECTED_SHA256: fail("sha256 mismatch")
+if evidence.get("bytes")!=EXPECTED_BYTES: fail("evidence bytes mismatch")
+if evidence.get("sha256")!=EXPECTED_SHA256: fail("evidence sha256 mismatch")
 if evidence.get("triangles")!=EXPECTED_TRIANGLES: fail("triangle count mismatch")
 if evidence.get("socketTranslations")!=EXPECTED_SOCKETS: fail("socket transforms changed")
 if not REQUIRED_FEATURES.issubset(set(evidence.get("qualityFeatures",[]))): fail("quality feature missing")
