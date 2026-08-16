@@ -1,0 +1,28 @@
+{
+  "assetId": "AF-002",
+  "sku": "TS_MECH_SHAFT_COUPLER_A",
+  "stage": "RUNTIME_CANDIDATE",
+  "version": "0.3.0-dcc-candidate",
+  "signature": "Tehkné Solutions",
+  "runtimeUrl": "/api/asset-forge/af002/coupler",
+  "transport": {
+    "encoding": "gzip+base64",
+    "chunks": 2,
+    "bytes": 5032,
+    "sha256": "2bd7f252777249e6b27cadded8fb90485968dd41d6b933c33d3d1338a65c0e38"
+  },
+  "glb": {
+    "bytes": 22600,
+    "sha256": "48e8363cdc38b5ae93ace0b975c42498663e03c922970fb2b60e80c65d26b50e"
+  },
+  "claims": {
+    "runtimePayloadAvailable": true,
+    "physicalSocketsMaterialized": true,
+    "heroCandidate": false,
+    "goldenAsset": false,
+    "torqueCapacity": false,
+    "maxRpm": false,
+    "dynamics": false
+  },
+  "nextGate": "STUDIO_RENDER_AND_AF001_SNAP_EVIDENCE"
+}
