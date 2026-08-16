@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 
 const required = [
   "packages/invention-assembly-runtime/src/rotary-continuous-angle.ts",
+  "packages/invention-assembly-runtime/src/rotary-relative-angle.ts",
   "packages/invention-mechanical-command-runtime/src/index.ts",
   "apps/studio-web/components/RotaryJointControls.tsx",
   "tests/domain/invention-rotary-multiturn.test.mjs",
@@ -17,6 +18,17 @@ if (!motor) throw new Error("S2.24 AF-001 motor definition missing");
 if (motor.metadata?.visualAsset?.version !== "0.6.6-hero-candidate" || motor.metadata?.visualAsset?.status !== "HERO_CANDIDATE") throw new Error("S2.24 must preserve AF-001 HERO_CANDIDATE identity");
 if (motor.metadata?.visualAsset?.triangles !== 3292 || motor.metadata?.visualAsset?.bytes !== 243848) throw new Error("S2.24 must preserve AF-001 LOD0 budget");
 if (motor.metadata?.visualAsset?.sha256 !== "65b82b78ecc038fa872a8d8ff9e6e720956cdcdec9e4e51d9eb7904adac8622c") throw new Error("S2.24 must not change AF-001 fingerprint");
+
+const principalMath = await readFile("packages/invention-assembly-runtime/src/rotary-relative-angle.ts", "utf8");
+for (const token of [
+  "ROTARY_RELATIVE_ANGLE_EPSILON",
+  "normalizePrincipalAngle",
+  "Math.abs(normalizedAngle) <= ROTARY_RELATIVE_ANGLE_EPSILON",
+  "rotaryJointTargetDelta",
+  'mode: "principal-shortest"'
+]) {
+  if (!principalMath.includes(token)) throw new Error(`S2.24 principal-angle boundary contract missing: ${token}`);
+}
 
 const math = await readFile("packages/invention-assembly-runtime/src/rotary-continuous-angle.ts", "utf8");
 for (const token of [
@@ -98,12 +110,14 @@ for (const token of [
   "20 * DEG",
   "530 * DEG",
   "550 * DEG",
+  "canonicalizes near-zero principal residue before an exact pi target",
+  "180 * DEG",
+  "540 * DEG",
   "restore reconstructs multi-turn state from persisted session events plus spatial evidence without command replay",
   "rejects tampered continuous event evidence"
 ]) {
   if (!domain.includes(token)) throw new Error(`S2.24 domain evidence missing: ${token}`);
 }
-if (domain.includes("180 * DEG")) throw new Error("S2.24 domain gate must not depend on ambiguous ±π shortest-path sign");
 
 const browser = await readFile("tests/browser/rotary-multiturn-kinematics.spec.ts", "utf8");
 for (const token of [
@@ -121,18 +135,20 @@ for (const token of [
 ]) {
   if (!browser.includes(token)) throw new Error(`S2.24 browser evidence missing: ${token}`);
 }
-if (browser.includes('target.fill("180")')) throw new Error("S2.24 browser gate must avoid the ambiguous ±π target representative");
+if (browser.includes('target.fill("180")')) throw new Error("S2.24 canonical browser acceptance must use the unambiguous 170°→-170° wrap scenario");
 
 const readme = await readFile("README.md", "utf8");
-for (const token of ["Current baseline", "S2.24", "Multi-turn Rotary Kinematics", "session.events", "continuous", "revolutions", "HERO_CANDIDATE", "AF-001L", "Tehkné Solutions"]) {
+for (const token of ["Current baseline", "S2.24", "Multi-turn Rotary Kinematics", "session.events", "continuous", "revolutions", "170° → -170°", "HERO_CANDIDATE", "AF-001L", "Tehkné Solutions"]) {
   if (!readme.includes(token)) throw new Error(`S2.24 README baseline missing: ${token}`);
 }
 
 const pkg = JSON.parse(await readFile("package.json", "utf8"));
 if (pkg.scripts?.["verify:s2.24"] !== "node scripts/verify-s2.24.mjs") throw new Error("S2.24 package verification script missing");
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
+if (!workflow.includes("S2.24 Multi-turn Rotary Kinematics Gate")) throw new Error("S2.24 workflow identity missing");
 if (!workflow.includes("npm run verify:s2.24")) throw new Error("S2.24 CI contract missing");
 if (!workflow.includes("tests/browser/rotary-multiturn-kinematics.spec.ts")) throw new Error("S2.24 browser gate missing from CI");
+if (!workflow.includes("s2-24-browser-failure")) throw new Error("S2.24 failure artifact identity missing");
 if (workflow.includes("contents: write")) throw new Error("S2.24 CI must remain read-only");
 
-console.log("S2.24 Multi-turn Rotary Kinematics PASS · continuous angle + integer revolutions derived from persisted session.events and spatial principal evidence + unambiguous wrap gate + CommandBus/atomic lineage + no global state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.24 Multi-turn Rotary Kinematics PASS · continuous angle + integer revolutions derived from persisted session.events and spatial principal evidence + deterministic pi boundary + unambiguous browser wrap gate + CommandBus/atomic lineage + no global state/no dynamics fiction + Tehkné Solutions");
