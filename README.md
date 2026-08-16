@@ -10,6 +10,8 @@ Previous validated baseline: `0.1.0-alpha.1 · S1.12 + S2.31`.
 
 Historical validated baseline: `0.1.0-alpha.1 · S1.12 + S2.30`.
 
+Earlier validated baseline: `0.1.0-alpha.1 · S1.12 + S2.29`.
+
 Tehkné Studio is an executable engineering workspace where products, components, experiments and spatial assemblies share the same engineering state instead of being disconnected demos.
 
 ### Implemented platform foundation
