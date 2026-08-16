@@ -17,6 +17,10 @@ import {
   mechanicalRotaryHomeRuntimeFor,
   type MechanicalRotaryHomeResult
 } from "../../../packages/invention-mechanical-command-runtime/src/rotary-home";
+import {
+  mechanicalRotaryNamedPositionsRuntimeFor,
+  type MechanicalRotaryNamedPositionResult
+} from "../../../packages/invention-mechanical-command-runtime/src/rotary-named-positions";
 import type { InventionSpatialScene } from "../../../packages/invention-spatial-runtime/src/index";
 import type { SpatialEntityBinding } from "../../../packages/spatial-runtime/src/index";
 import { useSpatialPortEndpoint } from "./InventionAssetVisual";
@@ -55,11 +59,15 @@ export function RotaryJointControls({
   const [continuousTargetDegrees, setContinuousTargetDegrees] = useState("0");
   const [minTravelDegrees, setMinTravelDegrees] = useState("-180");
   const [maxTravelDegrees, setMaxTravelDegrees] = useState("540");
+  const [positionName, setPositionName] = useState("");
+  const [selectedPositionKey, setSelectedPositionKey] = useState("");
   const [lastCommand, setLastCommand] = useState<MechanicalRotaryCommandResult | null>(null);
   const [lastLimitCommand, setLastLimitCommand] = useState<MechanicalRotaryTravelLimitsResult | null>(null);
   const [lastHomeCommand, setLastHomeCommand] = useState<MechanicalRotaryHomeResult | null>(null);
+  const [lastPositionCommand, setLastPositionCommand] = useState<MechanicalRotaryNamedPositionResult | null>(null);
   const commands = mechanicalCommandRuntimeFor(spatial);
   const homeCommands = mechanicalRotaryHomeRuntimeFor(spatial);
+  const positionCommands = mechanicalRotaryNamedPositionsRuntimeFor(spatial);
   const driverEndpoint = useSpatialPortEndpoint(driverEntity, driverBinding, constraint.driver.portId);
   const followerEndpoint = useSpatialPortEndpoint(followerEntity, followerBinding, constraint.follower.portId);
   const driverAxis = mechanicalWorldAxis(constraint.driverAxisLocal, driverBinding.rotation);
@@ -69,6 +77,8 @@ export function RotaryJointControls({
   const kinematics = ready ? commands.kinematics(constraint.relationshipId) : null;
   const limits = ready ? commands.travelLimits(constraint.relationshipId) : null;
   const home = ready ? homeCommands.home(constraint.relationshipId) : null;
+  const namedPositions = ready ? positionCommands.positions(constraint.relationshipId) : [];
+  const selectedPosition = namedPositions.find((entry) => entry.key === selectedPositionKey) ?? null;
 
   const acceptCommand = (result: MechanicalRotaryCommandResult): void => {
     setLastCommand(result);
@@ -175,9 +185,47 @@ export function RotaryJointControls({
     }
   };
 
-  return <div className={styles.wireEvidence} aria-label={`Rotary joint ${constraint.relationshipId}`} data-testid={`rotary-joint-${constraint.relationshipId}`} data-dof="rotary-follower" data-state={ready ? "ready" : "blocked"} data-driver-entity={constraint.driver.entityId} data-follower-entity={constraint.follower.entityId} data-axis={formatAxis(driverAxis)} data-angle-rad={kinematics === null ? "" : kinematics.principalRadians.toFixed(3)} data-angle-mode="principal-derived" data-continuous-angle-rad={kinematics === null ? "" : kinematics.continuousRadians.toFixed(3)} data-revolutions={kinematics === null ? "" : String(kinematics.revolutions)} data-kinematics-source={kinematics?.derivedFrom ?? ""} data-kinematics-evidence={kinematics === null ? "" : String(kinematics.evidenceCommands)} data-target-mode="principal-shortest" data-continuous-target-mode="continuous-absolute" data-travel-limited={limits ? "true" : "false"} data-travel-limit-mode={limits?.mode ?? ""} data-travel-min-rad={limits ? limits.minContinuousRadians.toFixed(3) : ""} data-travel-max-rad={limits ? limits.maxContinuousRadians.toFixed(3) : ""} data-limit-command-id={lastLimitCommand?.commandId ?? ""} data-limit-command-source={lastLimitCommand?.source ?? ""} data-limit-command-action={lastLimitCommand?.action ?? ""} data-home-authored={home ? "true" : "false"} data-home-mode={home?.mode ?? ""} data-home-rad={home ? home.homeContinuousRadians.toFixed(3) : ""} data-home-command-id={lastHomeCommand?.commandId ?? ""} data-home-command-source={lastHomeCommand?.source ?? ""} data-home-command-action={lastHomeCommand?.action ?? ""} data-transform-mode="atomic-batch" data-command-bus="session" data-command-source={lastCommand?.source ?? ""} data-command-id={lastCommand?.commandId ?? ""} data-command-mode={lastCommand?.mode ?? ""}>
+  const saveNamedPosition = async (): Promise<void> => {
+    try {
+      if (!physical) throw new Error(`Rotary joint ${constraint.relationshipId} requires physical endpoints`);
+      const outcome = await positionCommands.savePosition(constraint.relationshipId, positionName, "ui");
+      if (!outcome.ok || !outcome.result || !outcome.result.current) throw new Error(outcome.error ?? "Mechanical rotary save named position command failed");
+      setLastPositionCommand(outcome.result);
+      setSelectedPositionKey(outcome.result.current.key);
+      setPositionName(outcome.result.current.name);
+    } catch (cause) {
+      onBlocked(cause);
+    }
+  };
+
+  const goToNamedPosition = async (): Promise<void> => {
+    try {
+      if (!physical) throw new Error(`Rotary joint ${constraint.relationshipId} requires physical endpoints`);
+      if (!selectedPosition) throw new Error("Select an authored rotary named position");
+      const outcome = await positionCommands.goToPosition(constraint.relationshipId, selectedPosition.name, "ui");
+      if (!outcome.ok || !outcome.result) throw new Error(outcome.error ?? "Mechanical rotary go to named position command failed");
+      acceptCommand(outcome.result);
+    } catch (cause) {
+      onBlocked(cause);
+    }
+  };
+
+  const deleteNamedPosition = async (): Promise<void> => {
+    try {
+      if (!physical) throw new Error(`Rotary joint ${constraint.relationshipId} requires physical endpoints`);
+      if (!selectedPosition) throw new Error("Select an authored rotary named position");
+      const outcome = await positionCommands.deletePosition(constraint.relationshipId, selectedPosition.name, "ui");
+      if (!outcome.ok || !outcome.result) throw new Error(outcome.error ?? "Mechanical rotary delete named position command failed");
+      setLastPositionCommand(outcome.result);
+      setSelectedPositionKey("");
+    } catch (cause) {
+      onBlocked(cause);
+    }
+  };
+
+  return <div className={styles.wireEvidence} aria-label={`Rotary joint ${constraint.relationshipId}`} data-testid={`rotary-joint-${constraint.relationshipId}`} data-dof="rotary-follower" data-state={ready ? "ready" : "blocked"} data-driver-entity={constraint.driver.entityId} data-follower-entity={constraint.follower.entityId} data-axis={formatAxis(driverAxis)} data-angle-rad={kinematics === null ? "" : kinematics.principalRadians.toFixed(3)} data-angle-mode="principal-derived" data-continuous-angle-rad={kinematics === null ? "" : kinematics.continuousRadians.toFixed(3)} data-revolutions={kinematics === null ? "" : String(kinematics.revolutions)} data-kinematics-source={kinematics?.derivedFrom ?? ""} data-kinematics-evidence={kinematics === null ? "" : String(kinematics.evidenceCommands)} data-target-mode="principal-shortest" data-continuous-target-mode="continuous-absolute" data-travel-limited={limits ? "true" : "false"} data-travel-limit-mode={limits?.mode ?? ""} data-travel-min-rad={limits ? limits.minContinuousRadians.toFixed(3) : ""} data-travel-max-rad={limits ? limits.maxContinuousRadians.toFixed(3) : ""} data-limit-command-id={lastLimitCommand?.commandId ?? ""} data-limit-command-source={lastLimitCommand?.source ?? ""} data-limit-command-action={lastLimitCommand?.action ?? ""} data-home-authored={home ? "true" : "false"} data-home-mode={home?.mode ?? ""} data-home-rad={home ? home.homeContinuousRadians.toFixed(3) : ""} data-home-command-id={lastHomeCommand?.commandId ?? ""} data-home-command-source={lastHomeCommand?.source ?? ""} data-home-command-action={lastHomeCommand?.action ?? ""} data-named-position-count={String(namedPositions.length)} data-selected-position-key={selectedPosition?.key ?? ""} data-position-command-id={lastPositionCommand?.commandId ?? ""} data-position-command-source={lastPositionCommand?.source ?? ""} data-position-command-action={lastPositionCommand?.action ?? ""} data-transform-mode="atomic-batch" data-command-bus="session" data-command-source={lastCommand?.source ?? ""} data-command-id={lastCommand?.commandId ?? ""} data-command-mode={lastCommand?.mode ?? ""}>
     <strong>ROTARY JOINT DOF · {followerEntity.name}</strong>
-    <small>{constraint.driver.portId} → {constraint.follower.portId} · follower-only · {ready ? "READY" : "BLOCKED"} · {kinematics === null ? "ANGLE UNRESOLVED" : `PRINCIPAL ${formatAngle(kinematics.principalRadians)} · CONTÍNUO ${formatAngle(kinematics.continuousRadians)} · VOLTAS ${kinematics.revolutions}`} · {limits ? `CURSO ${formatAngle(limits.minContinuousRadians)} → ${formatAngle(limits.maxContinuousRadians)}` : "CURSO ILIMITADO"} · {home ? `HOME ${formatAngle(home.homeContinuousRadians)}` : "HOME NÃO DEFINIDO"} · CommandBus + atomic transform · sem RPM/torque</small>
+    <small>{constraint.driver.portId} → {constraint.follower.portId} · follower-only · {ready ? "READY" : "BLOCKED"} · {kinematics === null ? "ANGLE UNRESOLVED" : `PRINCIPAL ${formatAngle(kinematics.principalRadians)} · CONTÍNUO ${formatAngle(kinematics.continuousRadians)} · VOLTAS ${kinematics.revolutions}`} · {limits ? `CURSO ${formatAngle(limits.minContinuousRadians)} → ${formatAngle(limits.maxContinuousRadians)}` : "CURSO ILIMITADO"} · {home ? `HOME ${formatAngle(home.homeContinuousRadians)}` : "HOME NÃO DEFINIDO"} · POSIÇÕES {namedPositions.length} · CommandBus + atomic transform · sem RPM/torque</small>
     <div className={styles.axisGrid}>
       <button type="button" onClick={() => void rotateJoint(-JOINT_STEP_RAD)} disabled={!ready}>JOINT −</button>
       <button type="button" onClick={() => void rotateJoint(JOINT_STEP_RAD)} disabled={!ready}>JOINT +</button>
@@ -204,6 +252,20 @@ export function RotaryJointControls({
     </div>
     <div className={styles.axisGrid}>
       <button type="button" onClick={() => void clearHome()} disabled={!ready || !home}>CLEAR HOME</button>
+    </div>
+    <div className={styles.axisGrid}>
+      <input aria-label="Rotary named position name" type="text" maxLength={64} value={positionName} onChange={(event) => setPositionName(event.target.value)} disabled={!ready} placeholder="Inspect, Load, Park…" />
+      <button type="button" onClick={() => void saveNamedPosition()} disabled={!ready || positionName.trim().length === 0}>SAVE POSITION</button>
+    </div>
+    <div className={styles.axisGrid}>
+      <select aria-label="Rotary named position" value={selectedPositionKey} onChange={(event) => setSelectedPositionKey(event.target.value)} disabled={!ready || namedPositions.length === 0}>
+        <option value="">Select position…</option>
+        {namedPositions.map((entry) => <option key={entry.key} value={entry.key}>{entry.name} · {(entry.continuousRadians * 180 / Math.PI).toFixed(1)}°</option>)}
+      </select>
+      <button type="button" onClick={() => void goToNamedPosition()} disabled={!ready || !selectedPosition}>GO POSITION</button>
+    </div>
+    <div className={styles.axisGrid}>
+      <button type="button" onClick={() => void deleteNamedPosition()} disabled={!ready || !selectedPosition}>DELETE POSITION</button>
     </div>
   </div>;
 }
