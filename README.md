@@ -4,11 +4,11 @@ Virtual Engineering Atelier by **Tehkné Solutions**.
 
 ## Current baseline
 
-`0.1.0-alpha.1 · S1.12 + S2.31`
+`0.1.0-alpha.1 · S1.12 + S2.32`
 
-Previous validated baseline: `0.1.0-alpha.1 · S1.12 + S2.30`.
+Previous validated baseline: `0.1.0-alpha.1 · S1.12 + S2.31`.
 
-Historical validated baseline: `0.1.0-alpha.1 · S1.12 + S2.29`.
+Historical validated baseline: `0.1.0-alpha.1 · S1.12 + S2.30`.
 
 Tehkné Studio is an executable engineering workspace where products, components, experiments and spatial assemblies share the same engineering state instead of being disconnected demos.
 
@@ -39,11 +39,12 @@ Tehkné Studio is an executable engineering workspace where products, components
 - **Rotary Named Positions (S2.28)**: multiple normalized bookmarks such as `Inspect`, `Load` and `Park` are stored on the same rotary relationship and `GO POSITION` delegates to canonical movement;
 - **Rotary Segment Rate Evidence (S2.29)**: an explicit positive `durationSeconds` on a completed movement segment produces deterministic `segment-average` rad/s and RPM evidence; untimed movement remains `RATE UNRESOLVED`;
 - **Rotary Waypoint Sequence (S2.30)**: an ordered sequence references existing Named Positions and may author a duration per segment. `RUN SEQUENCE` executes each target through the same `setContinuousTarget` path;
-- **Rotary Waypoint Sequence Plan (S2.31)**: `PREVIEW SEQUENCE` computes a read-only deterministic plan from the current continuous coordinate and live Named Positions, including per-segment delta/rate evidence, travel admissibility, route totals and explicit-duration completeness. `RUN SEQUENCE` consumes the same plan as its preflight.
+- **Rotary Waypoint Sequence Plan (S2.31)**: `PREVIEW SEQUENCE` computes a read-only deterministic plan from the current continuous coordinate and live Named Positions, including per-segment delta/rate evidence, travel admissibility, route totals and explicit-duration completeness. `RUN SEQUENCE` consumes the same plan as its preflight;
+- **Rotary Waypoint Sequence Execution Evidence (S2.32)**: successful sequence runs are reconstructed read-only from `session.events`, linking the sequence request to canonical movement command evidence without creating a parallel execution document.
 
 ## Engineering invariants
 
-`connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints, rotary controls, travel limits, HOME, Named Positions and S2.30 `rotaryWaypointSequences` are projections or metadata of that same graph. The S2.31 waypoint plan is a read-only projection derived from those authorities and is not persisted. Tehkné Studio does not maintain a parallel assembly, rotation, joint, limit, home, named-position, sequence, plan, revolution or rate graph.
+`connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints, rotary controls, travel limits, HOME, Named Positions and S2.30 `rotaryWaypointSequences` are projections or metadata of that same graph. The S2.31 waypoint plan and S2.32 execution evidence are read-only projections derived from canonical authorities and are not persisted as parallel state. Tehkné Studio does not maintain a parallel assembly, rotation, joint, limit, home, named-position, sequence, plan, execution, revolution or rate graph.
 
 The `inventionSpatial` document remains the only persisted physical spatial source of truth. `transformBatch(...)` prepares and validates each mechanical state transition before committing. Mechanical commands do not introduce a shadow transform map or second joint state.
 
@@ -152,6 +153,16 @@ S2.31 does not persist a `rotaryWaypointPlan`, `sequencePlan`, plan document or 
 
 S2.31 **does not wait** for durations, schedule future motion or introduce physical dynamics. There is no hidden clock, timer, motion timeline, acceleration solver, torque solver, inertia solver or alternate movement planner.
 
+### Rotary Waypoint Sequence Execution Evidence authority
+
+S2.32 adds `rotaryWaypointExecutionEvidence(session, relationshipId, sequenceName?)` and `latestRotaryWaypointExecutionEvidence(...)` as **read-only projections** over `session.events`. They resolve each successful `MechanicalRotaryWaypointSequenceRequested` event and then resolve the canonical movement events referenced by its `movementCommandIds`.
+
+Each execution segment exposes the persisted before/after continuous coordinate, exact delta, explicit duration when authored, deterministic segment-average rad/s and RPM, rate mode and movement mode. Aggregate evidence exposes net delta, cumulative absolute travel, timed/untimed step counts, explicit-duration sum and a total duration only when every segment is explicitly timed.
+
+The projection validates duplicate or missing movement command IDs, relationship mismatches, broken continuous-coordinate chains, aggregate mismatches, final movement identity and final rate mode. Invalid persisted evidence fails closed instead of being silently repaired.
+
+S2.32 does not persist `sequenceExecution`, an execution map or a second history. It does not dispatch commands, record events, mutate `inventionSpatial`, schedule future work or infer time from timestamps. `session.events` remains the canonical persisted execution evidence authority.
+
 ## Asset Forge · AF-001
 
 Current motor candidate: `TS_ELEC_MOTOR_DC_A v0.6.6-hero-candidate`.
@@ -171,11 +182,11 @@ The AF-001L gate remains intentionally fail-closed: hosted CI validates its cont
 npm ci --ignore-scripts
 npm run security:audit
 npm run verify:s1.12
-npm run verify:s2.31
+npm run verify:s2.32
 npm run smoke:browser
 ```
 
-The cumulative S2.31 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform → S2.23 Mechanical Command Runtime → S2.24 Multi-turn Rotary Kinematics → S2.25 Rotary Continuous Target → S2.26 Rotary Travel Limits → S2.27 Rotary Home Position → S2.28 Rotary Named Positions → S2.29 Rotary Segment Rate Evidence → S2.30 Rotary Waypoint Sequence before validating S2.31 Rotary Waypoint Sequence Plan, followed by complete Chromium smoke and AF-001I deterministic evidence.
+The cumulative S2.32 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform → S2.23 Mechanical Command Runtime → S2.24 Multi-turn Rotary Kinematics → S2.25 Rotary Continuous Target → S2.26 Rotary Travel Limits → S2.27 Rotary Home Position → S2.28 Rotary Named Positions → S2.29 Rotary Segment Rate Evidence → S2.30 Rotary Waypoint Sequence → S2.31 Rotary Waypoint Sequence Plan before validating S2.32 Rotary Waypoint Sequence Execution Evidence, followed by complete Chromium smoke and AF-001I deterministic evidence.
 
 ## Repository structure
 
