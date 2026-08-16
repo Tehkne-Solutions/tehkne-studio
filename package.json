@@ -55,7 +55,8 @@
     "verify:s2.25": "node scripts/verify-s2.25.mjs",
     "verify:s2.26": "node scripts/verify-s2.26.mjs",
     "verify:s2.27": "node scripts/verify-s2.27.mjs",
-    "verify:s2.28": "node scripts/verify-s2.28.mjs"
+    "verify:s2.28": "node scripts/verify-s2.28.mjs",
+    "verify:s2.29": "node scripts/verify-s2.29.mjs"
   },
   "overrides": {
     "postcss": "8.5.25",
