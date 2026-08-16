@@ -56,9 +56,10 @@ for (const forbidden of [
   "rpmSolver",
   "torqueSolver",
   "angularVelocitySolver",
-  "angularAccelerationSolver"
+  "angularAccelerationSolver",
+  "rateByProject"
 ]) {
-  if (runtime.includes(forbidden)) throw new Error(`S2.28 named positions must reuse authoritative graph + canonical continuous-target runtime and avoid dynamics fiction: ${forbidden}`);
+  if (runtime.includes(forbidden)) throw new Error(`S2.28 named positions must reuse authoritative graph + canonical continuous-target runtime and avoid parallel solver/state: ${forbidden}`);
 }
 
 const baseRuntime = await readFile("packages/invention-mechanical-command-runtime/src/index.ts", "utf8");
@@ -95,13 +96,12 @@ for (const token of [
   "data-position-command-action",
   "POSIÇÕES",
   'data-command-bus="session"',
-  'data-transform-mode="atomic-batch"',
-  "sem RPM/torque"
+  'data-transform-mode="atomic-batch"'
 ]) {
   if (!control.includes(token)) throw new Error(`S2.28 UI named-position projection missing: ${token}`);
 }
-for (const forbidden of ["positionMap", "positionsByProject", "namedPositionGraph", "setInterval(", "requestAnimationFrame(", "rpm", "angularVelocity", "torqueTarget"]) {
-  if (control.includes(forbidden)) throw new Error(`S2.28 UI must not own bookmark truth or dynamics: ${forbidden}`);
+for (const forbidden of ["positionMap", "positionsByProject", "namedPositionGraph", "setInterval(", "requestAnimationFrame(", "torqueTarget", "rateByProject"]) {
+  if (control.includes(forbidden)) throw new Error(`S2.28 UI must not own bookmark truth or solver state: ${forbidden}`);
 }
 
 const domain = await readFile("tests/domain/invention-rotary-named-positions.test.mjs", "utf8");
@@ -148,7 +148,7 @@ if (!workflow.includes("S2.28 rotary named positions contract")) throw new Error
 if (!workflow.includes("npm run verify:s2.28")) throw new Error("S2.28 CI contract missing");
 if (!workflow.includes("S2.28 rotary named positions browser contract")) throw new Error("S2.28 cumulative browser step missing");
 if (!workflow.includes("tests/browser/rotary-named-positions.spec.ts")) throw new Error("S2.28 dedicated browser gate missing from CI");
-if (!workflow.includes("s2-28-browser-failure")) throw new Error("S2.28 failure artifact identity missing");
+if (!workflow.includes("s2-28-browser-failure")) throw new Error("S2.28 failure artifact lineage missing");
 if (workflow.includes("contents: write")) throw new Error("S2.28 CI must remain read-only");
 
-console.log("S2.28 Rotary Named Positions PASS · multiple normalized continuous bookmarks authored on authoritative connectedTo metadata + same session CommandBus SAVE/GO/DELETE + GO POSITION delegated to canonical continuous target and S2.26 limits + HOME preserved independently + persistence without replay + no parallel state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.28 Rotary Named Positions PASS · multiple normalized continuous bookmarks authored on authoritative connectedTo metadata + same session CommandBus SAVE/GO/DELETE + GO POSITION delegated to canonical continuous target and S2.26 limits + HOME preserved independently + persistence without replay + successor rate evidence compatible + no parallel state/no dynamics solver + Tehkné Solutions");
