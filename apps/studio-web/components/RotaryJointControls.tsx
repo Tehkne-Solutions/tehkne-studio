@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { EngineeringEntity } from "../../../packages/engineering-core/src/index";
 import {
   endpointsAreCoincident,
@@ -8,7 +9,7 @@ import {
   planMechanicalRotaryJointStep,
   type MechanicalAxialConstraint
 } from "../../../packages/invention-assembly-runtime/src/index";
-import { rotaryJointRelativeAngle } from "../../../packages/invention-assembly-runtime/src/rotary-relative-angle";
+import { rotaryJointRelativeAngle, rotaryJointTargetDelta } from "../../../packages/invention-assembly-runtime/src/rotary-relative-angle";
 import type { InventionSpatialScene } from "../../../packages/invention-spatial-runtime/src/index";
 import type { SpatialEntityBinding } from "../../../packages/spatial-runtime/src/index";
 import { useSpatialPortEndpoint } from "./InventionAssetVisual";
@@ -43,6 +44,7 @@ export function RotaryJointControls({
   readonly onChanged: (radians: number) => void;
   readonly onBlocked: (cause: unknown) => void;
 }) {
+  const [targetDegrees, setTargetDegrees] = useState("0");
   const driverEndpoint = useSpatialPortEndpoint(driverEntity, driverBinding, constraint.driver.portId);
   const followerEndpoint = useSpatialPortEndpoint(followerEntity, followerBinding, constraint.follower.portId);
   const driverAxis = mechanicalWorldAxis(constraint.driverAxisLocal, driverBinding.rotation);
@@ -71,12 +73,45 @@ export function RotaryJointControls({
     }
   };
 
-  return <div className={styles.wireEvidence} aria-label={`Rotary joint ${constraint.relationshipId}`} data-testid={`rotary-joint-${constraint.relationshipId}`} data-dof="rotary-follower" data-state={ready ? "ready" : "blocked"} data-driver-entity={constraint.driver.entityId} data-follower-entity={constraint.follower.entityId} data-axis={formatAxis(driverAxis)} data-angle-rad={relativeAngle === null ? "" : relativeAngle.toFixed(3)} data-angle-mode="principal-derived">
+  const applyTargetAngle = (): void => {
+    try {
+      if (!physical) throw new Error(`Rotary joint ${constraint.relationshipId} requires physical endpoints`);
+      const degrees = Number(targetDegrees);
+      if (!Number.isFinite(degrees) || degrees < -180 || degrees > 180) throw new Error("Rotary target angle must be between -180 and 180 degrees");
+      const target = rotaryJointTargetDelta(
+        constraint.driverAxisLocal,
+        constraint.followerAxisLocal,
+        driverBinding.rotation,
+        followerBinding.rotation,
+        degrees * Math.PI / 180
+      );
+      const plan = planMechanicalRotaryJointStep(
+        driverEndpoint.position,
+        followerEndpoint.localPosition,
+        constraint.driverAxisLocal,
+        constraint.followerAxisLocal,
+        driverBinding,
+        followerBinding,
+        target.deltaRadians
+      );
+      spatial.rotate(plan.entityId, plan.toRotation);
+      spatial.move(plan.entityId, plan.toPosition);
+      onChanged(target.deltaRadians);
+    } catch (cause) {
+      onBlocked(cause);
+    }
+  };
+
+  return <div className={styles.wireEvidence} aria-label={`Rotary joint ${constraint.relationshipId}`} data-testid={`rotary-joint-${constraint.relationshipId}`} data-dof="rotary-follower" data-state={ready ? "ready" : "blocked"} data-driver-entity={constraint.driver.entityId} data-follower-entity={constraint.follower.entityId} data-axis={formatAxis(driverAxis)} data-angle-rad={relativeAngle === null ? "" : relativeAngle.toFixed(3)} data-angle-mode="principal-derived" data-target-mode="principal-shortest">
     <strong>ROTARY JOINT DOF · {followerEntity.name}</strong>
     <small>{constraint.driver.portId} → {constraint.follower.portId} · follower-only · {ready ? "READY" : "BLOCKED"} · {relativeAngle === null ? "ANGLE UNRESOLVED" : `ANGLE ${formatAngle(relativeAngle)}`} · sem RPM/torque</small>
     <div className={styles.axisGrid}>
       <button type="button" onClick={() => rotateJoint(-JOINT_STEP_RAD)} disabled={!ready}>JOINT −</button>
       <button type="button" onClick={() => rotateJoint(JOINT_STEP_RAD)} disabled={!ready}>JOINT +</button>
+    </div>
+    <div className={styles.axisGrid}>
+      <input aria-label="Rotary joint target angle degrees" type="number" min="-180" max="180" step="15" value={targetDegrees} onChange={(event) => setTargetDegrees(event.target.value)} disabled={!ready} />
+      <button type="button" onClick={applyTargetAngle} disabled={!ready}>SET ANGLE</button>
     </div>
   </div>;
 }
