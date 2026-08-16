@@ -50,6 +50,100 @@ test("S2.11 move is bounded, finite and preserves entity identity", async () => 
   assert.throws(() => spatial.move(battery.id, { x: Number.NaN, y: 0, z: 0 }), /must be finite/);
 });
 
+test("S2.22 transformBatch commits position and rotation for multiple bindings in one validated transaction", async () => {
+  const { spatial, battery, regulator } = await canonicalSpatialCore();
+  const result = spatial.transformBatch([
+    {
+      entityId: battery.id,
+      position: { x: -0.21, y: 0.11, z: 0.04 },
+      rotation: { x: 0.1, y: 0.2, z: 0.3 }
+    },
+    {
+      entityId: regulator.id,
+      position: { x: 0.19, y: -0.08, z: 0.12 },
+      rotation: { x: -0.2, y: 0.4, z: -0.1 }
+    }
+  ]);
+
+  assert.equal(result.length, 2);
+  assert.deepEqual(spatial.binding(battery.id).position, { x: -0.21, y: 0.11, z: 0.04 });
+  assert.deepEqual(spatial.binding(battery.id).rotation, { x: 0.1, y: 0.2, z: 0.3 });
+  assert.deepEqual(spatial.binding(regulator.id).position, { x: 0.19, y: -0.08, z: 0.12 });
+  assert.deepEqual(spatial.binding(regulator.id).rotation, { x: -0.2, y: 0.4, z: -0.1 });
+});
+
+test("S2.22 transformBatch validates the complete batch before mutating any binding", async () => {
+  const { spatial, battery, regulator } = await canonicalSpatialCore();
+  const batteryBefore = spatial.binding(battery.id);
+  const regulatorBefore = spatial.binding(regulator.id);
+
+  assert.throws(
+    () => spatial.transformBatch([
+      {
+        entityId: battery.id,
+        position: { x: 0.2, y: 0.1, z: 0.05 },
+        rotation: { x: 0, y: Math.PI / 4, z: 0 }
+      },
+      {
+        entityId: regulator.id,
+        position: { x: 0.8, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0 }
+      }
+    ]),
+    /outside invention workspace bounds/
+  );
+
+  assert.deepEqual(spatial.binding(battery.id), batteryBefore, "first mutation must not leak from a rejected batch");
+  assert.deepEqual(spatial.binding(regulator.id), regulatorBefore, "rejected binding must remain untouched");
+
+  assert.throws(
+    () => spatial.transformBatch([
+      {
+        entityId: battery.id,
+        position: batteryBefore.position,
+        rotation: batteryBefore.rotation
+      },
+      {
+        entityId: regulator.id,
+        position: regulatorBefore.position,
+        rotation: { x: Number.NaN, y: 0, z: 0 }
+      }
+    ]),
+    /Spatial rotation x must be finite/
+  );
+  assert.deepEqual(spatial.binding(battery.id), batteryBefore);
+  assert.deepEqual(spatial.binding(regulator.id), regulatorBefore);
+});
+
+test("S2.22 transformBatch rejects duplicate or unknown entities before commit", async () => {
+  const { spatial, battery } = await canonicalSpatialCore();
+  const before = spatial.binding(battery.id);
+  const mutation = {
+    entityId: battery.id,
+    position: { x: 0.1, y: 0.1, z: 0.1 },
+    rotation: { x: 0.1, y: 0.1, z: 0.1 }
+  };
+
+  assert.throws(() => spatial.transformBatch([mutation, mutation]), /Duplicate spatial transform entity/);
+  assert.deepEqual(spatial.binding(battery.id), before);
+  assert.throws(() => spatial.transformBatch([
+    mutation,
+    { entityId: "missing-component", position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 } }
+  ]), /Unknown invention spatial binding/);
+  assert.deepEqual(spatial.binding(battery.id), before);
+});
+
+test("S2.22 atomic transforms persist and restore through the existing signed inventionSpatial document", async () => {
+  const { session, spatial, battery, regulator } = await canonicalSpatialCore();
+  spatial.transformBatch([
+    { entityId: battery.id, position: { x: -0.15, y: 0.05, z: 0.08 }, rotation: { x: 0, y: 0.5, z: 0 } },
+    { entityId: regulator.id, position: { x: 0.15, y: -0.05, z: 0.08 }, rotation: { x: 0, y: -0.5, z: 0 } }
+  ]);
+  const document = spatial.document();
+  const restored = new InventionSpatialScene(session, parseInventionSpatialDocument(JSON.parse(JSON.stringify(document))));
+  assert.deepEqual(restored.document(), document);
+});
+
 test("S2.11 visual wire segments derive from the authored connectedTo relationships and follow movement", async () => {
   const { builder, spatial, battery, regulator } = await canonicalSpatialCore();
   const connection = builder.connect(
