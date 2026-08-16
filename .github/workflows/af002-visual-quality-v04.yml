@@ -1,0 +1,31 @@
+name: AF-002 Visual Quality v0.4 Gate
+
+on:
+  pull_request:
+    paths:
+      - 'tools/asset_forge/af002_v04/**'
+      - '.github/workflows/af002-visual-quality-v04.yml'
+  workflow_dispatch:
+
+jobs:
+  verify-af002-visual-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install deterministic geometry dependencies
+        run: pip install numpy==2.3.5 trimesh==4.11.1
+      - name: Generate AF-002 v0.4 candidate
+        run: python tools/asset_forge/af002_v04/generate_visual_quality_candidate.py
+      - name: Verify AF-002 v0.4 contract
+        run: python tools/asset_forge/af002_v04/verify_visual_quality_candidate.py
+      - name: Preserve generated visual-quality candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: af002-v04-visual-quality-candidate
+          path: tools/asset_forge/af002_v04/generated/
+          retention-days: 14
