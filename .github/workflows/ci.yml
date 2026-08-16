@@ -1,4 +1,4 @@
-name: S2.28 Rotary Named Positions Gate
+name: S2.29 Rotary Segment Rate Evidence Gate
 
 on:
   pull_request:
@@ -91,6 +91,8 @@ jobs:
         run: npm run verify:s2.27
       - name: S2.28 rotary named positions contract
         run: npm run verify:s2.28
+      - name: S2.29 rotary segment rate evidence contract
+        run: npm run verify:s2.29
       - name: Install Chromium runtime
         run: npx playwright install --with-deps chromium
       - name: S2.14 socket-aware browser contract
@@ -123,6 +125,8 @@ jobs:
         run: npx playwright test tests/browser/rotary-home.spec.ts --config=playwright.config.ts
       - name: S2.28 rotary named positions browser contract
         run: npx playwright test tests/browser/rotary-named-positions.spec.ts --config=playwright.config.ts
+      - name: S2.29 rotary segment rate evidence browser contract
+        run: npx playwright test tests/browser/rotary-segment-rate.spec.ts tests/browser/rotary-segment-rate-named-position.spec.ts --config=playwright.config.ts
       - name: Alpha and platform browser smoke
         run: |
           set -o pipefail
@@ -155,11 +159,12 @@ jobs:
           retention-days: 14
       # S2.26 cumulative lineage token: s2-26-browser-failure
       # S2.27 cumulative lineage token: s2-27-browser-failure
+      # S2.28 cumulative lineage token: s2-28-browser-failure
       - name: Preserve browser failure evidence
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: s2-28-browser-failure
+          name: s2-29-browser-failure
           path: test-results
           if-no-files-found: ignore
           retention-days: 7
