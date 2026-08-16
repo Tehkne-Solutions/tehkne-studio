@@ -17,7 +17,7 @@ for (const token of [
   "InventionSpatialScene",
   "parseInventionSpatialDocument",
   "runtime.spatial.connectionSegments(connections)",
-  "runtime.spatial.move",
+  "runtime.spatial.transformBatch",
   "runtime.spatial.select",
   "runtime.builder.compatibleTargets",
   "runtime.builder.connect",
@@ -30,7 +30,7 @@ for (const token of [
   "3D Invention Workbench",
   "TEHKNÉ SOLUTIONS"
 ]) {
-  if (!workbench.includes(token)) throw new Error(`S2.12 3D workbench contract missing: ${token}`);
+  if (!workbench.includes(token)) throw new Error(`S2.12 semantic 3D workbench contract missing: ${token}`);
 }
 
 for (const forbidden of [
@@ -85,4 +85,4 @@ for (const token of [
 }
 if (workflow.includes("contents: write")) throw new Error("S2.12 CI must remain read-only");
 
-console.log("S2.12 3D Invention Workbench PASS · real R3F viewport + same Engineering Graph/spatial bindings + XYZ manipulation + connectedTo-derived 3D wires + canonical compatibility + shared persistence + no implicit physics · Tehkné Solutions");
+console.log("S2.12 3D Invention Workbench PASS · real R3F viewport + same Engineering Graph/spatial bindings + atomic XYZ manipulation + connectedTo-derived 3D wires + canonical compatibility + shared persistence + no implicit physics · Tehkné Solutions");
