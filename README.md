@@ -4,7 +4,9 @@ Virtual Engineering Atelier by **Tehkné Solutions**.
 
 ## Current baseline
 
-`0.1.0-alpha.1 · S1.12 + S2.29`
+`0.1.0-alpha.1 · S1.12 + S2.30`
+
+Previous validated baseline: `0.1.0-alpha.1 · S1.12 + S2.29`.
 
 Tehkné Studio is an executable engineering workspace where products, components, experiments and spatial assemblies share the same engineering state instead of being disconnected demos.
 
@@ -30,89 +32,49 @@ Tehkné Studio is an executable engineering workspace where products, components
 - **Mechanical Command Runtime (S2.23)**: rotary operations run through the existing `EngineeringSession.commands` CommandBus;
 - **Multi-turn Rotary Kinematics (S2.24)**: principal angle, continuous angle and integer revolutions are reconciled from `inventionSpatial + session.events` without replay;
 - **Rotary Continuous Target (S2.25)**: absolute multi-turn targets such as `720°` and `−450°` use `continuous-absolute` semantics through the same CommandBus;
-- **Rotary Travel Limits (S2.26)**: an optional continuous travel envelope can be authored on the authoritative `connectedTo` relationship. Incremental, principal and continuous targets are rejected fail closed before planning or spatial mutation if they would leave that envelope; a shaft with no envelope remains unlimited;
-- **Rotary Home Position (S2.27)**: the current continuous joint coordinate can be captured as an authored HOME on the same `connectedTo` relationship. `GO HOME` delegates movement to the canonical `setContinuousTarget` path, so S2.26 limits, atomic transforms and persisted movement evidence remain authoritative;
-- **Rotary Named Positions (S2.28)**: multiple normalized bookmarks such as `Inspect`, `Load` and `Park` can be saved on the same rotary relationship. `GO POSITION` delegates to the canonical continuous-target path, while save/update/delete remain metadata-only operations;
-- **Rotary Segment Rate Evidence (S2.29)**: movement commands may carry an explicit positive `durationSeconds`. The executed signed delta and authored duration produce deterministic `segment-average` rad/s and RPM evidence; commands without duration remain `RATE UNRESOLVED`.
+- **Rotary Travel Limits (S2.26)**: an optional continuous travel envelope can be authored on the authoritative `connectedTo` relationship;
+- **Rotary Home Position (S2.27)**: the current continuous coordinate can be captured as HOME and `GO HOME` delegates to the canonical continuous-target path;
+- **Rotary Named Positions (S2.28)**: multiple normalized bookmarks such as `Inspect`, `Load` and `Park` are stored on the same rotary relationship and `GO POSITION` delegates to canonical movement;
+- **Rotary Segment Rate Evidence (S2.29)**: an explicit positive `durationSeconds` on a completed movement segment produces deterministic `segment-average` rad/s and RPM evidence; untimed movement remains `RATE UNRESOLVED`;
+- **Rotary Waypoint Sequence (S2.30)**: an ordered sequence references existing Named Positions and may author a duration per segment. `RUN SEQUENCE` preflights every waypoint against the active travel envelope before the first movement, then executes each target through the same `setContinuousTarget` path.
 
 ## Engineering invariants
 
-`connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints, rotary controls, S2.26 travel limits, S2.27 HOME and S2.28 named positions are projections or metadata of that same graph; Tehkné Studio does not maintain a parallel assembly, rotation, joint, limit, home, named-position, revolution or rate graph.
+`connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints, rotary controls, travel limits, HOME, Named Positions and S2.30 `rotaryWaypointSequences` are projections or metadata of that same graph. Tehkné Studio does not maintain a parallel assembly, rotation, joint, limit, home, named-position, sequence, revolution or rate graph.
 
-The `inventionSpatial` document remains the only persisted physical spatial source of truth. `transformBatch(...)` prepares and validates the complete mutation set before committing. Mechanical commands do not introduce a shadow transform map or second joint state.
+The `inventionSpatial` document remains the only persisted physical spatial source of truth. `transformBatch(...)` prepares and validates each mechanical state transition before committing. Mechanical commands do not introduce a shadow transform map or second joint state.
 
-The mechanical runtime deliberately reuses the **existing session CommandBus**. Its rotary semantic command types are:
+The mechanical runtime deliberately reuses the **existing session CommandBus**. Its rotary semantic command types include:
 
-- `invention.mechanical.rotary.step` — signed incremental kinematic step;
-- `invention.mechanical.rotary.setTarget` — absolute principal target using `principal-shortest`;
-- `invention.mechanical.rotary.setContinuousTarget` — absolute continuous multi-turn target using `continuous-absolute`;
-- `invention.mechanical.rotary.setTravelLimits` — author or replace an optional continuous travel envelope;
-- `invention.mechanical.rotary.clearTravelLimits` — remove that envelope and restore unlimited travel;
-- `invention.mechanical.rotary.setHome` — capture the current continuous coordinate as HOME;
-- `invention.mechanical.rotary.goHome` — resolve the authored HOME and delegate movement to `setContinuousTarget`;
-- `invention.mechanical.rotary.clearHome` — remove the authored HOME reference;
-- `invention.mechanical.rotary.saveNamedPosition` — create or update a normalized named bookmark from the current continuous coordinate;
-- `invention.mechanical.rotary.goToNamedPosition` — resolve a bookmark and delegate movement to `setContinuousTarget`;
-- `invention.mechanical.rotary.deleteNamedPosition` — remove only the selected bookmark.
+- `invention.mechanical.rotary.step`;
+- `invention.mechanical.rotary.setTarget`;
+- `invention.mechanical.rotary.setContinuousTarget`;
+- `invention.mechanical.rotary.setTravelLimits` / `clearTravelLimits`;
+- `invention.mechanical.rotary.setHome` / `goHome` / `clearHome`;
+- `invention.mechanical.rotary.saveNamedPosition` / `goToNamedPosition` / `deleteNamedPosition`;
+- `invention.mechanical.rotary.saveWaypointSequence` / `runWaypointSequence` / `deleteWaypointSequence`.
 
 UI, voice and automation therefore invoke the same validated operations rather than separate implementations.
 
-### Travel-limit authority and persistence
+### Travel-limit authority
 
-S2.26 stores limits directly in the authoritative connection metadata under `rotaryTravelLimits`:
+S2.26 stores an optional continuous envelope in `relationship.metadata.rotaryTravelLimits`. Movement outside the envelope is rejected before planner and spatial mutation; there is no silent clamp. Shafts without this metadata remain unlimited.
 
-```text
-mode = continuous
-minContinuousRadians = authored minimum
-maxContinuousRadians = authored maximum
-signature = Tehkné Solutions
-```
+Travel-limit authoring events are audit evidence only and stay outside the movement fold. Save/restore persists the envelope naturally through the Engineering Graph snapshot.
 
-The graph exposes a safe `replaceRelationship(...)` primitive so relationship metadata can be updated without disconnecting/reconnecting the authored topology. Save/restore persists these limits naturally because they are part of the canonical Engineering Graph snapshot; no `travelLimitMap`, limit document or project-global state exists.
+### HOME authority
 
-Limit authoring is dispatched through the session CommandBus and recorded as `MechanicalRotaryTravelLimitsSet` or `MechanicalRotaryTravelLimitsCleared`. Those events are audit evidence only and are intentionally excluded from the S2.24 kinematic fold, so setting or clearing a limit cannot manufacture angle, continuous travel or revolutions.
+S2.27 stores HOME in `relationship.metadata.rotaryHome`. `SET HOME` and `CLEAR HOME` are metadata-only. `GO HOME` resolves the persisted continuous coordinate and delegates to `setContinuousTarget`, preserving travel-limit checks, follower-only planning, atomic spatial mutation and normal movement evidence.
 
-For any movement command, the runtime derives current continuous kinematics first, calculates the intended continuous result, reads the optional relationship envelope and applies the travel-limit check **before** `planMechanicalRotaryJointStep(...)` and before `transformBatch(...)`. Out-of-range commands are rejected rather than clamped. They produce no spatial mutation and no false movement-success event.
+### Named Positions authority
 
-An authored envelope must contain the joint's current continuous position at the moment it is set. Inverted bounds and bounds that exclude the current state fail closed. Removing an envelope restores unlimited rotary travel; shafts without `rotaryTravelLimits` preserve all S2.25 behavior, including multi-turn targets such as 1080°.
+S2.28 stores multiple normalized bookmarks under `relationship.metadata.rotaryNamedPositions`. `SAVE POSITION` and `DELETE POSITION` are metadata-only. `GO POSITION` resolves the current bookmark and delegates to `setContinuousTarget`.
 
-### HOME authority and persistence
-
-S2.27 stores HOME directly in the same authoritative connection metadata under `rotaryHome`:
-
-```text
-mode = continuous
-homeContinuousRadians = captured current continuous coordinate
-signature = Tehkné Solutions
-```
-
-`SET HOME` captures the already-derived continuous coordinate and updates only relationship metadata. It does not rotate the joint and its `MechanicalRotaryHomeSet` event is audit evidence, not kinematic evidence. `CLEAR HOME` removes only `rotaryHome` and records `MechanicalRotaryHomeCleared`; it does not move the assembly or rewrite travel limits.
-
-`GO HOME` is intentionally an orchestration command rather than a second movement planner. It resolves `rotaryHome`, then dispatches the existing `setContinuousTarget` operation on the same session CommandBus. The actual movement therefore remains `continuous-absolute`, passes through S2.26 travel-limit validation before the planner, commits through the same atomic `transformBatch(...)`, and records the canonical mechanical movement event. `MechanicalRotaryHomeRequested` only links the HOME request to that movement command and remains outside the S2.24 kinematic fold.
-
-A HOME may remain authored even if a later travel envelope makes it temporarily unreachable. In that case `GO HOME` fails closed through the existing S2.26 limit check without spatial mutation or false HOME-request success evidence. Clearing or widening the envelope can make the same persisted HOME reachable again. No `homeMap`, home document, second planner or second spatial state exists.
-
-### Named-position authority and persistence
-
-S2.28 stores multiple bookmarks directly in the same authoritative connection metadata under `rotaryNamedPositions`:
-
-```text
-version = 1
-positions[] = { key, name, continuousRadians, signature }
-signature = Tehkné Solutions
-```
-
-Position names are Unicode-normalized, trimmed, internal whitespace is collapsed and identity is case-insensitive through a normalized key. Saving the same normalized name updates the existing bookmark instead of creating a duplicate. Names must contain 1–64 characters and tampered duplicate keys or invalid signatures fail closed.
-
-`SAVE POSITION` captures the current continuous coordinate and updates only relationship metadata. `DELETE POSITION` removes only the selected bookmark. Their `MechanicalRotaryNamedPositionSaved` and `MechanicalRotaryNamedPositionDeleted` events are audit evidence and remain outside the S2.24 movement fold, so authoring bookmarks cannot manufacture angle or revolutions.
-
-`GO POSITION` resolves the authored bookmark and delegates to the existing `setContinuousTarget` operation on the same session CommandBus. Movement therefore remains `continuous-absolute`, passes through S2.26 travel-limit validation, uses the established follower-only rotary planner and commits through the same atomic `transformBatch(...)`. `MechanicalRotaryNamedPositionRequested` links the bookmark request to the canonical movement command and also remains outside the kinematic fold.
-
-A named position may remain persisted while temporarily unreachable because of a later travel envelope. In that case `GO POSITION` fails closed before spatial mutation and records no false request-success evidence. Clearing or widening the envelope restores reachability without rewriting the bookmark. HOME remains independent: it is the one special reference target, while named positions provide multiple reusable bookmarks. No `positionMap`, named-position document outside the relationship, second planner or second spatial state exists.
+Named Positions are live references for S2.30. If an existing bookmark is updated to a new continuous coordinate, a sequence that references its normalized key follows that new coordinate without rewriting the sequence. If the bookmark is removed, sequence execution fails closed before movement rather than retaining a copied coordinate as shadow truth.
 
 ### Segment-rate evidence
 
-S2.29 adds **explicit command-duration evidence**, not a hidden simulation clock. A movement command may carry `durationSeconds > 0`. The runtime computes the completed segment average from the movement that actually passed validation and executed:
+S2.29 adds **explicit command-duration evidence**, not a hidden simulation clock:
 
 ```text
 averageAngularVelocityRadPerSec = deltaRadians / durationSeconds
@@ -121,21 +83,40 @@ mode = segment-average
 signature = Tehkné Solutions
 ```
 
-The same optional duration is accepted by signed incremental `step`, principal `setTarget`, absolute multi-turn `setContinuousTarget`, `GO HOME` and `GO POSITION`. HOME and Named Position orchestration only forward duration to the canonical continuous-target command. Their request events record the linked `movementCommandId`, duration and rate mode for auditability, but rate authority remains the canonical mechanical movement event.
+The duration is optional on incremental, principal, continuous, HOME and Named Position movement. `commands.rate(relationshipId)` reconstructs the latest successful movement segment from `session.events`. If the latest movement is untimed, rate is unresolved even if an earlier movement was timed.
 
-Travel limits remain prior authority: the intended continuous coordinate is checked before rate derivation, planning or spatial mutation. A timed movement rejected by S2.26 creates no successful movement event, no request-success event and no false RPM. `SET/CLEAR LIMITS`, `SET/CLEAR HOME`, `SAVE/DELETE POSITION` and request audit events are not movement and therefore never replace the latest rate evidence.
+S2.29 never subtracts `issuedAt`, `occurredAt`, browser frame time, `Date`, `performance.now()` or other wall-clock metadata to manufacture physical duration. Persisted rate values are recomputed from signed delta + explicit duration and tampered evidence fails closed.
 
-`commands.rate(relationshipId)` reconstructs only the latest successful rotary movement segment from persisted `session.events`. If that latest movement had no explicit duration, the result is `unresolved-no-duration` and the UI shows `RATE UNRESOLVED`, even if an earlier movement was timed. Persisted rate values are recomputed from signed delta + duration; mismatched/tampered angular-rate or RPM evidence fails closed.
+S2.29 does not claim instantaneous angular velocity, acceleration, torque or time integration. It also does not claim collision sweep, inertia, backlash or motor dynamics.
 
-S2.29 never subtracts `issuedAt`, `occurredAt`, browser frame time, `Date`, `performance.now()` or any other wall-clock metadata to invent physical duration. The geometric transform still commits atomically as an exact state transition; the supplied duration describes evidence for the completed command segment rather than driving a time integrator.
+### Rotary Waypoint Sequence authority
 
-Successful mechanical movement commands continue recording evidence in `session.events` with command ID, source, relationship, driver/follower, before/after principal angle, signed delta, continuous angle, revolutions and, when explicitly authored, duration plus segment-average rate. Restore reconstructs kinematics and latest rate from existing evidence and current transforms; it does not replay commands or reapply transforms.
+S2.30 stores authored sequences directly in the same authoritative relationship metadata under `rotaryWaypointSequences`:
 
-The S2.24 stabilization continues canonicalizing numerical zero within the established rotary epsilon. Its canonical wrap proof uses `170° → -170°`, while the exact `180°` boundary remains covered in domain regression.
+```text
+version = 1
+sequences[] = {
+  key,
+  name,
+  steps[] = { positionKey, positionName, durationSeconds | null, signature },
+  signature
+}
+signature = Tehkné Solutions
+```
 
-S2.29 **does not claim instantaneous angular velocity, acceleration, torque or time integration**. It also does not claim collision sweep, inertia, backlash or motor dynamics. Those require a later explicit dynamics/time solver contract.
+A sequence contains between 1 and 32 ordered waypoints. Repeating a Named Position is allowed, so cycles such as `Inspect → Load → Inspect` remain expressible. Sequence names are Unicode-normalized, trimmed and case-insensitive through the same normalized-key principle used by Named Positions.
 
-Mechanical endpoint resolution remains runtime-safe outside React. Canonical mechanical local positions come from authored component metadata or explicit proxy anchors; AF-001 `shaft-out` is `[0, 0, 0.03185] m`, matching AF-001M socket-transform QA for `SOCKET_MECH_AXIS_OUT`.
+`SAVE SEQUENCE` resolves every draft waypoint against a real S2.28 Named Position and stores only its stable normalized reference plus optional positive duration. It does not move the joint, does not create rate evidence and records only `MechanicalRotaryWaypointSequenceSaved` audit evidence. `DELETE SEQUENCE` removes only the selected sequence and records `MechanicalRotaryWaypointSequenceDeleted`.
+
+Before `RUN SEQUENCE` executes its first movement, it resolves **all** referenced Named Positions again and performs a travel-limit preflight for every target. If any bookmark is missing, metadata is malformed or any waypoint lies outside the current S2.26 envelope, the sequence fails before waypoint 1: no spatial mutation, no movement event, no rate event and no successful sequence-request event are published.
+
+After preflight, each waypoint delegates to the existing `setContinuousTarget` command in authored order. The optional step duration is forwarded unchanged to S2.29. Every segment therefore produces the same canonical continuous/revolution/rate evidence it would have produced individually. The sequence request event stores the list of resulting movement command IDs for auditability but remains outside the movement/rate fold.
+
+The rate after a successful sequence is simply the canonical rate of its **final movement segment**. S2.30 creates no aggregate RPM, average-over-sequence velocity or parallel rate state.
+
+S2.30 **does not wait** for the authored duration to elapse and does not use timers. Durations describe evidence for each exact completed segment; they are not a wall-clock scheduler. There is no `setTimeout`, `setInterval`, animation loop, hidden timeline, acceleration solver, torque solver or time integrator in this sprint.
+
+The UI may keep an unsaved waypoint draft in React so a user can compose and inspect it before pressing `SAVE SEQUENCE`. That draft is transient form state only. The persisted source of truth remains `relationship.metadata.rotaryWaypointSequences`.
 
 ## Asset Forge · AF-001
 
@@ -156,11 +137,11 @@ The AF-001L gate remains intentionally fail-closed: hosted CI validates its cont
 npm ci --ignore-scripts
 npm run security:audit
 npm run verify:s1.12
-npm run verify:s2.29
+npm run verify:s2.30
 npm run smoke:browser
 ```
 
-The cumulative S2.29 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform → S2.23 Mechanical Command Runtime → S2.24 Multi-turn Rotary Kinematics → S2.25 Rotary Continuous Target → S2.26 Rotary Travel Limits → S2.27 Rotary Home Position → S2.28 Rotary Named Positions before validating S2.29 Rotary Segment Rate Evidence, followed by complete Chromium smoke and AF-001I deterministic evidence.
+The cumulative S2.30 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform → S2.23 Mechanical Command Runtime → S2.24 Multi-turn Rotary Kinematics → S2.25 Rotary Continuous Target → S2.26 Rotary Travel Limits → S2.27 Rotary Home Position → S2.28 Rotary Named Positions → S2.29 Rotary Segment Rate Evidence before validating S2.30 Rotary Waypoint Sequence, followed by complete Chromium smoke and AF-001I deterministic evidence.
 
 ## Repository structure
 
