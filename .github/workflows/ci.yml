@@ -1,4 +1,4 @@
-name: S2.31 Rotary Waypoint Sequence Plan Gate
+name: S2.32 Rotary Waypoint Sequence Execution Evidence Gate
 
 on:
   pull_request:
@@ -97,6 +97,8 @@ jobs:
         run: npm run verify:s2.30
       - name: S2.31 rotary waypoint sequence plan contract
         run: npm run verify:s2.31
+      - name: S2.32 rotary waypoint execution evidence contract
+        run: npm run verify:s2.32
       - name: Install Chromium runtime
         run: npx playwright install --with-deps chromium
       - name: S2.14 socket-aware browser contract
@@ -165,18 +167,17 @@ jobs:
           path: test-results/af001i-evidence
           if-no-files-found: ignore
           retention-days: 14
-      # S2.26 cumulative lineage token: s2-26-browser-failure
-      # S2.27 cumulative lineage token: s2-27-browser-failure
-      # S2.28 cumulative lineage token: s2-28-browser-failure
       # S2.29 predecessor workflow identity token: S2.29 Rotary Segment Rate Evidence Gate
       # S2.29 cumulative lineage token: s2-29-browser-failure
       # S2.30 predecessor workflow identity token: S2.30 Rotary Waypoint Sequence Gate
       # S2.30 cumulative lineage token: s2-30-browser-failure
+      # S2.31 predecessor workflow identity token: S2.31 Rotary Waypoint Sequence Plan Gate
+      # S2.31 cumulative lineage token: s2-31-browser-failure
       - name: Preserve browser failure evidence
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: s2-31-browser-failure
+          name: s2-32-browser-failure
           path: test-results
           if-no-files-found: ignore
           retention-days: 7
