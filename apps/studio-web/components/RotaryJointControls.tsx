@@ -47,6 +47,7 @@ export function RotaryJointControls({
   readonly onBlocked: (cause: unknown) => void;
 }) {
   const [targetDegrees, setTargetDegrees] = useState("0");
+  const [continuousTargetDegrees, setContinuousTargetDegrees] = useState("0");
   const [lastCommand, setLastCommand] = useState<MechanicalRotaryCommandResult | null>(null);
   const commands = mechanicalCommandRuntimeFor(spatial);
   const driverEndpoint = useSpatialPortEndpoint(driverEntity, driverBinding, constraint.driver.portId);
@@ -86,7 +87,20 @@ export function RotaryJointControls({
     }
   };
 
-  return <div className={styles.wireEvidence} aria-label={`Rotary joint ${constraint.relationshipId}`} data-testid={`rotary-joint-${constraint.relationshipId}`} data-dof="rotary-follower" data-state={ready ? "ready" : "blocked"} data-driver-entity={constraint.driver.entityId} data-follower-entity={constraint.follower.entityId} data-axis={formatAxis(driverAxis)} data-angle-rad={kinematics === null ? "" : kinematics.principalRadians.toFixed(3)} data-angle-mode="principal-derived" data-continuous-angle-rad={kinematics === null ? "" : kinematics.continuousRadians.toFixed(3)} data-revolutions={kinematics === null ? "" : String(kinematics.revolutions)} data-kinematics-source={kinematics?.derivedFrom ?? ""} data-kinematics-evidence={kinematics === null ? "" : String(kinematics.evidenceCommands)} data-target-mode="principal-shortest" data-transform-mode="atomic-batch" data-command-bus="session" data-command-source={lastCommand?.source ?? ""} data-command-id={lastCommand?.commandId ?? ""} data-command-mode={lastCommand?.mode ?? ""}>
+  const applyContinuousTarget = async (): Promise<void> => {
+    try {
+      if (!physical) throw new Error(`Rotary joint ${constraint.relationshipId} requires physical endpoints`);
+      const degrees = Number(continuousTargetDegrees);
+      if (!Number.isFinite(degrees)) throw new Error("Rotary continuous target angle must be finite degrees");
+      const outcome = await commands.setContinuousTarget(constraint.relationshipId, degrees * Math.PI / 180, "ui");
+      if (!outcome.ok || !outcome.result) throw new Error(outcome.error ?? "Mechanical rotary continuous target command failed");
+      acceptCommand(outcome.result);
+    } catch (cause) {
+      onBlocked(cause);
+    }
+  };
+
+  return <div className={styles.wireEvidence} aria-label={`Rotary joint ${constraint.relationshipId}`} data-testid={`rotary-joint-${constraint.relationshipId}`} data-dof="rotary-follower" data-state={ready ? "ready" : "blocked"} data-driver-entity={constraint.driver.entityId} data-follower-entity={constraint.follower.entityId} data-axis={formatAxis(driverAxis)} data-angle-rad={kinematics === null ? "" : kinematics.principalRadians.toFixed(3)} data-angle-mode="principal-derived" data-continuous-angle-rad={kinematics === null ? "" : kinematics.continuousRadians.toFixed(3)} data-revolutions={kinematics === null ? "" : String(kinematics.revolutions)} data-kinematics-source={kinematics?.derivedFrom ?? ""} data-kinematics-evidence={kinematics === null ? "" : String(kinematics.evidenceCommands)} data-target-mode="principal-shortest" data-continuous-target-mode="continuous-absolute" data-transform-mode="atomic-batch" data-command-bus="session" data-command-source={lastCommand?.source ?? ""} data-command-id={lastCommand?.commandId ?? ""} data-command-mode={lastCommand?.mode ?? ""}>
     <strong>ROTARY JOINT DOF · {followerEntity.name}</strong>
     <small>{constraint.driver.portId} → {constraint.follower.portId} · follower-only · {ready ? "READY" : "BLOCKED"} · {kinematics === null ? "ANGLE UNRESOLVED" : `PRINCIPAL ${formatAngle(kinematics.principalRadians)} · CONTÍNUO ${formatAngle(kinematics.continuousRadians)} · VOLTAS ${kinematics.revolutions}`} · CommandBus + atomic transform · sem RPM/torque</small>
     <div className={styles.axisGrid}>
@@ -96,6 +110,10 @@ export function RotaryJointControls({
     <div className={styles.axisGrid}>
       <input aria-label="Rotary joint target angle degrees" type="number" min="-180" max="180" step="15" value={targetDegrees} onChange={(event) => setTargetDegrees(event.target.value)} disabled={!ready} />
       <button type="button" onClick={() => void applyTargetAngle()} disabled={!ready}>SET ANGLE</button>
+    </div>
+    <div className={styles.axisGrid}>
+      <input aria-label="Rotary joint continuous target degrees" type="number" step="15" value={continuousTargetDegrees} onChange={(event) => setContinuousTargetDegrees(event.target.value)} disabled={!ready} />
+      <button type="button" onClick={() => void applyContinuousTarget()} disabled={!ready}>SET CONTINUOUS</button>
     </div>
   </div>;
 }
