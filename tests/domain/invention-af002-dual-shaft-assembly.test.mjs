@@ -22,23 +22,29 @@ async function registryWithAf002() {
   );
 }
 
-test("S2.33 registers AF-002 as an engineering-reference component with two independent rotary shaft ports", async () => {
+test("S2.33 preserves AF-002 engineering-reference authority and dual rotary ports through authorized presentation stages", async () => {
   const registry = await registryWithAf002();
   const definition = registry.get("mechanical.coupler.shaft-a-v1");
   assert.ok(definition);
   assert.equal(definition.metadata.assetForgeId, "AF-002");
   assert.equal(definition.metadata.assetForgeSku, "TS_MECH_SHAFT_COUPLER_A");
-  assert.equal(definition.metadata.assetForgeStage, "ENGINEERING_REFERENCE");
+  assert.ok(["ENGINEERING_REFERENCE", "RUNTIME_CANDIDATE"].includes(definition.metadata.assetForgeStage));
   assert.equal(definition.metadata.signature, "Tehkné Solutions");
-  assert.equal(definition.metadata.spatialProxy.status, "PROXY_EXPLICIT_ENGINEERING_REFERENCE");
+  assert.ok(["PROXY_EXPLICIT_ENGINEERING_REFERENCE", "FALLBACK_ONLY_RUNTIME_CANDIDATE"].includes(definition.metadata.spatialProxy.status));
   assert.deepEqual(definition.metadata.spatialProxy.portAnchors["axis-in"].position, [0, 0, -0.0175]);
   assert.deepEqual(definition.metadata.spatialProxy.portAnchors["axis-out"].position, [0, 0, 0.0175]);
+  assert.deepEqual(definition.metadata.spatialProxy.portAnchors["axis-in"].axis, [0, 0, -1]);
+  assert.deepEqual(definition.metadata.spatialProxy.portAnchors["axis-out"].axis, [0, 0, 1]);
   assert.equal(definition.ports["axis-in"].direction, "in");
   assert.equal(definition.ports["axis-out"].direction, "out");
   assert.deepEqual(definition.ports["axis-in"].compatibility, ["mechanical.rotary-shaft"]);
   assert.deepEqual(definition.ports["axis-out"].compatibility, ["mechanical.rotary-shaft"]);
   assert.equal(definition.metadata.physicalClaims.torqueCapacity, false);
   assert.equal(definition.metadata.physicalClaims.maxRpm, false);
+  assert.equal(definition.metadata.physicalClaims.misalignmentCapacity, false);
+  assert.equal(definition.metadata.physicalClaims.stiffness, false);
+  assert.equal(definition.metadata.physicalClaims.damping, false);
+  assert.equal(definition.metadata.physicalClaims.manufacturingCertification, false);
 });
 
 test("S2.33 AF-002 participates in two distinct canonical connectedTo relationships without a parallel transmission graph", async () => {

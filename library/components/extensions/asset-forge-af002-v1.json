@@ -30,10 +30,17 @@
       "metadata": {
         "assetForgeId": "AF-002",
         "assetForgeSku": "TS_MECH_SHAFT_COUPLER_A",
-        "assetForgeVersion": "0.2.0-engineering-reference",
-        "assetForgeStage": "ENGINEERING_REFERENCE",
-        "provenance": "tools/asset_forge/af002_v02/engineering_reference.json",
+        "assetForgeVersion": "0.3.0-dcc-candidate",
+        "assetForgeStage": "RUNTIME_CANDIDATE",
+        "provenance": "tools/asset_forge/af002_v02/dcc_qa_evidence.json",
         "signature": "Tehkné Solutions",
+        "runtimeAsset": {
+          "kind": "glb",
+          "url": "/api/asset-forge/af002/coupler",
+          "bytes": 22600,
+          "sha256": "48e8363cdc38b5ae93ace0b975c42498663e03c922970fb2b60e80c65d26b50e",
+          "status": "RUNTIME_CANDIDATE"
+        },
         "physicalClaims": {
           "geometry": true,
           "physicalSockets": true,
@@ -47,7 +54,7 @@
         },
         "spatialProxy": {
           "kind": "shaft-coupler",
-          "status": "PROXY_EXPLICIT_ENGINEERING_REFERENCE",
+          "status": "FALLBACK_ONLY_RUNTIME_CANDIDATE",
           "dimensionsM": { "radius": 0.015, "length": 0.035, "boreRadius": 0.005 },
           "portAnchors": {
             "axis-in": { "name": "SOCKET_MECH_AXIS_IN", "position": [0, 0, -0.0175], "axis": [0, 0, -1] },
