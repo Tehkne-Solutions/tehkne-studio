@@ -1,0 +1,34 @@
+{
+  "assetId": "AF-002",
+  "sku": "TS_MECH_SHAFT_COUPLER_A",
+  "version": "0.4.0-visual-quality",
+  "stage": "VISUAL_QUALITY_CANDIDATE",
+  "signature": "Tehkné Solutions",
+  "expectedBytes": 59436,
+  "expectedSha256": "451d97b50ed9321c45b8dfb7e679cf6f273ec335da837d2c49d377426b98f122",
+  "expectedTriangles": 10816,
+  "maxTriangles": 12000,
+  "requiredSockets": {
+    "SOCKET_MECH_AXIS_IN": [0, 0, -0.0175],
+    "SOCKET_MECH_AXIS_OUT": [0, 0, 0.0175],
+    "SOCKET_MECH_INSPECT_A": [0.015, 0, 0],
+    "SOCKET_MECH_INSPECT_B": [-0.015, 0, 0]
+  },
+  "requiredQualityFeatures": [
+    "layered-machined-body",
+    "edge-bands",
+    "central-collars",
+    "retention-rings",
+    "socket-head-fasteners",
+    "hex-recess-geometry",
+    "identity-bands"
+  ],
+  "forbiddenClaims": [
+    "heroCandidate",
+    "goldenAsset",
+    "runtimeIntegrated",
+    "torqueCapacity",
+    "maxRpm",
+    "manufacturingCertification"
+  ]
+}
