@@ -2,13 +2,13 @@ import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 for (const path of [
-  "tools/asset_forge/af002_v02/engineering-reference.json",
-  "tools/asset_forge/af002_v02/engineering-reference.md",
+  "tools/asset_forge/af002_v02/engineering_reference.json",
+  "docs/platform/asset-forge/AF-002-ENGINEERING-REFERENCE.md",
   "library/components/extensions/asset-forge-af002-v1.json",
   "tests/domain/invention-af002-dual-shaft-assembly.test.mjs"
 ]) await access(resolve(path));
 
-const reference = JSON.parse(await readFile("tools/asset_forge/af002_v02/engineering-reference.json", "utf8"));
+const reference = JSON.parse(await readFile("tools/asset_forge/af002_v02/engineering_reference.json", "utf8"));
 if (reference.assetId !== "AF-002" || reference.sku !== "TS_MECH_SHAFT_COUPLER_A") throw new Error("S2.33 AF-002 identity mismatch");
 if (reference.stage !== "ENGINEERING_REFERENCE" || reference.version !== "0.2.0-engineering-reference") throw new Error("S2.33 must preserve engineering-reference stage");
 if (reference.signature !== "Tehkné Solutions") throw new Error("S2.33 AF-002 signature mismatch");
