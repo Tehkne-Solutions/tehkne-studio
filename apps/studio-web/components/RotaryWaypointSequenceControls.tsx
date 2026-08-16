@@ -3,10 +3,13 @@
 import { useState } from "react";
 import { mechanicalRotaryNamedPositionsRuntimeFor } from "../../../packages/invention-mechanical-command-runtime/src/rotary-named-positions";
 import {
+  mechanicalRotaryWaypointPlanAttestationRuntimeFor,
+  type MechanicalRotaryWaypointAttestedRunResult
+} from "../../../packages/invention-mechanical-command-runtime/src/rotary-waypoint-plan-attestation";
+import {
   mechanicalRotaryWaypointSequenceRuntimeFor,
   type MechanicalRotaryWaypointSequenceAuthoringResult,
-  type MechanicalRotaryWaypointSequencePlan,
-  type MechanicalRotaryWaypointSequenceRunResult
+  type MechanicalRotaryWaypointSequencePlan
 } from "../../../packages/invention-mechanical-command-runtime/src/rotary-waypoint-sequence";
 import type { InventionSpatialScene } from "../../../packages/invention-spatial-runtime/src/index";
 import styles from "./Invention3DWorkbench.module.css";
@@ -40,15 +43,17 @@ export function RotaryWaypointSequenceControls({
   const [draft, setDraft] = useState<readonly DraftWaypoint[]>([]);
   const [selectedSequenceKey, setSelectedSequenceKey] = useState("");
   const [lastAuthoring, setLastAuthoring] = useState<MechanicalRotaryWaypointSequenceAuthoringResult | null>(null);
-  const [lastRun, setLastRun] = useState<MechanicalRotaryWaypointSequenceRunResult | null>(null);
+  const [lastRun, setLastRun] = useState<MechanicalRotaryWaypointAttestedRunResult | null>(null);
   const [lastPlan, setLastPlan] = useState<MechanicalRotaryWaypointSequencePlan | null>(null);
 
   const positionsRuntime = mechanicalRotaryNamedPositionsRuntimeFor(spatial);
   const sequenceRuntime = mechanicalRotaryWaypointSequenceRuntimeFor(spatial);
+  const attestationRuntime = mechanicalRotaryWaypointPlanAttestationRuntimeFor(spatial);
   const positions = ready ? positionsRuntime.positions(relationshipId) : [];
   const sequences = ready ? sequenceRuntime.sequences(relationshipId) : [];
   const selectedPosition = positions.find((entry) => entry.key === selectedPositionKey) ?? null;
   const selectedSequence = sequences.find((entry) => entry.key === selectedSequenceKey) ?? null;
+  const attestation = ready && selectedSequence ? attestationRuntime.lastAttestation(relationshipId, selectedSequence.name) : null;
 
   const parsedStepDuration = (): number | undefined => {
     if (stepDurationSeconds.trim() === "") return undefined;
@@ -109,8 +114,8 @@ export function RotaryWaypointSequenceControls({
   const runSequence = async (): Promise<void> => {
     try {
       if (!selectedSequence) throw new Error("Select an authored rotary waypoint sequence");
-      const outcome = await sequenceRuntime.runSequence(relationshipId, selectedSequence.name, "ui");
-      if (!outcome.ok || !outcome.result) throw new Error(outcome.error ?? "Mechanical rotary waypoint sequence failed");
+      const outcome = await attestationRuntime.runSequenceAttested(relationshipId, selectedSequence.name, "ui");
+      if (!outcome.ok || !outcome.result) throw new Error(outcome.error ?? "Mechanical rotary attested waypoint sequence failed");
       setLastRun(outcome.result);
       setLastPlan(null);
       onChanged(outcome.result.totalDeltaRadians);
@@ -142,6 +147,12 @@ export function RotaryWaypointSequenceControls({
   const planSegmentsText = lastPlan === null
     ? ""
     : lastPlan.segments.map((segment) => `${segment.index + 1}. ${segment.positionName} · Δ ${formatPlanRadians(segment.deltaRadians)} · ${segment.rateMode === "segment-average" ? `${segment.durationSeconds!.toFixed(3)} s · ${segment.averageRpm!.toFixed(3)} RPM` : "RATE UNRESOLVED"} · ${segment.withinTravelLimits ? "LIMIT OK" : "LIMIT BLOCKED"}`).join(" → ");
+  const attestationText = attestation === null
+    ? "PLAN-EXECUTION ATTESTATION NÃO DISPONÍVEL"
+    : `ATTESTED · ${attestation.stepsCompleted} segmentos · plan Δ ${formatPlanRadians(attestation.plannedTotalDeltaRadians)} = S2.32 actual Δ ${formatPlanRadians(attestation.actualTotalDeltaRadians)} · percurso ${formatPlanRadians(attestation.actualCumulativeAbsoluteTravelRadians)} · ${attestation.durationMode}`;
+  const attestationSegmentsText = attestation === null
+    ? ""
+    : attestation.segments.map((segment) => `${segment.index + 1}. ${segment.positionName} · ${segment.movementCommandId} · plan ${formatPlanRadians(segment.plannedTargetContinuousRadians)} / Δ ${formatPlanRadians(segment.plannedDeltaRadians)} = actual ${formatPlanRadians(segment.actualAfterContinuousRadians)} / Δ ${formatPlanRadians(segment.actualDeltaRadians)} · ${segment.actualRateMode === "segment-average" ? `${segment.actualDurationSeconds!.toFixed(3)} s · ${segment.actualAverageRpm!.toFixed(3)} RPM` : "RATE UNRESOLVED"} · MATCH`).join(" → ");
 
   return <div
     className={styles.wireEvidence}
@@ -165,13 +176,22 @@ export function RotaryWaypointSequenceControls({
     data-sequence-plan-final-rad={lastPlan === null ? "" : lastPlan.afterContinuousRadians.toFixed(3)}
     data-sequence-plan-timed-steps={lastPlan === null ? "" : String(lastPlan.timedSteps)}
     data-sequence-plan-untimed-steps={lastPlan === null ? "" : String(lastPlan.untimedSteps)}
+    data-sequence-attestation-status={attestation === null ? "" : "verified"}
+    data-sequence-attestation-command-id={attestation?.attestationCommandId ?? ""}
+    data-sequence-attestation-run-id={attestation?.sequenceRunCommandId ?? ""}
+    data-sequence-attestation-derived-from={attestation?.derivedFrom ?? ""}
+    data-sequence-attestation-plan-delta-rad={attestation === null ? "" : attestation.plannedTotalDeltaRadians.toFixed(3)}
+    data-sequence-attestation-actual-delta-rad={attestation === null ? "" : attestation.actualTotalDeltaRadians.toFixed(3)}
+    data-sequence-attestation-match={attestation === null ? "" : String(attestation.allSegmentsMatched)}
     data-command-bus="session"
     data-sequence-execution="canonical-continuous-targets"
     data-sequence-preflight="shared-read-only-plan"
     data-sequence-plan-mutation="none"
+    data-sequence-execution-evidence="s2.32-read-only"
+    data-sequence-attestation-persistence="session-events"
   >
     <strong>ROTARY WAYPOINT SEQUENCE</strong>
-    <small>Named Positions autoradas · até 32 waypoints · duração explícita opcional por segmento · plan/preflight determinístico antes do primeiro movimento · sem relógio contínuo/dinâmica</small>
+    <small>Named Positions autoradas · até 32 waypoints · plan S2.31 + execution evidence S2.32 + attestation histórica S2.33 · sem relógio contínuo/dinâmica</small>
     <div className={styles.axisGrid}>
       <input aria-label="Rotary waypoint sequence name" type="text" maxLength={64} value={sequenceName} onChange={(event) => setSequenceName(event.target.value)} disabled={!ready} placeholder="Inspection Cycle…" />
       <select aria-label="Rotary waypoint position" value={selectedPositionKey} onChange={(event) => setSelectedPositionKey(event.target.value)} disabled={!ready || positions.length === 0}>
@@ -201,6 +221,8 @@ export function RotaryWaypointSequenceControls({
     </div>
     <small aria-label="Rotary waypoint sequence plan summary">{planText}</small>
     <small aria-label="Rotary waypoint sequence plan segments">{planSegmentsText}</small>
+    <small aria-label="Rotary waypoint plan execution attestation summary">{attestationText}</small>
+    <small aria-label="Rotary waypoint plan execution attestation segments">{attestationSegmentsText}</small>
     <div className={styles.axisGrid}>
       <button type="button" onClick={() => void deleteSequence()} disabled={!ready || !selectedSequence}>DELETE SEQUENCE</button>
     </div>
