@@ -24,14 +24,14 @@ Tehkné Studio is an executable engineering workspace where products, components
 - rigid assembly translation and RX/RY/RZ rotation;
 - axial alignment for `mechanical.rotary-shaft` joints;
 - **Rotary Joint DOF**: follower-only rotation around an already snapped and aligned shaft while the driver remains fixed;
-- **Rotary Joint Relative Angle**: signed principal angle in `[-π, π]` derived directly from the existing driver/follower transforms and authored shaft axes, with no duplicate joint-angle state;
-- **Multi-turn Rotary Kinematics**: explicit signed revolution memory per rotary `connectedTo` relationship, composed with the S2.20 principal angle to expose an unwrapped absolute angle across multiple turns.
+- **Rotary Joint Relative Angle**: signed principal relative angle in `[-π, π]` derived directly from the existing driver/follower transforms and authored shaft axes, with no duplicate joint-angle state;
+- **Multi-turn Rotary Kinematics**: explicit signed revolution memory per rotary `connectedTo` relationship, composed with the S2.20 principal relative angle to expose an unwrapped absolute angle across multiple turns.
 
 ## Engineering invariants
 
 `connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints and rotary controls are projections of that same graph; Tehkné Studio does not maintain a parallel assembly, rotation, joint or kinematics graph.
 
-The S2.20 principal joint angle remains **derived evidence**, not mutable state. S2.21 adds only the historical information that geometry alone cannot recover after principal-angle wrapping: an integer revolution count attached to the existing rotary relationship identity. The absolute angle is reconstructed as `revolutions × 2π + principalAngle`.
+The S2.20 principal relative angle remains **derived evidence**, not mutable state. S2.21 adds only the historical information that geometry alone cannot recover after principal-angle wrapping: an integer revolution count attached to the existing rotary relationship identity. The absolute angle is reconstructed as `revolutions × 2π + principalAngle`.
 
 The S2.21 `inventionRotaryKinematics` extension is signed `Tehkné Solutions`, versioned and persisted in the same session snapshot. It accepts only authoritative `mechanical.rotary-shaft` `connectedTo` relationships, omits zero-revolution records, rejects ambiguous commanded steps at or above π radians and remains invariant under rigid assembly rotation.
 
