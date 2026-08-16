@@ -4,7 +4,7 @@ Virtual Engineering Atelier by **Tehkné Solutions**.
 
 ## Current baseline
 
-`0.1.0-alpha.1 · S1.12 + S2.22`
+`0.1.0-alpha.1 · S1.12 + S2.23`
 
 Tehkné Studio is an executable engineering workspace where products, components, experiments and spatial assemblies share the same engineering state instead of being disconnected demos.
 
@@ -25,22 +25,25 @@ Tehkné Studio is an executable engineering workspace where products, components
 - axial alignment for `mechanical.rotary-shaft` joints;
 - **Rotary Joint DOF**: follower-only rotation around an already snapped and aligned shaft while the driver remains fixed;
 - **Rotary Joint Relative Angle**: signed principal angle in `[-π, π]` derived directly from the existing driver/follower transforms and authored shaft axes, with no duplicate joint-angle state;
-- **Rotary Joint Target Angle**: absolute principal positioning using a `principal-shortest` delta derived from the current transform evidence, then applied through the existing follower-only physical planner;
-- **Atomic Spatial Transform**: `transformBatch(...)` validates every position/rotation/entity in a mechanical transform set before committing any binding, so axial snap, assembly translation, rigid rotation and rotary target changes are observed as one spatial transaction.
+- **Rotary Joint Target Angle**: absolute principal positioning using a `principal-shortest` delta derived from the current transform evidence;
+- **Atomic Spatial Transform**: `transformBatch(...)` validates every position/rotation/entity in a mechanical transform set before committing any binding;
+- **Mechanical Command Runtime**: rotary step/target operations are dispatched through the existing `EngineeringSession.commands` `CommandBus`, preserving command source (`ui`, `voice`, `automation`, `simulation`, `system`) while reusing the same authoritative graph, planners and atomic spatial commit.
 
 ## Engineering invariants
 
 `connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints and rotary controls are projections of that same graph; Tehkné Studio does not maintain a parallel assembly, rotation or joint graph.
 
-The `inventionSpatial` document remains the only persisted spatial source of truth. S2.22 does not add a transaction graph, shadow binding map or pending-transform state. `transformBatch(...)` prepares and validates the complete mutation set first and writes to the canonical binding map only after every entry passes. Existing `move()` and `rotate()` APIs remain backward-compatible delegates to the same atomic transform primitive.
+The `inventionSpatial` document remains the only persisted spatial source of truth. `transformBatch(...)` prepares and validates the complete mutation set first and writes to the canonical binding map only after every entry passes. Mechanical commands do not introduce a shadow transform map, command graph or second joint state.
 
-Mechanical paths now use the atomic primitive end-to-end: automatic coincident/axial snap, multi-member assembly translation, rigid assembly rotation, incremental rotary-joint steps and absolute target-angle positioning. A rejected batch cannot expose a partially moved or partially rotated assembly.
+S2.23 deliberately reuses the **existing session CommandBus** instead of creating a mechanical bus. The semantic command types are `invention.mechanical.rotary.step` and `invention.mechanical.rotary.setTarget`. UI controls are now projections of those commands rather than owners of mechanical planning. The same runtime accepts `voice` and `automation` origins, so future Studio Intelligence and automation surfaces can invoke the exact same validated operation.
 
-The S2.20 joint angle remains **derived evidence**, not mutable joint state. S2.21 target values remain commands, not persisted mechanical state. Save/reload reconstructs the resulting geometry from the signed `inventionSpatial` transforms.
+Successful mechanical commands record evidence in the existing `session.events` stream with command ID, source, relationship, driver/follower, before/after angle and signed delta. That event stream is already part of the normal persistence snapshot, so restore preserves command evidence. New mechanical command IDs resume monotonically from persisted `mechanical-cmd-N` evidence instead of resetting or requiring a separate mechanical history store.
 
-Multi-turn revolution counting requires an explicit future kinematics contract rather than being inferred from principal transforms.
+Mechanical endpoint resolution is also runtime-safe outside React. Canonical mechanical local positions come from authored component metadata or explicit proxy anchors; AF-001 `shaft-out` is `[0, 0, 0.03185] m`, matching the AF-001M socket-transform QA for `SOCKET_MECH_AXIS_OUT`. React socket evidence remains a rendering concern, not a requirement for command execution.
 
-Physics and simulation remain fail-closed. S2.22 does **not** claim RPM, angular velocity, acceleration or torque dynamics. Those require later explicitly modeled state/solver evidence.
+The S2.20 joint angle remains **derived evidence**, not mutable joint state. S2.21 target values remain commands, not persisted mechanical state. Multi-turn revolution counting remains intentionally deferred until it can be introduced as an explicit kinematics contract on top of the CommandBus/atomic-transform foundation.
+
+Physics and simulation remain fail-closed. S2.23 does **not** claim RPM, angular velocity, acceleration or torque dynamics.
 
 ## Asset Forge · AF-001
 
@@ -61,16 +64,16 @@ The AF-001L gate is intentionally fail-closed: hosted CI validates its contract,
 npm ci --ignore-scripts
 npm run security:audit
 npm run verify:s1.12
-npm run verify:s2.22
+npm run verify:s2.23
 npm run smoke:browser
 ```
 
-The cumulative S2.22 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle before validating atomic spatial commit semantics, followed by the complete browser smoke and AF-001I deterministic evidence.
+The cumulative S2.23 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform before validating the S2.23 Mechanical Command Runtime, followed by the complete browser smoke and AF-001I deterministic evidence.
 
 ## Repository structure
 
 - `apps/studio-web` — browser studio, workbenches, 3D invention and Asset Forge review surfaces;
-- `packages/` — engineering, graph, session, component, persistence, spatial, invention and mechanical runtimes;
+- `packages/` — engineering, graph, session, component, persistence, spatial, invention, mechanical and command runtimes;
 - `library/` — signed component catalog, extensions and compatibility overlays;
 - `tests/domain` — deterministic domain contracts;
 - `tests/browser` — Chromium product and engineering flows;
