@@ -54,6 +54,10 @@ function normalizeNearZero(value: number): number {
   return Math.abs(value) <= 1e-12 ? 0 : value;
 }
 
+function record(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 export class InventionMechanicalCommandRuntime {
   #sequence: number;
 
@@ -225,6 +229,7 @@ export class InventionMechanicalCommandRuntime {
   #restoreCommandSequence(): number {
     let maximum = 0;
     for (const event of this.session.events.list()) {
+      if (!record(event.payload)) continue;
       const commandId = event.payload.commandId;
       if (typeof commandId !== "string") continue;
       const match = /^mechanical-cmd-(\d+)$/.exec(commandId);
