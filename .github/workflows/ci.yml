@@ -167,6 +167,7 @@ jobs:
           path: test-results/af001i-evidence
           if-no-files-found: ignore
           retention-days: 14
+      # S2.28 cumulative lineage token: s2-28-browser-failure
       # S2.29 predecessor workflow identity token: S2.29 Rotary Segment Rate Evidence Gate
       # S2.29 cumulative lineage token: s2-29-browser-failure
       # S2.30 predecessor workflow identity token: S2.30 Rotary Waypoint Sequence Gate
