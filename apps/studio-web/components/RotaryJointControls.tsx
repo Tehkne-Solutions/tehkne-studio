@@ -8,7 +8,6 @@ import {
   mechanicalWorldAxis,
   type MechanicalAxialConstraint
 } from "../../../packages/invention-assembly-runtime/src/index";
-import { rotaryJointRelativeAngle } from "../../../packages/invention-assembly-runtime/src/rotary-relative-angle";
 import {
   mechanicalCommandRuntimeFor,
   type MechanicalRotaryCommandResult
@@ -56,7 +55,7 @@ export function RotaryJointControls({
   const followerAxis = mechanicalWorldAxis(constraint.followerAxisLocal, followerBinding.rotation);
   const physical = driverEndpoint.source !== "center-fallback" && followerEndpoint.source !== "center-fallback";
   const ready = physical && endpointsAreCoincident(driverEndpoint.position, followerEndpoint.position) && mechanicalAxesAreAligned(driverAxis, followerAxis);
-  const relativeAngle = ready ? rotaryJointRelativeAngle(constraint.driverAxisLocal, constraint.followerAxisLocal, driverBinding.rotation, followerBinding.rotation) : null;
+  const kinematics = ready ? commands.kinematics(constraint.relationshipId) : null;
 
   const acceptCommand = (result: MechanicalRotaryCommandResult): void => {
     setLastCommand(result);
@@ -87,9 +86,9 @@ export function RotaryJointControls({
     }
   };
 
-  return <div className={styles.wireEvidence} aria-label={`Rotary joint ${constraint.relationshipId}`} data-testid={`rotary-joint-${constraint.relationshipId}`} data-dof="rotary-follower" data-state={ready ? "ready" : "blocked"} data-driver-entity={constraint.driver.entityId} data-follower-entity={constraint.follower.entityId} data-axis={formatAxis(driverAxis)} data-angle-rad={relativeAngle === null ? "" : relativeAngle.toFixed(3)} data-angle-mode="principal-derived" data-target-mode="principal-shortest" data-transform-mode="atomic-batch" data-command-bus="session" data-command-source={lastCommand?.source ?? ""} data-command-id={lastCommand?.commandId ?? ""} data-command-mode={lastCommand?.mode ?? ""}>
+  return <div className={styles.wireEvidence} aria-label={`Rotary joint ${constraint.relationshipId}`} data-testid={`rotary-joint-${constraint.relationshipId}`} data-dof="rotary-follower" data-state={ready ? "ready" : "blocked"} data-driver-entity={constraint.driver.entityId} data-follower-entity={constraint.follower.entityId} data-axis={formatAxis(driverAxis)} data-angle-rad={kinematics === null ? "" : kinematics.principalRadians.toFixed(3)} data-angle-mode="principal-derived" data-continuous-angle-rad={kinematics === null ? "" : kinematics.continuousRadians.toFixed(3)} data-revolutions={kinematics === null ? "" : String(kinematics.revolutions)} data-kinematics-source={kinematics?.derivedFrom ?? ""} data-kinematics-evidence={kinematics === null ? "" : String(kinematics.evidenceCommands)} data-target-mode="principal-shortest" data-transform-mode="atomic-batch" data-command-bus="session" data-command-source={lastCommand?.source ?? ""} data-command-id={lastCommand?.commandId ?? ""} data-command-mode={lastCommand?.mode ?? ""}>
     <strong>ROTARY JOINT DOF · {followerEntity.name}</strong>
-    <small>{constraint.driver.portId} → {constraint.follower.portId} · follower-only · {ready ? "READY" : "BLOCKED"} · {relativeAngle === null ? "ANGLE UNRESOLVED" : `ANGLE ${formatAngle(relativeAngle)}`} · CommandBus + atomic transform · sem RPM/torque</small>
+    <small>{constraint.driver.portId} → {constraint.follower.portId} · follower-only · {ready ? "READY" : "BLOCKED"} · {kinematics === null ? "ANGLE UNRESOLVED" : `PRINCIPAL ${formatAngle(kinematics.principalRadians)} · CONTÍNUO ${formatAngle(kinematics.continuousRadians)} · VOLTAS ${kinematics.revolutions}`} · CommandBus + atomic transform · sem RPM/torque</small>
     <div className={styles.axisGrid}>
       <button type="button" onClick={() => void rotateJoint(-JOINT_STEP_RAD)} disabled={!ready}>JOINT −</button>
       <button type="button" onClick={() => void rotateJoint(JOINT_STEP_RAD)} disabled={!ready}>JOINT +</button>
