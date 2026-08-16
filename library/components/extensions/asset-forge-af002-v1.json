@@ -32,7 +32,7 @@
         "assetForgeSku": "TS_MECH_SHAFT_COUPLER_A",
         "assetForgeVersion": "0.2.0-engineering-reference",
         "assetForgeStage": "ENGINEERING_REFERENCE",
-        "provenance": "tools/asset_forge/af002_v02/engineering-reference.json",
+        "provenance": "tools/asset_forge/af002_v02/engineering_reference.json",
         "signature": "Tehkné Solutions",
         "physicalClaims": {
           "geometry": true,
