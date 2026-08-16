@@ -132,7 +132,7 @@ test("S2.28 persists multiple named positions restores without replay navigates 
   assert.equal(restoredPositions.position(connection.id, "Inspect"), null);
   assert.equal(restoredPositions.positions(connection.id).length, 1);
   assert.equal(restoredPositions.positions(connection.id)[0]?.name, "Load");
-  close(restoredMechanical.kinematics(connection.id).continuousRadians, -450 * DEG, "deleting a bookmark must not move the joint");
+  close(restoredMechanical.kinematics(connection.id).continuousRadians, -450 * DEG);
   assert.equal(restoredSession.events.list().at(-1)?.type, "MechanicalRotaryNamedPositionDeleted");
 });
 
