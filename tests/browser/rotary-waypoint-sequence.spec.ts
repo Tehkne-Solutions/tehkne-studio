@@ -38,9 +38,9 @@ test("S2.30 authors persists and runs ordered Named Position waypoints with trav
 
   const sequence = page.getByTestId(`rotary-waypoint-sequence-${relationshipId}`);
   await expect(sequence).toHaveAttribute("data-waypoint-sequence-count", "0");
-  await sequence.getByLabel("Rotary waypoint sequence name").fill("Inspection Cycle");
-  const waypoint = sequence.getByLabel("Rotary waypoint position");
-  const waypointDuration = sequence.getByLabel("Rotary waypoint duration seconds");
+  await sequence.getByLabel("Rotary waypoint sequence name", { exact: true }).fill("Inspection Cycle");
+  const waypoint = sequence.getByLabel("Rotary waypoint position", { exact: true });
+  const waypointDuration = sequence.getByLabel("Rotary waypoint duration seconds", { exact: true });
   await waypoint.selectOption("inspect");
   await waypointDuration.fill("3");
   await sequence.getByRole("button", { name: "ADD WAYPOINT", exact: true }).click();
@@ -48,11 +48,11 @@ test("S2.30 authors persists and runs ordered Named Position waypoints with trav
   await waypointDuration.fill("9");
   await sequence.getByRole("button", { name: "ADD WAYPOINT", exact: true }).click();
   await expect(sequence).toHaveAttribute("data-waypoint-draft-count", "2");
-  await expect(sequence.getByLabel("Rotary waypoint draft")).toContainText("Inspect · 3.000 s");
-  await expect(sequence.getByLabel("Rotary waypoint draft")).toContainText("Load · 9.000 s");
+  await expect(sequence.getByLabel("Rotary waypoint draft", { exact: true })).toContainText("Inspect · 3.000 s");
+  await expect(sequence.getByLabel("Rotary waypoint draft", { exact: true })).toContainText("Load · 9.000 s");
   await sequence.getByRole("button", { name: "SAVE SEQUENCE", exact: true }).click();
   await expect(sequence).toHaveAttribute("data-waypoint-sequence-count", "1");
-  await expect(sequence.getByLabel("Rotary waypoint sequence")).toHaveValue("inspection cycle");
+  await expect(sequence.getByLabel("Rotary waypoint sequence", { exact: true })).toHaveValue("inspection cycle");
 
   await sequence.getByRole("button", { name: "RUN SEQUENCE", exact: true }).click();
   await expect(sequence).toHaveAttribute("data-sequence-run-steps", "2");
@@ -70,7 +70,7 @@ test("S2.30 authors persists and runs ordered Named Position waypoints with trav
   const restoredJoint = page.getByTestId(`rotary-joint-${relationshipId}`);
   const restoredSequence = page.getByTestId(`rotary-waypoint-sequence-${relationshipId}`);
   await expect(restoredSequence).toHaveAttribute("data-waypoint-sequence-count", "1", { timeout: 20_000 });
-  await restoredSequence.getByLabel("Rotary waypoint sequence").selectOption("inspection cycle");
+  await restoredSequence.getByLabel("Rotary waypoint sequence", { exact: true }).selectOption("inspection cycle");
 
   const restoredContinuous = restoredJoint.getByLabel("Rotary joint continuous target degrees");
   await restoredContinuous.fill("0");

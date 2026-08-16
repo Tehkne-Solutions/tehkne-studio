@@ -142,6 +142,8 @@ for (const token of [
   "Inspection Cycle",
   "Inspect · 3.000 s",
   "Load · 9.000 s",
+  'getByLabel("Rotary waypoint sequence name", { exact: true })',
+  'getByLabel("Rotary waypoint sequence", { exact: true })',
   "SAVE SEQUENCE",
   "RUN SEQUENCE",
   'data-sequence-run-steps", "2"',
@@ -153,6 +155,9 @@ for (const token of [
   "DELETE SEQUENCE"
 ]) {
   if (!browser.includes(token)) throw new Error(`S2.30 browser evidence missing: ${token}`);
+}
+if (browser.includes('getByLabel("Rotary waypoint sequence")')) {
+  throw new Error("S2.30 browser contract must use an exact locator for the sequence selector because its label prefixes the sequence-name input label");
 }
 
 const readme = await readFile("README.md", "utf8");
@@ -189,4 +194,4 @@ for (const token of [
 }
 if (workflow.includes("contents: write")) throw new Error("S2.30 CI must remain read-only");
 
-console.log("S2.30 Rotary Waypoint Sequence PASS · ordered live Named Position references + optional explicit segment durations + all-waypoint travel preflight + canonical continuous-target execution + final-segment rate authority + persistence without replay + metadata-only authoring + no hidden clock/no dynamics solver + Tehkné Solutions");
+console.log("S2.30 Rotary Waypoint Sequence PASS · ordered live Named Position references + optional explicit segment durations + all-waypoint travel preflight + canonical continuous-target execution + final-segment rate authority + persistence without replay + metadata-only authoring + exact browser label identity + no hidden clock/no dynamics solver + Tehkné Solutions");
