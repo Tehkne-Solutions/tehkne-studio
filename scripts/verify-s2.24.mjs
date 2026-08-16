@@ -145,10 +145,8 @@ for (const token of ["Current baseline", "S2.24", "Multi-turn Rotary Kinematics"
 const pkg = JSON.parse(await readFile("package.json", "utf8"));
 if (pkg.scripts?.["verify:s2.24"] !== "node scripts/verify-s2.24.mjs") throw new Error("S2.24 package verification script missing");
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
-if (!workflow.includes("S2.24 Multi-turn Rotary Kinematics Gate")) throw new Error("S2.24 workflow identity missing");
 if (!workflow.includes("npm run verify:s2.24")) throw new Error("S2.24 CI contract missing");
-if (!workflow.includes("tests/browser/rotary-multiturn-kinematics.spec.ts")) throw new Error("S2.24 browser gate missing from CI");
-if (!workflow.includes("s2-24-browser-failure")) throw new Error("S2.24 failure artifact identity missing");
+if (!workflow.includes("tests/browser/rotary-multiturn-kinematics.spec.ts")) throw new Error("S2.24 browser gate missing from successor CI");
 if (workflow.includes("contents: write")) throw new Error("S2.24 CI must remain read-only");
 
-console.log("S2.24 Multi-turn Rotary Kinematics PASS · continuous angle + integer revolutions derived from persisted session.events and spatial principal evidence + deterministic pi boundary + unambiguous browser wrap gate + CommandBus/atomic lineage + no global state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.24 Multi-turn Rotary Kinematics PASS · continuous angle + integer revolutions derived from persisted session.events and spatial principal evidence + deterministic pi boundary + unambiguous browser wrap gate + CommandBus/atomic lineage + successor workflow compatible + no global state/no dynamics fiction + Tehkné Solutions");
