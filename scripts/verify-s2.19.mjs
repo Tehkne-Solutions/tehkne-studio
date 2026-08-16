@@ -49,6 +49,9 @@ for (const token of [
 ]) {
   if (!commandRuntime.includes(token)) throw new Error(`S2.19 CommandBus execution lineage missing: ${token}`);
 }
+for (const forbidden of ["rpmSolver", "torqueSolver", "angularVelocitySolver", "angularAccelerationSolver"]) {
+  if (commandRuntime.includes(forbidden)) throw new Error(`S2.19 command lineage must remain free of dynamics solvers: ${forbidden}`);
+}
 
 const control = await readFile("apps/studio-web/components/RotaryJointControls.tsx", "utf8");
 for (const token of [
@@ -60,8 +63,7 @@ for (const token of [
   "JOINT +",
   "disabled={!ready}",
   'data-transform-mode="atomic-batch"',
-  'data-command-bus="session"',
-  "sem RPM/torque"
+  'data-command-bus="session"'
 ]) {
   if (!control.includes(token)) throw new Error(`S2.19 semantic control contract missing: ${token}`);
 }
@@ -124,4 +126,4 @@ if (!workflow.includes("npm run verify:s2.19")) throw new Error("S2.19 CI contra
 if (!workflow.includes("tests/browser/rotary-joint-dof.spec.ts")) throw new Error("S2.19 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.19 CI must remain read-only");
 
-console.log("S2.19 Rotary Joint DOF PASS · follower-only planner preserved behind session CommandBus + atomic spatial commit + axial/rigid composition + no dynamics fiction · Tehkné Solutions");
+console.log("S2.19 Rotary Joint DOF PASS · follower-only planner preserved behind session CommandBus + atomic spatial commit + axial/rigid composition + no dynamics solver + successor explicit rate evidence compatible + Tehkné Solutions");
