@@ -195,7 +195,7 @@ for (const token of [
 ]) {
   if (!readme.includes(token)) throw new Error(`S2.29 README baseline missing: ${token}`);
 }
-if (!readme.includes("does **not** claim instantaneous angular velocity, acceleration, torque or time integration")) {
+if (!readme.includes("does not claim instantaneous angular velocity, acceleration, torque or time integration")) {
   throw new Error("S2.29 README must preserve no-instantaneous-dynamics boundary");
 }
 
