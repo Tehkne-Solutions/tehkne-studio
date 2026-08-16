@@ -63,6 +63,6 @@ test("S2.33 AF-002 participates in two distinct canonical connectedTo relationsh
   const authored = relationships.filter((entry) => entry.id === input.id || entry.id === output.id);
   assert.equal(authored.length, 2);
   assert.ok(authored.every((entry) => entry.type === "connectedTo"));
-  assert.equal(authored.filter((entry) => entry.from.entityId === coupler.id || entry.to.entityId === coupler.id).length, 2);
+  assert.equal(authored.filter((entry) => entry.source === coupler.id || entry.target === coupler.id).length, 2);
   assert.equal(session.graph.snapshot().relationships.some((entry) => entry.type === "transmissionGraph"), false);
 });
