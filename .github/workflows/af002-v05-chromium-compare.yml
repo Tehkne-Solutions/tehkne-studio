@@ -38,6 +38,8 @@ jobs:
       - name: Build Studio web
         run: npm run build:web
       - name: Run AF-002 v0.4 vs v0.5 Chromium comparison
+        env:
+          AF002_V05_COMPARE: '1'
         run: npx playwright test tests/browser/asset-forge-af002-v05-compare.spec.ts --config=playwright.config.ts --project=chromium
       - name: Preserve hero A/B visual evidence
         if: always()
