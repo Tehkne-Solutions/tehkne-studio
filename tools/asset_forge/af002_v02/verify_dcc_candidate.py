@@ -33,6 +33,21 @@ def vector_close(actual: list[float], expected: list[float], epsilon: float = 1e
     return len(actual) == len(expected) and all(math.isclose(float(a), float(b), abs_tol=epsilon) for a, b in zip(actual, expected))
 
 
+def node_translation(node: dict) -> list[float]:
+    if "translation" in node:
+        value = node["translation"]
+        if not isinstance(value, list) or len(value) != 3:
+            raise RuntimeError("AF-002 glTF node translation must contain three values")
+        return [float(value[0]), float(value[1]), float(value[2])]
+    if "matrix" in node:
+        matrix = node["matrix"]
+        if not isinstance(matrix, list) or len(matrix) != 16:
+            raise RuntimeError("AF-002 glTF node matrix must contain sixteen values")
+        # glTF matrices are column-major; translation occupies indices 12..14.
+        return [float(matrix[12]), float(matrix[13]), float(matrix[14])]
+    return [0.0, 0.0, 0.0]
+
+
 def triangle_count(document: dict) -> int:
     accessors = document.get("accessors", [])
     total = 0
@@ -87,7 +102,7 @@ for socket_name in ("SOCKET_MECH_AXIS_IN", "SOCKET_MECH_AXIS_OUT"):
     if expected_socket is None:
         raise RuntimeError(f"AF-002 reference missing {socket_name}")
     node = node_by_name[socket_name]
-    translation = node.get("translation", [0.0, 0.0, 0.0])
+    translation = node_translation(node)
     if not vector_close(translation, expected_socket["position"]):
         raise RuntimeError(f"AF-002 socket translation mismatch: {socket_name} {translation} != {expected_socket['position']}")
 
