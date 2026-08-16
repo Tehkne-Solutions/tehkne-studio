@@ -85,13 +85,14 @@ function inspectAndTune(root: Object3D): AssetInspection {
 }
 
 function CameraRig({ view }: { readonly view: CameraView }) {
-  const { camera } = useThree();
+  const { camera, invalidate } = useThree();
   useEffect(() => {
     const preset = CAMERA_VIEWS[view];
     camera.position.set(...preset.position);
     camera.lookAt(...preset.target);
     camera.updateProjectionMatrix();
-  }, [camera, view]);
+    invalidate();
+  }, [camera, invalidate, view]);
   return null;
 }
 
@@ -214,6 +215,7 @@ export function GoldenMotorPbrReviewGateV065ContractAligned() {
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(300px, 360px)", gap: 16, minHeight: 0 }}>
         <div data-testid="pbr-canvas-shell" data-camera-view={view} style={{ minHeight: 600, borderRadius: 18, overflow: "hidden", border: "1px solid #343d43", background: "#151a1e" }}>
           <Canvas
+            frameloop="demand"
             camera={{ position: CAMERA_VIEWS["three-quarter"].position, fov: 30, near: 0.001, far: 5 }}
             dpr={1}
             gl={{ antialias: true, powerPreference: "high-performance", alpha: false }}
