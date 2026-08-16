@@ -48,7 +48,7 @@ async function authorCycle(spatial, relationshipId, steps = [
   return { commands, positions, sequences, attestations: mechanicalRotaryWaypointPlanAttestationRuntimeFor(spatial) };
 }
 
-test("S2.33 attests the consumed S2.31 plan against canonical S2.32 execution evidence per segment", async () => {
+test("S2.34 attests the consumed S2.31 plan against canonical S2.32 execution evidence per segment", async () => {
   const { session, spatial, connection } = await rotaryRuntime("attestation-verified");
   const { attestations } = await authorCycle(spatial, connection.id);
   const eventsBefore = session.events.list().length;
@@ -88,7 +88,7 @@ test("S2.33 attests the consumed S2.31 plan against canonical S2.32 execution ev
   assert.equal(attestations.lastAttestation(connection.id, "inspection cycle")?.allSegmentsMatched, true);
 });
 
-test("S2.33 freezes consumed plan coordinates while future live plans follow edited Named Positions", async () => {
+test("S2.34 freezes consumed plan coordinates while future live plans follow edited Named Positions", async () => {
   const { spatial, connection } = await rotaryRuntime("attestation-live-edit");
   const { commands, positions, sequences, attestations } = await authorCycle(spatial, connection.id);
   assert.equal((await attestations.runSequenceAttested(connection.id, "Inspection Cycle", "ui")).ok, true);
@@ -104,7 +104,7 @@ test("S2.33 freezes consumed plan coordinates while future live plans follow edi
   close(attestations.lastAttestation(connection.id, "Inspection Cycle")?.segments[0]?.plannedTargetContinuousRadians, 90 * DEG);
 });
 
-test("S2.33 publishes no attestation when the canonical S2.31 preflight blocks before movement", async () => {
+test("S2.34 publishes no attestation when the canonical S2.31 preflight blocks before movement", async () => {
   const { session, spatial, connection } = await rotaryRuntime("attestation-blocked");
   const { commands, attestations } = await authorCycle(spatial, connection.id);
   assert.equal((await commands.setTravelLimits(connection.id, -90 * DEG, 180 * DEG, "ui")).ok, true);
@@ -119,7 +119,7 @@ test("S2.33 publishes no attestation when the canonical S2.31 preflight blocks b
   assert.equal(rotaryWaypointExecutionEvidence(session, connection.id, "Inspection Cycle").length, 0);
 });
 
-test("S2.33 restores attestation without replay and fails closed when either attestation or S2.32 evidence is tampered", async () => {
+test("S2.34 restores attestation without replay and fails closed when either attestation or S2.32 evidence is tampered", async () => {
   const { session, builder, spatial, connection } = await rotaryRuntime("attestation-restore");
   const { attestations } = await authorCycle(spatial, connection.id);
   assert.equal((await attestations.runSequenceAttested(connection.id, "Inspection Cycle", "voice")).ok, true);
