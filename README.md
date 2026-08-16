@@ -62,7 +62,7 @@ S2.24 reconstructs continuous angle and integer revolutions from the current pri
 
 ### Travel-limit authority
 
-S2.26 stores an optional continuous envelope in `relationship.metadata.rotaryTravelLimits`. Movement outside the envelope is rejected before planner and spatial mutation; there is no silent clamp. Shafts without this metadata remain unlimited.
+S2.26 stores an optional continuous envelope in `relationship.metadata.rotaryTravelLimits`. Any movement outside the envelope must **fail closed** before planner and spatial mutation; there is no silent clamp. Shafts without this metadata remain unlimited.
 
 Travel-limit authoring events are audit evidence only and stay outside the movement fold. Save/restore persists the envelope naturally through the Engineering Graph snapshot.
 
