@@ -4,13 +4,13 @@ Virtual Engineering Atelier by **Tehkné Solutions**.
 
 ## Current baseline
 
-`0.1.0-alpha.1 · S1.12 + S2.32`
+`0.1.0-alpha.1 · S1.12 + S2.34`
 
-Previous validated baseline: `0.1.0-alpha.1 · S1.12 + S2.31`.
+Previous validated baseline: `0.1.0-alpha.1 · S1.12 + S2.33`.
 
-Historical validated baseline: `0.1.0-alpha.1 · S1.12 + S2.30`.
+Historical validated baseline: `0.1.0-alpha.1 · S1.12 + S2.32`.
 
-Earlier validated baseline: `0.1.0-alpha.1 · S1.12 + S2.29`.
+Earlier validated baseline: `0.1.0-alpha.1 · S1.12 + S2.31`.
 
 Tehkné Studio is an executable engineering workspace where products, components, experiments and spatial assemblies share the same engineering state instead of being disconnected demos.
 
@@ -42,11 +42,13 @@ Tehkné Studio is an executable engineering workspace where products, components
 - **Rotary Segment Rate Evidence (S2.29)**: an explicit positive `durationSeconds` on a completed movement segment produces deterministic `segment-average` rad/s and RPM evidence; untimed movement remains `RATE UNRESOLVED`;
 - **Rotary Waypoint Sequence (S2.30)**: an ordered sequence references existing Named Positions and may author a duration per segment. `RUN SEQUENCE` executes each target through the same `setContinuousTarget` path;
 - **Rotary Waypoint Sequence Plan (S2.31)**: `PREVIEW SEQUENCE` computes a read-only deterministic plan from the current continuous coordinate and live Named Positions, including per-segment delta/rate evidence, travel admissibility, route totals and explicit-duration completeness. `RUN SEQUENCE` consumes the same plan as its preflight;
-- **Rotary Waypoint Sequence Execution Evidence (S2.32)**: successful sequence runs are reconstructed read-only from `session.events`, linking the sequence request to canonical movement command evidence without creating a parallel execution document.
+- **Rotary Waypoint Sequence Execution Evidence (S2.32)**: successful sequence runs are reconstructed read-only from `session.events`, linking the sequence request to canonical movement command evidence without creating a parallel execution document;
+- **AF-002 Dual-Shaft Assembly (S2.33)**: the shaft coupler participates in two independent canonical `connectedTo` rotary relationships while preserving its engineering-reference socket authority and no transmission graph;
+- **Rotary Waypoint Plan-Execution Attestation (S2.34)**: an attested run preserves the exact S2.31 plan consumed at execution time and verifies it against canonical S2.32 execution evidence before recording immutable audit evidence in `session.events`.
 
 ## Engineering invariants
 
-`connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints, rotary controls, travel limits, HOME, Named Positions and S2.30 `rotaryWaypointSequences` are projections or metadata of that same graph. The S2.31 waypoint plan and S2.32 execution evidence are read-only projections derived from canonical authorities and are not persisted as parallel state. Tehkné Studio does not maintain a parallel assembly, rotation, joint, limit, home, named-position, sequence, plan, execution, revolution or rate graph.
+`connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints, rotary controls, travel limits, HOME, Named Positions and S2.30 `rotaryWaypointSequences` are projections or metadata of that same graph. The S2.31 waypoint plan and S2.32 execution evidence are read-only projections derived from canonical authorities. S2.34 plan-execution attestations are immutable historical audit evidence in `session.events`, not parallel planning/topology state. Tehkné Studio does not maintain a parallel assembly, rotation, joint, limit, home, named-position, sequence, plan, execution, attestation, transmission, revolution or rate graph.
 
 The `inventionSpatial` document remains the only persisted physical spatial source of truth. `transformBatch(...)` prepares and validates each mechanical state transition before committing. Mechanical commands do not introduce a shadow transform map or second joint state.
 
@@ -58,9 +60,10 @@ The mechanical runtime deliberately reuses the **existing session CommandBus**. 
 - `invention.mechanical.rotary.setTravelLimits` / `clearTravelLimits`;
 - `invention.mechanical.rotary.setHome` / `goHome` / `clearHome`;
 - `invention.mechanical.rotary.saveNamedPosition` / `goToNamedPosition` / `deleteNamedPosition`;
-- `invention.mechanical.rotary.saveWaypointSequence` / `runWaypointSequence` / `deleteWaypointSequence`.
+- `invention.mechanical.rotary.saveWaypointSequence` / `runWaypointSequence` / `deleteWaypointSequence`;
+- `invention.mechanical.rotary.runWaypointSequenceAttested` — captures the consumed S2.31 plan, delegates to the canonical sequence RUN and attests it against S2.32 execution evidence.
 
-`planSequence(...)` is intentionally a pure query rather than a fourth sequence command. UI, voice and automation movement still invoke the same validated CommandBus operations; previewing a plan does not consume a command ID or manufacture an audit/movement event.
+`planSequence(...)` is intentionally a pure query rather than a sequence command. UI, voice and automation movement still invoke the same validated CommandBus operations; previewing a plan does not consume a command ID or manufacture an audit/movement event.
 
 ### Multi-turn evidence
 
@@ -165,6 +168,24 @@ The projection validates duplicate or missing movement command IDs, relationship
 
 S2.32 does not persist `sequenceExecution`, an execution map or a second history. It does not dispatch commands, record events, mutate `inventionSpatial`, schedule future work or infer time from timestamps. `session.events` remains the canonical persisted execution evidence authority.
 
+### AF-002 Dual-Shaft authority
+
+S2.33 adds `mechanical.coupler.shaft-a-v1` with two independent `mechanical.rotary-shaft` ports mirrored from the canonical AF-002 Engineering Reference: `axis-in` at `z=-17.5 mm` and `axis-out` at `z=+17.5 mm`. Motor → coupler and coupler → wheel remain two ordinary `connectedTo` relationships; no transmission graph is introduced.
+
+The Engineering Reference remains the dimensional/socket authority even as the component presentation advances monotonically to later validated Asset Forge stages. S2.33 therefore preserves identity, port transforms, connected topology and all negative physical claims rather than freezing the component forever at one rendering stage.
+
+AF-002 DCC QA separately validated the deterministic coupler GLB after correcting socket serialization in the generator. The DCC payload is **22,600 bytes**, **1,792 triangles**, SHA-256 `48e8363cdc38b5ae93ace0b975c42498663e03c922970fb2b60e80c65d26b50e`, with the four authored socket translations materialized directly in GLB JSON. This is `DCC_QA_CANDIDATE` evidence only; it does not claim runtime/HERO/Golden, torque, max RPM or dynamics readiness.
+
+### Rotary Waypoint Plan-Execution Attestation authority
+
+S2.34 adds `invention.mechanical.rotary.runWaypointSequenceAttested`. The orchestration command captures the exact S2.31 read-only plan immediately before execution, delegates movement to the canonical S2.30/S2.31 RUN, resolves the resulting canonical S2.32 execution evidence by sequence-run command ID, compares every segment and aggregate, and only then records `MechanicalRotaryWaypointPlanExecutionAttested`.
+
+Each attestation segment preserves the consumed waypoint key/name and planned from/target/delta/duration/rate next to the actual S2.32 movement command ID and before/after/delta/duration/rate. `derivedFrom = consumed-plan+s2.32-execution-evidence`; `matched = true` is only recorded after deterministic comparison succeeds.
+
+This distinction is intentional: Named Positions remain live authority for future planning, while a completed attestation is immutable historical audit evidence. If `Inspect` changes from 90° to 120° after a successful run, the next S2.31 preview follows 120°, but the historical S2.34 attestation retains the 90° target consumed by that run. Restore does not replay movement or attestation creation, and `lastAttestation(...)` revalidates stored actual fields against current canonical S2.32 execution evidence; tampering on either side fails closed.
+
+S2.34 does not persist the preview plan as topology/current-plan state, does not duplicate the movement-event parser, does not mutate `connectedTo` metadata or `inventionSpatial` outside the canonical RUN, and does not introduce wall-clock timing, schedulers, timelines, torque, acceleration, inertia or dynamics solvers.
+
 ## Asset Forge · AF-001
 
 Current motor candidate: `TS_ELEC_MOTOR_DC_A v0.6.6-hero-candidate`.
@@ -178,17 +199,30 @@ Current motor candidate: `TS_ELEC_MOTOR_DC_A v0.6.6-hero-candidate`.
 
 The AF-001L gate remains intentionally fail-closed: hosted CI validates its contract while the physical benchmark requires explicit target-hardware execution and real hardware attestation.
 
+## Asset Forge · AF-002
+
+Current shaft-coupler lineage: `TS_MECH_SHAFT_COUPLER_A`.
+
+- Engineering Reference remains the dimensional/socket authority;
+- S2.33 proves dual-shaft canonical `connectedTo` assembly without a transmission graph;
+- DCC QA candidate: `0.3.0-dcc-candidate`;
+- DCC payload: `22,600 bytes`;
+- LOD0 triangles: `1,792`;
+- SHA-256: `48e8363cdc38b5ae93ace0b975c42498663e03c922970fb2b60e80c65d26b50e`;
+- authored socket translations are serialized in the GLB;
+- status remains below HERO/Golden and unsupported torque/RPM/dynamics claims remain false.
+
 ## Verification
 
 ```bash
 npm ci --ignore-scripts
 npm run security:audit
 npm run verify:s1.12
-npm run verify:s2.32
+npm run verify:s2.34
 npm run smoke:browser
 ```
 
-The cumulative S2.32 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform → S2.23 Mechanical Command Runtime → S2.24 Multi-turn Rotary Kinematics → S2.25 Rotary Continuous Target → S2.26 Rotary Travel Limits → S2.27 Rotary Home Position → S2.28 Rotary Named Positions → S2.29 Rotary Segment Rate Evidence → S2.30 Rotary Waypoint Sequence → S2.31 Rotary Waypoint Sequence Plan before validating S2.32 Rotary Waypoint Sequence Execution Evidence, followed by complete Chromium smoke and AF-001I deterministic evidence.
+The cumulative S2.34 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform → S2.23 Mechanical Command Runtime → S2.24 Multi-turn Rotary Kinematics → S2.25 Rotary Continuous Target → S2.26 Rotary Travel Limits → S2.27 Rotary Home Position → S2.28 Rotary Named Positions → S2.29 Rotary Segment Rate Evidence → S2.30 Rotary Waypoint Sequence → S2.31 Rotary Waypoint Sequence Plan → S2.32 Rotary Waypoint Sequence Execution Evidence → S2.33 AF-002 Dual-Shaft Assembly before validating S2.34 Rotary Waypoint Plan-Execution Attestation, followed by complete Chromium smoke and AF-001I deterministic evidence.
 
 ## Repository structure
 
@@ -197,7 +231,7 @@ The cumulative S2.32 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Soc
 - `library/` — signed component catalog, extensions and compatibility overlays;
 - `tests/domain` — deterministic domain contracts;
 - `tests/browser` — Chromium product and engineering flows;
-- `tools/asset_forge` — AF-001 DCC/runtime validation tooling;
+- `tools/asset_forge` — AF-001/AF-002 DCC/runtime validation tooling;
 - `.github/workflows` — read-only CI and explicit hardware gates.
 
 ## License
