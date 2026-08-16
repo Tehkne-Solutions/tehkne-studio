@@ -6,11 +6,13 @@ import {
   endpointsAreCoincident,
   mechanicalAxesAreAligned,
   mechanicalWorldAxis,
-  planMechanicalRotaryJointStep,
-  type MechanicalAxialConstraint,
-  type PlannedRotaryJointStep
+  type MechanicalAxialConstraint
 } from "../../../packages/invention-assembly-runtime/src/index";
-import { rotaryJointRelativeAngle, rotaryJointTargetDelta } from "../../../packages/invention-assembly-runtime/src/rotary-relative-angle";
+import { rotaryJointRelativeAngle } from "../../../packages/invention-assembly-runtime/src/rotary-relative-angle";
+import {
+  mechanicalCommandRuntimeFor,
+  type MechanicalRotaryCommandResult
+} from "../../../packages/invention-mechanical-command-runtime/src/index";
 import type { InventionSpatialScene } from "../../../packages/invention-spatial-runtime/src/index";
 import type { SpatialEntityBinding } from "../../../packages/spatial-runtime/src/index";
 import { useSpatialPortEndpoint } from "./InventionAssetVisual";
@@ -24,14 +26,6 @@ function formatAxis(value: { readonly x: number; readonly y: number; readonly z:
 
 function formatAngle(radians: number): string {
   return `${radians >= 0 ? "+" : "−"}${Math.abs(radians).toFixed(3)} rad · ${(radians * 180 / Math.PI).toFixed(1)}°`;
-}
-
-function commitRotaryPlan(spatial: InventionSpatialScene, plan: PlannedRotaryJointStep): void {
-  spatial.transformBatch([{
-    entityId: plan.entityId,
-    position: plan.toPosition,
-    rotation: plan.toRotation
-  }]);
 }
 
 export function RotaryJointControls({
@@ -54,6 +48,8 @@ export function RotaryJointControls({
   readonly onBlocked: (cause: unknown) => void;
 }) {
   const [targetDegrees, setTargetDegrees] = useState("0");
+  const [lastCommand, setLastCommand] = useState<MechanicalRotaryCommandResult | null>(null);
+  const commands = mechanicalCommandRuntimeFor(spatial);
   const driverEndpoint = useSpatialPortEndpoint(driverEntity, driverBinding, constraint.driver.portId);
   const followerEndpoint = useSpatialPortEndpoint(followerEntity, followerBinding, constraint.follower.portId);
   const driverAxis = mechanicalWorldAxis(constraint.driverAxisLocal, driverBinding.rotation);
@@ -62,63 +58,45 @@ export function RotaryJointControls({
   const ready = physical && endpointsAreCoincident(driverEndpoint.position, followerEndpoint.position) && mechanicalAxesAreAligned(driverAxis, followerAxis);
   const relativeAngle = ready ? rotaryJointRelativeAngle(constraint.driverAxisLocal, constraint.followerAxisLocal, driverBinding.rotation, followerBinding.rotation) : null;
 
-  const rotateJoint = (radians: number): void => {
+  const acceptCommand = (result: MechanicalRotaryCommandResult): void => {
+    setLastCommand(result);
+    onChanged(result.deltaRadians);
+  };
+
+  const rotateJoint = async (radians: number): Promise<void> => {
     try {
       if (!physical) throw new Error(`Rotary joint ${constraint.relationshipId} requires physical endpoints`);
-      const plan = planMechanicalRotaryJointStep(
-        driverEndpoint.position,
-        followerEndpoint.localPosition,
-        constraint.driverAxisLocal,
-        constraint.followerAxisLocal,
-        driverBinding,
-        followerBinding,
-        radians
-      );
-      commitRotaryPlan(spatial, plan);
-      onChanged(radians);
+      const outcome = await commands.step(constraint.relationshipId, radians, "ui");
+      if (!outcome.ok || !outcome.result) throw new Error(outcome.error ?? "Mechanical rotary step command failed");
+      acceptCommand(outcome.result);
     } catch (cause) {
       onBlocked(cause);
     }
   };
 
-  const applyTargetAngle = (): void => {
+  const applyTargetAngle = async (): Promise<void> => {
     try {
       if (!physical) throw new Error(`Rotary joint ${constraint.relationshipId} requires physical endpoints`);
       const degrees = Number(targetDegrees);
       if (!Number.isFinite(degrees) || degrees < -180 || degrees > 180) throw new Error("Rotary target angle must be between -180 and 180 degrees");
-      const target = rotaryJointTargetDelta(
-        constraint.driverAxisLocal,
-        constraint.followerAxisLocal,
-        driverBinding.rotation,
-        followerBinding.rotation,
-        degrees * Math.PI / 180
-      );
-      const plan = planMechanicalRotaryJointStep(
-        driverEndpoint.position,
-        followerEndpoint.localPosition,
-        constraint.driverAxisLocal,
-        constraint.followerAxisLocal,
-        driverBinding,
-        followerBinding,
-        target.deltaRadians
-      );
-      commitRotaryPlan(spatial, plan);
-      onChanged(target.deltaRadians);
+      const outcome = await commands.setTarget(constraint.relationshipId, degrees * Math.PI / 180, "ui");
+      if (!outcome.ok || !outcome.result) throw new Error(outcome.error ?? "Mechanical rotary target command failed");
+      acceptCommand(outcome.result);
     } catch (cause) {
       onBlocked(cause);
     }
   };
 
-  return <div className={styles.wireEvidence} aria-label={`Rotary joint ${constraint.relationshipId}`} data-testid={`rotary-joint-${constraint.relationshipId}`} data-dof="rotary-follower" data-state={ready ? "ready" : "blocked"} data-driver-entity={constraint.driver.entityId} data-follower-entity={constraint.follower.entityId} data-axis={formatAxis(driverAxis)} data-angle-rad={relativeAngle === null ? "" : relativeAngle.toFixed(3)} data-angle-mode="principal-derived" data-target-mode="principal-shortest" data-transform-mode="atomic-batch">
+  return <div className={styles.wireEvidence} aria-label={`Rotary joint ${constraint.relationshipId}`} data-testid={`rotary-joint-${constraint.relationshipId}`} data-dof="rotary-follower" data-state={ready ? "ready" : "blocked"} data-driver-entity={constraint.driver.entityId} data-follower-entity={constraint.follower.entityId} data-axis={formatAxis(driverAxis)} data-angle-rad={relativeAngle === null ? "" : relativeAngle.toFixed(3)} data-angle-mode="principal-derived" data-target-mode="principal-shortest" data-transform-mode="atomic-batch" data-command-bus="session" data-command-source={lastCommand?.source ?? ""} data-command-id={lastCommand?.commandId ?? ""} data-command-mode={lastCommand?.mode ?? ""}>
     <strong>ROTARY JOINT DOF · {followerEntity.name}</strong>
-    <small>{constraint.driver.portId} → {constraint.follower.portId} · follower-only · {ready ? "READY" : "BLOCKED"} · {relativeAngle === null ? "ANGLE UNRESOLVED" : `ANGLE ${formatAngle(relativeAngle)}`} · atomic transform · sem RPM/torque</small>
+    <small>{constraint.driver.portId} → {constraint.follower.portId} · follower-only · {ready ? "READY" : "BLOCKED"} · {relativeAngle === null ? "ANGLE UNRESOLVED" : `ANGLE ${formatAngle(relativeAngle)}`} · CommandBus + atomic transform · sem RPM/torque</small>
     <div className={styles.axisGrid}>
-      <button type="button" onClick={() => rotateJoint(-JOINT_STEP_RAD)} disabled={!ready}>JOINT −</button>
-      <button type="button" onClick={() => rotateJoint(JOINT_STEP_RAD)} disabled={!ready}>JOINT +</button>
+      <button type="button" onClick={() => void rotateJoint(-JOINT_STEP_RAD)} disabled={!ready}>JOINT −</button>
+      <button type="button" onClick={() => void rotateJoint(JOINT_STEP_RAD)} disabled={!ready}>JOINT +</button>
     </div>
     <div className={styles.axisGrid}>
       <input aria-label="Rotary joint target angle degrees" type="number" min="-180" max="180" step="15" value={targetDegrees} onChange={(event) => setTargetDegrees(event.target.value)} disabled={!ready} />
-      <button type="button" onClick={applyTargetAngle} disabled={!ready}>SET ANGLE</button>
+      <button type="button" onClick={() => void applyTargetAngle()} disabled={!ready}>SET ANGLE</button>
     </div>
   </div>;
 }
