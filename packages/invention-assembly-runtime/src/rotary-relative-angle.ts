@@ -83,7 +83,7 @@ function worldReferenceTangent(localAxis: SpatialVector3, rotation: SpatialVecto
 export function normalizePrincipalAngle(radians: number): number {
   if (!Number.isFinite(radians)) throw new Error("Rotary relative angle must be finite");
   let normalizedAngle = Math.atan2(Math.sin(radians), Math.cos(radians));
-  if (Object.is(normalizedAngle, -0)) normalizedAngle = 0;
+  if (Object.is(normalizedAngle, -0) || Math.abs(normalizedAngle) <= ROTARY_RELATIVE_ANGLE_EPSILON) normalizedAngle = 0;
   return normalizedAngle;
 }
 
