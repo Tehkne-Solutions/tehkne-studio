@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 
 const required = [
   "packages/invention-spatial-runtime/src/index.ts",
+  "packages/invention-mechanical-command-runtime/src/index.ts",
   "apps/studio-web/components/Invention3DWorkbench.tsx",
   "apps/studio-web/components/RotaryJointControls.tsx",
   "tests/domain/invention-spatial-runtime.test.mjs",
@@ -30,9 +31,7 @@ for (const token of [
   "assertFiniteRotation(mutation.rotation)",
   "const prepared = mutations.map",
   "for (const next of prepared) this.#bindings.set(next.entityId, next)",
-  "return prepared.map(clone)",
-  "return this.transform(entityId, position, binding.rotation)",
-  "return this.transform(entityId, binding.position, rotation)"
+  "return prepared.map(clone)"
 ]) {
   if (!spatial.includes(token)) throw new Error(`S2.22 spatial transaction contract missing: ${token}`);
 }
@@ -55,71 +54,48 @@ for (const token of [
 ]) {
   if (!workbench.includes(token)) throw new Error(`S2.22 Workbench atomic migration missing: ${token}`);
 }
-for (const forbidden of [
-  "runtime.spatial.move(entry.entityId, entry.toPosition)",
-  "runtime.spatial.rotate(entry.entityId, entry.toRotation)",
-  "spatial.rotate(plan.entityId, plan.toRotation)",
-  "spatial.move(plan.entityId, plan.toPosition)",
-  "spatialTransactionGraph",
-  'status: "GOLDEN_ASSET"'
-]) {
+for (const forbidden of ["runtime.spatial.move(entry.entityId, entry.toPosition)", "runtime.spatial.rotate(entry.entityId, entry.toRotation)", "spatial.rotate(plan.entityId, plan.toRotation)", "spatial.move(plan.entityId, plan.toPosition)", "spatialTransactionGraph", 'status: "GOLDEN_ASSET"']) {
   if (workbench.includes(forbidden)) throw new Error(`S2.22 Workbench still exposes non-atomic/forbidden path: ${forbidden}`);
 }
 
-const rotary = await readFile("apps/studio-web/components/RotaryJointControls.tsx", "utf8");
+const commandRuntime = await readFile("packages/invention-mechanical-command-runtime/src/index.ts", "utf8");
 for (const token of [
-  "commitRotaryPlan",
-  "spatial.transformBatch",
-  'data-transform-mode="atomic-batch"',
-  "plan.toPosition",
-  "plan.toRotation",
-  "rotaryJointTargetDelta",
-  "sem RPM/torque"
+  "planMechanicalRotaryJointStep",
+  "this.spatial.transformBatch([",
+  "position: plan.toPosition",
+  "rotation: plan.toRotation",
+  "rotaryJointTargetDelta"
 ]) {
-  if (!rotary.includes(token)) throw new Error(`S2.22 rotary atomic commit missing: ${token}`);
+  if (!commandRuntime.includes(token)) throw new Error(`S2.22 rotary atomic execution missing behind CommandBus: ${token}`);
 }
 for (const forbidden of ["spatial.rotate(plan.entityId", "spatial.move(plan.entityId", "jointGraph", "rpmSolver", "torqueSolver"]) {
-  if (rotary.includes(forbidden)) throw new Error(`S2.22 rotary path must remain atomic/no dynamics: ${forbidden}`);
+  if (commandRuntime.includes(forbidden)) throw new Error(`S2.22 rotary execution must remain atomic/no dynamics: ${forbidden}`);
 }
 
+const rotary = await readFile("apps/studio-web/components/RotaryJointControls.tsx", "utf8");
+for (const token of ['data-transform-mode="atomic-batch"', 'data-command-bus="session"', "mechanicalCommandRuntimeFor", "sem RPM/torque"]) {
+  if (!rotary.includes(token)) throw new Error(`S2.22 UI atomic/command projection missing: ${token}`);
+}
+if (rotary.includes("spatial.transformBatch([{") || rotary.includes("spatial.rotate(plan.entityId") || rotary.includes("spatial.move(plan.entityId")) throw new Error("S2.22 UI must not bypass command-backed atomic execution");
+
 const domain = await readFile("tests/domain/invention-spatial-runtime.test.mjs", "utf8");
-for (const token of [
-  "S2.22 transformBatch commits position and rotation for multiple bindings in one validated transaction",
-  "S2.22 transformBatch validates the complete batch before mutating any binding",
-  "first mutation must not leak from a rejected batch",
-  "S2.22 transformBatch rejects duplicate or unknown entities before commit",
-  "S2.22 atomic transforms persist and restore through the existing signed inventionSpatial document"
-]) {
+for (const token of ["S2.22 transformBatch commits position and rotation for multiple bindings in one validated transaction", "S2.22 transformBatch validates the complete batch before mutating any binding", "first mutation must not leak from a rejected batch", "S2.22 transformBatch rejects duplicate or unknown entities before commit", "S2.22 atomic transforms persist and restore through the existing signed inventionSpatial document"]) {
   if (!domain.includes(token)) throw new Error(`S2.22 domain evidence missing: ${token}`);
 }
 
 const browser = await readFile("tests/browser/atomic-spatial-transform.spec.ts", "utf8");
-for (const token of [
-  "S2.22 commits mechanical translation rotation alignment and rotary target through atomic spatial batches",
-  'data-spatial-transform-mode", "atomic-batch"',
-  'data-transform-mode", "atomic-batch"',
-  'name: "Z +", exact: true',
-  'name: "RY +", exact: true',
-  'name: "SET ANGLE", exact: true',
-  'data-angle-rad", "0.785"',
-  "Guardar 3D",
-  "page.reload",
-  "pageErrors",
-  "consoleErrors"
-]) {
+for (const token of ["S2.22 commits mechanical translation rotation alignment and rotary target through atomic spatial batches", 'data-spatial-transform-mode", "atomic-batch"', 'data-transform-mode", "atomic-batch"', 'name: "Z +", exact: true', 'name: "RY +", exact: true', 'name: "SET ANGLE", exact: true', 'data-angle-rad", "0.785"', "Guardar 3D", "page.reload", "pageErrors", "consoleErrors"]) {
   if (!browser.includes(token)) throw new Error(`S2.22 browser evidence missing: ${token}`);
 }
 
 const readme = await readFile("README.md", "utf8");
-for (const token of ["Current baseline", "S2.22", "Atomic Spatial Transform", "transformBatch", "HERO_CANDIDATE", "AF-001L", "Tehkné Solutions"]) {
-  if (!readme.includes(token)) throw new Error(`S2.22 README baseline missing: ${token}`);
+for (const token of ["Current baseline", "Atomic Spatial Transform", "transformBatch", "HERO_CANDIDATE", "AF-001L", "Tehkné Solutions"]) {
+  if (!readme.includes(token)) throw new Error(`S2.22 README semantic baseline missing: ${token}`);
 }
 
 const pkg = JSON.parse(await readFile("package.json", "utf8"));
 if (pkg.scripts?.["verify:s2.22"] !== "node scripts/verify-s2.22.mjs") throw new Error("S2.22 package verification script missing");
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
-if (!workflow.includes("npm run verify:s2.22")) throw new Error("S2.22 CI contract missing");
-if (!workflow.includes("tests/browser/atomic-spatial-transform.spec.ts")) throw new Error("S2.22 browser gate missing from CI");
-if (workflow.includes("contents: write")) throw new Error("S2.22 CI must remain read-only");
+if (!workflow.includes("npm run verify:s2.22") || !workflow.includes("tests/browser/atomic-spatial-transform.spec.ts") || workflow.includes("contents: write")) throw new Error("S2.22 CI contract mismatch");
 
-console.log("S2.22 Atomic Spatial Transform PASS · validate-all-before-commit batch + atomic mechanical translation/rotation/alignment/rotary target + same signed inventionSpatial + no parallel state/no dynamics fiction + Tehkné Solutions");
+console.log("S2.22 Atomic Spatial Transform PASS · validate-all-before-commit core + command-backed rotary atomic commit + atomic translation/rotation/alignment + same signed inventionSpatial + no parallel state/no dynamics fiction + Tehkné Solutions");

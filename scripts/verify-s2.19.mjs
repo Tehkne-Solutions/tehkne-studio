@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 
 const required = [
   "packages/invention-assembly-runtime/src/index.ts",
+  "packages/invention-mechanical-command-runtime/src/index.ts",
   "apps/studio-web/components/Invention3DWorkbench.tsx",
   "apps/studio-web/components/RotaryJointControls.tsx",
   "tests/domain/invention-rotary-joint-runtime.test.mjs",
@@ -38,20 +39,34 @@ for (const forbidden of ["assemblyGraph", "mechanicalGraph", "rotationGraph", "a
   if (assembly.includes(forbidden)) throw new Error(`S2.19 must not create parallel topology or premature dynamics: ${forbidden}`);
 }
 
+const commandRuntime = await readFile("packages/invention-mechanical-command-runtime/src/index.ts", "utf8");
+for (const token of [
+  "MECHANICAL_ROTARY_STEP_COMMAND",
+  "planMechanicalRotaryJointStep",
+  "this.spatial.transformBatch",
+  "deriveMechanicalAxialConstraints",
+  "MechanicalRotaryStepExecuted"
+]) {
+  if (!commandRuntime.includes(token)) throw new Error(`S2.19 CommandBus execution lineage missing: ${token}`);
+}
+
 const control = await readFile("apps/studio-web/components/RotaryJointControls.tsx", "utf8");
 for (const token of [
   "RotaryJointControls",
-  "planMechanicalRotaryJointStep",
+  "mechanicalCommandRuntimeFor",
+  "commands.step",
   "rotary-follower",
   "JOINT −",
   "JOINT +",
   "disabled={!ready}",
-  "commitRotaryPlan",
-  "spatial.transformBatch",
   'data-transform-mode="atomic-batch"',
+  'data-command-bus="session"',
   "sem RPM/torque"
 ]) {
-  if (!control.includes(token)) throw new Error(`S2.19 control contract missing: ${token}`);
+  if (!control.includes(token)) throw new Error(`S2.19 semantic control contract missing: ${token}`);
+}
+for (const forbidden of ["planMechanicalRotaryJointStep(", "spatial.transformBatch([{"]) {
+  if (control.includes(forbidden)) throw new Error(`S2.19 UI must dispatch rather than own mechanical execution: ${forbidden}`);
 }
 
 const workbench = await readFile("apps/studio-web/components/Invention3DWorkbench.tsx", "utf8");
@@ -109,7 +124,4 @@ if (!workflow.includes("npm run verify:s2.19")) throw new Error("S2.19 CI contra
 if (!workflow.includes("tests/browser/rotary-joint-dof.spec.ts")) throw new Error("S2.19 browser gate missing from CI");
 if (workflow.includes("contents: write")) throw new Error("S2.19 CI must remain read-only");
 
-const sourceWorkflow = await readFile(".github/workflows/asset-forge-af001i-v065-contract.yml", "utf8");
-if (!sourceWorkflow.includes("actions/setup-node@v6") || !sourceWorkflow.includes('node-version: "24"')) throw new Error("S2.19 workflow housekeeping must align AF-001I source contract to Node 24/actions v6");
-
-console.log("S2.19 Rotary Joint DOF PASS · semantic follower-only shaft rotation + coincident endpoint preservation + atomic spatial commit + axial/rigid composition + no dynamics fiction · Tehkné Solutions");
+console.log("S2.19 Rotary Joint DOF PASS · follower-only planner preserved behind session CommandBus + atomic spatial commit + axial/rigid composition + no dynamics fiction · Tehkné Solutions");

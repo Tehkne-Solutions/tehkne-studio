@@ -50,6 +50,10 @@
           "shaft-out": "SOCKET_MECH_AXIS_OUT",
           "mount-front": "SOCKET_MECH_MOUNT_FRONT"
         },
+        "mechanicalPortPositionMap": {
+          "shaft-out": [0, 0, 0.03185],
+          "mount-front": [0, 0, 0.01655]
+        },
         "mechanicalPortAxisMap": {
           "shaft-out": [0, 0, 1]
         }
