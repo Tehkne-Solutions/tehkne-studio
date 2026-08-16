@@ -10,10 +10,13 @@ const BASELINE_SHA256 = "451d97b50ed9321c45b8dfb7e679cf6f273ec335da837d2c49d3774
 const CANDIDATE_BYTES = 138_120;
 const CANDIDATE_SHA256 = "2eda04ec02fb31c65c2d1ecb342c18bc4d7eaedd02af9a93b676b8a66d1fc6e6";
 const CANDIDATE_PATH = resolve(process.cwd(), "tools/asset_forge/af002_v05/generated/AF-002_TS_MECH_SHAFT_COUPLER_A_v0.5.0-hero-quality.glb");
+const DEDICATED_COMPARE = process.env.AF002_V05_COMPARE === "1";
 
 function sha256(body: Buffer) {
   return createHash("sha256").update(body).digest("hex");
 }
+
+test.skip(!DEDICATED_COMPARE, "AF-002 v0.5 comparison requires the dedicated gate to materialize its generated GLB");
 
 test("AF-002 v0.4 and v0.5 render side by side without runtime or HERO promotion", async ({ page }) => {
   const pageErrors: string[] = [];
