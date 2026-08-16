@@ -42,9 +42,9 @@ for (const token of [
   "MECHANICAL_ROTARY_TARGET_COMMAND",
   "rotaryJointTargetDelta",
   "target.deltaRadians",
+  "target.mode",
   "planMechanicalRotaryJointStep",
-  "this.spatial.transformBatch",
-  'mode: "principal-shortest"'
+  "this.spatial.transformBatch"
 ]) {
   if (!commandRuntime.includes(token)) throw new Error(`S2.21 target execution lineage missing: ${token}`);
 }
