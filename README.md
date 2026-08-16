@@ -4,7 +4,7 @@ Virtual Engineering Atelier by **Tehkné Solutions**.
 
 ## Current baseline
 
-`0.1.0-alpha.1 · S1.12 + S2.26`
+`0.1.0-alpha.1 · S1.12 + S2.27`
 
 Tehkné Studio is an executable engineering workspace where products, components, experiments and spatial assemblies share the same engineering state instead of being disconnected demos.
 
@@ -30,11 +30,12 @@ Tehkné Studio is an executable engineering workspace where products, components
 - **Mechanical Command Runtime (S2.23)**: rotary operations run through the existing `EngineeringSession.commands` CommandBus;
 - **Multi-turn Rotary Kinematics (S2.24)**: principal angle, continuous angle and integer revolutions are reconciled from `inventionSpatial + session.events` without replay;
 - **Rotary Continuous Target (S2.25)**: absolute multi-turn targets such as `720°` and `−450°` use `continuous-absolute` semantics through the same CommandBus;
-- **Rotary Travel Limits (S2.26)**: an optional continuous travel envelope can be authored on the authoritative `connectedTo` relationship. Incremental, principal and continuous targets are rejected fail closed before planning or spatial mutation if they would leave that envelope; a shaft with no envelope remains unlimited.
+- **Rotary Travel Limits (S2.26)**: an optional continuous travel envelope can be authored on the authoritative `connectedTo` relationship. Incremental, principal and continuous targets are rejected fail closed before planning or spatial mutation if they would leave that envelope; a shaft with no envelope remains unlimited;
+- **Rotary Segment Rate Evidence (S2.27)**: `step`, principal target and continuous target commands may carry explicit positive `durationSeconds`. The actually executed delta and that authored duration produce deterministic `segment-average` rad/s and RPM evidence. A motion command without duration remains `RATE UNRESOLVED`.
 
 ## Engineering invariants
 
-`connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints, rotary controls and S2.26 travel limits are projections or metadata of that same graph; Tehkné Studio does not maintain a parallel assembly, rotation, joint, limit or revolution graph.
+`connectedTo` remains the authoritative authored topology. Spatial wires, assembly constraints, axial constraints, rotary controls and S2.26 travel limits are projections or metadata of that same graph; Tehkné Studio does not maintain a parallel assembly, rotation, joint, limit, revolution or rate graph.
 
 The `inventionSpatial` document remains the only persisted physical spatial source of truth. `transformBatch(...)` prepares and validates the complete mutation set before committing. Mechanical commands do not introduce a shadow transform map or second joint state.
 
@@ -59,23 +60,41 @@ maxContinuousRadians = authored maximum
 signature = Tehkné Solutions
 ```
 
-The graph now exposes a safe `replaceRelationship(...)` primitive so relationship metadata can be updated without disconnecting/reconnecting the authored topology. Save/restore persists these limits naturally because they are part of the canonical Engineering Graph snapshot; no `travelLimitMap`, limit document or project-global state exists.
+The graph exposes a safe `replaceRelationship(...)` primitive so relationship metadata can be updated without disconnecting/reconnecting the authored topology. Save/restore persists these limits naturally because they are part of the canonical Engineering Graph snapshot; no `travelLimitMap`, limit document or project-global state exists.
 
-Limit authoring is itself dispatched through the session CommandBus and recorded as `MechanicalRotaryTravelLimitsSet` or `MechanicalRotaryTravelLimitsCleared`. Those events are audit evidence only and are intentionally excluded from the S2.24 kinematic fold, so setting or clearing a limit cannot manufacture angle, continuous travel or revolutions.
+Limit authoring is dispatched through the session CommandBus and recorded as `MechanicalRotaryTravelLimitsSet` or `MechanicalRotaryTravelLimitsCleared`. Those events are audit evidence only and are intentionally excluded from the S2.24 kinematic fold, so setting or clearing a limit cannot manufacture angle, continuous travel, revolutions or S2.27 segment rate.
 
 For any movement command, the runtime derives current continuous kinematics first, calculates the intended continuous result, reads the optional relationship envelope and applies the travel-limit check **before** `planMechanicalRotaryJointStep(...)` and before `transformBatch(...)`. Out-of-range commands are rejected rather than clamped. They produce no spatial mutation and no false movement-success event.
 
 An authored envelope must contain the joint's current continuous position at the moment it is set. Inverted bounds and bounds that exclude the current state fail closed. Removing an envelope restores unlimited rotary travel; shafts without `rotaryTravelLimits` preserve all S2.25 behavior, including multi-turn targets such as 1080°.
 
-Successful mechanical movement commands continue recording audit evidence in `session.events` with command ID, source, relationship, driver/follower, before/after principal angle, signed delta, continuous angle and revolutions. Restore reconstructs kinematics from evidence and current transforms; it does not replay commands or reapply transforms.
+### Explicit rotary segment-rate evidence
+
+S2.27 introduces **explicit command-duration evidence**, not a hidden simulation clock. `durationSeconds` is optional and may be supplied to incremental, `principal-shortest` or `continuous-absolute` movement commands. When present it must be finite and greater than zero.
+
+After S2.26 travel-limit validation accepts the intended continuous state, the runtime derives the completed segment's average angular rate as:
+
+```text
+averageAngularVelocityRadPerSec = deltaRadians / durationSeconds
+averageRpm = averageAngularVelocityRadPerSec × 60 / (2π)
+mode = segment-average
+```
+
+For `SET ANGLE`, `deltaRadians` is the actual shortest principal delta selected by S2.21. For `SET CONTINUOUS`, it is the exact multi-turn delta selected by S2.25, so a 720° command is never reduced to its principal 0° representative when rate evidence is calculated.
+
+The successful movement event stores `durationSeconds`, the derived average rad/s, average RPM and `rateMode` beside the existing angle/revolution evidence in `session.events`. `commands.rate(relationshipId)` recomputes the **latest successful motion segment** from that persisted delta + explicit duration and fails closed if recorded rate evidence was tampered with. Save/restore therefore preserves rate evidence without command replay and without a separate rate document.
+
+A movement command with no explicit duration records `unresolved-no-duration`; it deliberately replaces any older observable segment rate with `RATE UNRESOLVED`. By contrast, `SET LIMITS` and `CLEAR LIMITS` are not motion and do not replace the latest motion-rate evidence. A timed motion rejected by travel limits creates no success event, so it cannot publish or replace rate evidence.
+
+S2.27 never subtracts `issuedAt`, `occurredAt`, `Date`, browser frame time or other wall-clock metadata to invent elapsed physical time. Audit timestamps remain audit timestamps.
+
+Successful mechanical movement commands continue recording command ID, source, relationship, driver/follower, before/after principal angle, signed delta, continuous angle and revolutions. Restore reconstructs kinematics from evidence and current transforms; it does not replay commands or reapply transforms.
 
 The S2.24 stabilization continues canonicalizing numerical zero within the established rotary epsilon. Its canonical wrap proof uses `170° → -170°`, while the exact `180°` boundary remains covered in domain regression.
 
-S2.25 continuous targets remain exact kinematic state changes rather than time-resolved motor simulations. S2.26 adds an authored admissible envelope around those exact states; it still does not simulate the swept path between them.
-
 Mechanical endpoint resolution remains runtime-safe outside React. Canonical mechanical local positions come from authored component metadata or explicit proxy anchors; AF-001 `shaft-out` is `[0, 0, 0.03185] m`, matching AF-001M socket-transform QA for `SOCKET_MECH_AXIS_OUT`.
 
-Physics and simulation remain fail-closed. S2.26 is **kinematics and authored constraints only**: it does not claim elapsed time, RPM, angular velocity, angular acceleration, torque, collision sweep, inertia, backlash or motor dynamics.
+Physics and simulation remain fail-closed. S2.27 now claims **segment-average angular rate and RPM only when an explicit command duration exists**. It does **not** claim instantaneous angular velocity, acceleration, torque or time integration, and it still does not simulate swept-path collision, inertia, backlash or motor dynamics.
 
 ## Asset Forge · AF-001
 
@@ -96,11 +115,11 @@ The AF-001L gate remains intentionally fail-closed: hosted CI validates its cont
 npm ci --ignore-scripts
 npm run security:audit
 npm run verify:s1.12
-npm run verify:s2.26
+npm run verify:s2.27
 npm run smoke:browser
 ```
 
-The cumulative S2.26 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform → S2.23 Mechanical Command Runtime → S2.24 Multi-turn Rotary Kinematics → S2.25 Rotary Continuous Target before validating S2.26 Rotary Travel Limits, followed by complete Chromium smoke and AF-001I deterministic evidence.
+The cumulative S2.27 CI preserves S2.14 Socket-Aware Wiring → S2.15 Direct Socket Wiring → S2.16 Mechanical Assembly → S2.17 Rigid Assembly Rotation → S2.18 Axial Joint Alignment → S2.19 Rotary Joint DOF → S2.20 Rotary Joint Relative Angle → S2.21 Rotary Joint Target Angle → S2.22 Atomic Spatial Transform → S2.23 Mechanical Command Runtime → S2.24 Multi-turn Rotary Kinematics → S2.25 Rotary Continuous Target → S2.26 Rotary Travel Limits before validating S2.27 Rotary Segment Rate Evidence, followed by complete Chromium smoke and AF-001I deterministic evidence.
 
 ## Repository structure
 
