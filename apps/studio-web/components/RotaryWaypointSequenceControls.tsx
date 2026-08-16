@@ -5,6 +5,7 @@ import { mechanicalRotaryNamedPositionsRuntimeFor } from "../../../packages/inve
 import {
   mechanicalRotaryWaypointSequenceRuntimeFor,
   type MechanicalRotaryWaypointSequenceAuthoringResult,
+  type MechanicalRotaryWaypointSequencePlan,
   type MechanicalRotaryWaypointSequenceRunResult
 } from "../../../packages/invention-mechanical-command-runtime/src/rotary-waypoint-sequence";
 import type { InventionSpatialScene } from "../../../packages/invention-spatial-runtime/src/index";
@@ -14,6 +15,10 @@ interface DraftWaypoint {
   readonly positionKey: string;
   readonly positionName: string;
   readonly durationSeconds?: number;
+}
+
+function formatPlanRadians(value: number): string {
+  return `${value.toFixed(3)} rad · ${(value * 180 / Math.PI).toFixed(1)}°`;
 }
 
 export function RotaryWaypointSequenceControls({
@@ -36,6 +41,7 @@ export function RotaryWaypointSequenceControls({
   const [selectedSequenceKey, setSelectedSequenceKey] = useState("");
   const [lastAuthoring, setLastAuthoring] = useState<MechanicalRotaryWaypointSequenceAuthoringResult | null>(null);
   const [lastRun, setLastRun] = useState<MechanicalRotaryWaypointSequenceRunResult | null>(null);
+  const [lastPlan, setLastPlan] = useState<MechanicalRotaryWaypointSequencePlan | null>(null);
 
   const positionsRuntime = mechanicalRotaryNamedPositionsRuntimeFor(spatial);
   const sequenceRuntime = mechanicalRotaryWaypointSequenceRuntimeFor(spatial);
@@ -85,6 +91,16 @@ export function RotaryWaypointSequenceControls({
       setLastAuthoring(outcome.result);
       setSelectedSequenceKey(outcome.result.current.key);
       setSequenceName(outcome.result.current.name);
+      setLastPlan(null);
+    } catch (cause) {
+      onBlocked(cause);
+    }
+  };
+
+  const previewSequence = (): void => {
+    try {
+      if (!selectedSequence) throw new Error("Select an authored rotary waypoint sequence");
+      setLastPlan(sequenceRuntime.planSequence(relationshipId, selectedSequence.name));
     } catch (cause) {
       onBlocked(cause);
     }
@@ -96,6 +112,7 @@ export function RotaryWaypointSequenceControls({
       const outcome = await sequenceRuntime.runSequence(relationshipId, selectedSequence.name, "ui");
       if (!outcome.ok || !outcome.result) throw new Error(outcome.error ?? "Mechanical rotary waypoint sequence failed");
       setLastRun(outcome.result);
+      setLastPlan(null);
       onChanged(outcome.result.totalDeltaRadians);
     } catch (cause) {
       onBlocked(cause);
@@ -110,6 +127,7 @@ export function RotaryWaypointSequenceControls({
       setLastAuthoring(outcome.result);
       setSelectedSequenceKey("");
       setLastRun(null);
+      setLastPlan(null);
     } catch (cause) {
       onBlocked(cause);
     }
@@ -118,6 +136,12 @@ export function RotaryWaypointSequenceControls({
   const draftText = draft.length === 0
     ? "DRAFT VAZIO"
     : draft.map((step, index) => `${index + 1}. ${step.positionName}${step.durationSeconds === undefined ? " · RATE UNRESOLVED" : ` · ${step.durationSeconds.toFixed(3)} s`}`).join(" → ");
+  const planText = lastPlan === null
+    ? "PLAN NÃO GERADO"
+    : `${lastPlan.admissible ? "PLAN OK" : "PLAN BLOCKED"} · ${lastPlan.segments.length} segmentos · Δ ${formatPlanRadians(lastPlan.totalDeltaRadians)} · percurso ${formatPlanRadians(lastPlan.cumulativeAbsoluteTravelRadians)} · ${lastPlan.durationMode === "complete-explicit" ? `duração total ${lastPlan.totalDurationSeconds!.toFixed(3)} s` : `${lastPlan.durationMode} · explícito ${lastPlan.explicitDurationSeconds.toFixed(3)} s`}`;
+  const planSegmentsText = lastPlan === null
+    ? ""
+    : lastPlan.segments.map((segment) => `${segment.index + 1}. ${segment.positionName} · Δ ${formatPlanRadians(segment.deltaRadians)} · ${segment.rateMode === "segment-average" ? `${segment.durationSeconds!.toFixed(3)} s · ${segment.averageRpm!.toFixed(3)} RPM` : "RATE UNRESOLVED"} · ${segment.withinTravelLimits ? "LIMIT OK" : "LIMIT BLOCKED"}`).join(" → ");
 
   return <div
     className={styles.wireEvidence}
@@ -131,12 +155,23 @@ export function RotaryWaypointSequenceControls({
     data-sequence-run-steps={lastRun ? String(lastRun.stepsCompleted) : ""}
     data-sequence-final-movement-id={lastRun?.finalMovementCommandId ?? ""}
     data-sequence-final-rate-mode={lastRun?.finalRateMode ?? ""}
+    data-sequence-plan-status={lastPlan === null ? "" : lastPlan.admissible ? "admissible" : "blocked"}
+    data-sequence-plan-steps={lastPlan === null ? "" : String(lastPlan.segments.length)}
+    data-sequence-plan-duration-mode={lastPlan?.durationMode ?? ""}
+    data-sequence-plan-total-duration={lastPlan?.totalDurationSeconds === null || lastPlan === null ? "" : lastPlan.totalDurationSeconds.toFixed(3)}
+    data-sequence-plan-explicit-duration={lastPlan === null ? "" : lastPlan.explicitDurationSeconds.toFixed(3)}
+    data-sequence-plan-total-delta-rad={lastPlan === null ? "" : lastPlan.totalDeltaRadians.toFixed(3)}
+    data-sequence-plan-absolute-travel-rad={lastPlan === null ? "" : lastPlan.cumulativeAbsoluteTravelRadians.toFixed(3)}
+    data-sequence-plan-final-rad={lastPlan === null ? "" : lastPlan.afterContinuousRadians.toFixed(3)}
+    data-sequence-plan-timed-steps={lastPlan === null ? "" : String(lastPlan.timedSteps)}
+    data-sequence-plan-untimed-steps={lastPlan === null ? "" : String(lastPlan.untimedSteps)}
     data-command-bus="session"
     data-sequence-execution="canonical-continuous-targets"
-    data-sequence-preflight="travel-limits-all-waypoints"
+    data-sequence-preflight="shared-read-only-plan"
+    data-sequence-plan-mutation="none"
   >
     <strong>ROTARY WAYPOINT SEQUENCE</strong>
-    <small>Named Positions autoradas · até 32 waypoints · duração explícita opcional por segmento · preflight de curso antes do primeiro movimento · sem relógio contínuo/dinâmica</small>
+    <small>Named Positions autoradas · até 32 waypoints · duração explícita opcional por segmento · plan/preflight determinístico antes do primeiro movimento · sem relógio contínuo/dinâmica</small>
     <div className={styles.axisGrid}>
       <input aria-label="Rotary waypoint sequence name" type="text" maxLength={64} value={sequenceName} onChange={(event) => setSequenceName(event.target.value)} disabled={!ready} placeholder="Inspection Cycle…" />
       <select aria-label="Rotary waypoint position" value={selectedPositionKey} onChange={(event) => setSelectedPositionKey(event.target.value)} disabled={!ready || positions.length === 0}>
@@ -155,13 +190,18 @@ export function RotaryWaypointSequenceControls({
     </div>
     <div className={styles.axisGrid}>
       <button type="button" onClick={() => void saveSequence()} disabled={!ready || sequenceName.trim().length === 0 || draft.length === 0}>SAVE SEQUENCE</button>
-      <select aria-label="Rotary waypoint sequence" value={selectedSequenceKey} onChange={(event) => setSelectedSequenceKey(event.target.value)} disabled={!ready || sequences.length === 0}>
+      <select aria-label="Rotary waypoint sequence" value={selectedSequenceKey} onChange={(event) => { setSelectedSequenceKey(event.target.value); setLastPlan(null); }} disabled={!ready || sequences.length === 0}>
         <option value="">Select sequence…</option>
         {sequences.map((entry) => <option key={entry.key} value={entry.key}>{entry.name} · {entry.steps.length} steps</option>)}
       </select>
     </div>
     <div className={styles.axisGrid}>
+      <button type="button" onClick={previewSequence} disabled={!ready || !selectedSequence}>PREVIEW SEQUENCE</button>
       <button type="button" onClick={() => void runSequence()} disabled={!ready || !selectedSequence}>RUN SEQUENCE</button>
+    </div>
+    <small aria-label="Rotary waypoint sequence plan summary">{planText}</small>
+    <small aria-label="Rotary waypoint sequence plan segments">{planSegmentsText}</small>
+    <div className={styles.axisGrid}>
       <button type="button" onClick={() => void deleteSequence()} disabled={!ready || !selectedSequence}>DELETE SEQUENCE</button>
     </div>
   </div>;

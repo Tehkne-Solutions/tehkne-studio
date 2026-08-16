@@ -37,7 +37,6 @@ for (const token of [
   "sequences(relationshipId: string)",
   "sequence(relationshipId: string, name: string)",
   "this.namedPositions.position",
-  "#preflightTravel",
   "this.mechanical.travelLimits(relationshipId)",
   "ROTARY_CONTINUOUS_EPSILON",
   "this.mechanical.setContinuousTarget(",
@@ -59,11 +58,24 @@ for (const forbidden of [
 ]) {
   if (runtime.includes(forbidden)) throw new Error(`S2.30 sequence runtime must remain orchestration without parallel state/time/dynamics: ${forbidden}`);
 }
-const preflight = runtime.indexOf("this.#preflightTravel(command.payload.relationshipId, resolved)");
-const loop = runtime.indexOf("for (const waypoint of resolved)", preflight);
-const movement = runtime.indexOf("this.mechanical.setContinuousTarget(", loop);
-if (preflight < 0 || loop < 0 || movement < 0 || !(preflight < loop && loop < movement)) {
-  throw new Error("S2.30 must preflight all waypoints before the first canonical movement command");
+
+const runStart = runtime.indexOf("  async #executeRun(");
+const runEnd = runtime.indexOf("  #executeDelete(", runStart);
+if (runStart < 0 || runEnd < 0) throw new Error("S2.30 run body missing");
+const runBody = runtime.slice(runStart, runEnd);
+const loop = runBody.indexOf("for (const waypoint of resolved)");
+const movement = runBody.indexOf("this.mechanical.setContinuousTarget(", loop);
+const legacyPreflight = runBody.indexOf("this.#preflightTravel(command.payload.relationshipId, resolved)");
+const successorPlanBuild = runBody.indexOf("const plan = this.#buildPlan(command.payload.relationshipId, sequence, resolved, beforeContinuousRadians)");
+const successorPlanAssert = runBody.indexOf("this.#assertPlanAdmissible(plan)");
+const legacyValid = legacyPreflight >= 0 && loop >= 0 && movement >= 0 && legacyPreflight < loop && legacyPreflight < movement;
+const successorValid = successorPlanBuild >= 0 && successorPlanAssert >= 0 && loop >= 0 && movement >= 0
+  && successorPlanBuild < successorPlanAssert && successorPlanAssert < loop && successorPlanAssert < movement;
+if (!legacyValid && !successorValid) {
+  throw new Error("S2.30 must preflight all waypoints before the first canonical movement command, either through legacy travel preflight or a successor shared deterministic plan");
+}
+if (!runtime.includes("#preflightTravel") && !(runtime.includes("#buildPlan(") && runtime.includes("#assertPlanAdmissible(plan"))) {
+  throw new Error("S2.30 successor compatibility requires a recognizable all-waypoint preflight implementation");
 }
 
 const baseRuntime = await readFile("packages/invention-mechanical-command-runtime/src/index.ts", "utf8");
@@ -105,10 +117,14 @@ for (const token of [
   "data-sequence-final-rate-mode",
   'data-command-bus="session"',
   'data-sequence-execution="canonical-continuous-targets"',
-  'data-sequence-preflight="travel-limits-all-waypoints"',
   "sem relógio contínuo/dinâmica"
 ]) {
   if (!control.includes(token)) throw new Error(`S2.30 waypoint sequence UI contract missing: ${token}`);
+}
+const legacyUiPreflight = control.includes('data-sequence-preflight="travel-limits-all-waypoints"');
+const successorUiPreflight = control.includes('data-sequence-preflight="shared-read-only-plan"');
+if (!legacyUiPreflight && !successorUiPreflight) {
+  throw new Error("S2.30 UI must expose an all-waypoint preflight identity, including successor shared-plan projection");
 }
 for (const forbidden of ["localStorage", "setInterval(", "setTimeout(", "requestAnimationFrame(", "Date.now", "performance.now", "rpmSolver", "timelineState"]) {
   if (control.includes(forbidden)) throw new Error(`S2.30 UI draft must not become persisted/time/dynamics truth: ${forbidden}`);
@@ -194,4 +210,4 @@ for (const token of [
 }
 if (workflow.includes("contents: write")) throw new Error("S2.30 CI must remain read-only");
 
-console.log("S2.30 Rotary Waypoint Sequence PASS · ordered live Named Position references + optional explicit segment durations + all-waypoint travel preflight + canonical continuous-target execution + final-segment rate authority + persistence without replay + metadata-only authoring + exact browser label identity + no hidden clock/no dynamics solver + Tehkné Solutions");
+console.log(`S2.30 Rotary Waypoint Sequence PASS · ordered live Named Position references + optional explicit segment durations + ${successorValid ? "successor shared deterministic plan preflight" : "all-waypoint travel preflight"} + canonical continuous-target execution + final-segment rate authority + persistence without replay + metadata-only authoring + exact browser label identity + no hidden clock/no dynamics solver + Tehkné Solutions`);
