@@ -9,6 +9,7 @@ import {
 import {
   advanceRotaryContinuousState,
   rotaryContinuousState,
+  rotaryContinuousTargetDelta,
   type RotaryContinuousState
 } from "../../invention-assembly-runtime/src/rotary-continuous-angle.js";
 import {
@@ -20,6 +21,7 @@ import { mechanicalPortLocalPosition, mechanicalPortWorldPosition } from "./port
 
 export const MECHANICAL_ROTARY_STEP_COMMAND = "invention.mechanical.rotary.step" as const;
 export const MECHANICAL_ROTARY_TARGET_COMMAND = "invention.mechanical.rotary.setTarget" as const;
+export const MECHANICAL_ROTARY_CONTINUOUS_TARGET_COMMAND = "invention.mechanical.rotary.setContinuousTarget" as const;
 export const MECHANICAL_COMMAND_SIGNATURE = "Tehkné Solutions" as const;
 
 export interface MechanicalRotaryStepPayload {
@@ -30,6 +32,11 @@ export interface MechanicalRotaryStepPayload {
 export interface MechanicalRotaryTargetPayload {
   readonly relationshipId: string;
   readonly targetRadians: number;
+}
+
+export interface MechanicalRotaryContinuousTargetPayload {
+  readonly relationshipId: string;
+  readonly targetContinuousRadians: number;
 }
 
 export interface MechanicalRotaryKinematics extends RotaryContinuousState {
@@ -51,7 +58,7 @@ export interface MechanicalRotaryCommandResult {
   readonly beforeRevolutions: number;
   readonly afterRevolutions: number;
   readonly deltaRadians: number;
-  readonly mode: "incremental" | "principal-shortest";
+  readonly mode: "incremental" | "principal-shortest" | "continuous-absolute";
   readonly changed: boolean;
   readonly signature: typeof MECHANICAL_COMMAND_SIGNATURE;
 }
@@ -79,7 +86,9 @@ function numeric(value: unknown, label: string): number {
 }
 
 function rotaryEventType(type: string): boolean {
-  return type === "MechanicalRotaryStepExecuted" || type === "MechanicalRotaryTargetExecuted";
+  return type === "MechanicalRotaryStepExecuted"
+    || type === "MechanicalRotaryTargetExecuted"
+    || type === "MechanicalRotaryContinuousTargetExecuted";
 }
 
 export class InventionMechanicalCommandRuntime {
@@ -96,6 +105,9 @@ export class InventionMechanicalCommandRuntime {
     );
     this.session.commands.register(MECHANICAL_ROTARY_TARGET_COMMAND, (command) =>
       this.#executeTarget(command as StudioCommand<MechanicalRotaryTargetPayload>)
+    );
+    this.session.commands.register(MECHANICAL_ROTARY_CONTINUOUS_TARGET_COMMAND, (command) =>
+      this.#executeContinuousTarget(command as StudioCommand<MechanicalRotaryContinuousTargetPayload>)
     );
   }
 
@@ -124,6 +136,21 @@ export class InventionMechanicalCommandRuntime {
       id: this.#nextCommandId(),
       type: MECHANICAL_ROTARY_TARGET_COMMAND,
       payload: { relationshipId, targetRadians },
+      source,
+      issuedAt: new Date().toISOString()
+    });
+  }
+
+  async setContinuousTarget(
+    relationshipId: string,
+    targetContinuousRadians: number,
+    source: StudioCommand["source"] = "ui"
+  ): Promise<CommandResult<MechanicalRotaryCommandResult>> {
+    finiteRadians(targetContinuousRadians, "Mechanical rotary continuous target");
+    return this.session.commands.dispatch<MechanicalRotaryCommandResult>({
+      id: this.#nextCommandId(),
+      type: MECHANICAL_ROTARY_CONTINUOUS_TARGET_COMMAND,
+      payload: { relationshipId, targetContinuousRadians },
       source,
       issuedAt: new Date().toISOString()
     });
@@ -202,8 +229,15 @@ export class InventionMechanicalCommandRuntime {
     return this.#apply(command, command.payload.relationshipId, target.deltaRadians, target.mode);
   }
 
+  #executeContinuousTarget(command: StudioCommand<MechanicalRotaryContinuousTargetPayload>): MechanicalRotaryCommandResult {
+    finiteRadians(command.payload.targetContinuousRadians, "Mechanical rotary continuous target");
+    const before = this.kinematics(command.payload.relationshipId);
+    const target = rotaryContinuousTargetDelta(before.continuousRadians, command.payload.targetContinuousRadians);
+    return this.#apply(command, command.payload.relationshipId, target.deltaRadians, target.mode);
+  }
+
   #apply(
-    command: StudioCommand<MechanicalRotaryStepPayload | MechanicalRotaryTargetPayload>,
+    command: StudioCommand<MechanicalRotaryStepPayload | MechanicalRotaryTargetPayload | MechanicalRotaryContinuousTargetPayload>,
     relationshipId: string,
     deltaRadiansInput: number,
     mode: MechanicalRotaryCommandResult["mode"]
@@ -269,12 +303,17 @@ export class InventionMechanicalCommandRuntime {
   }
 
   #recordEvidence(
-    command: StudioCommand<MechanicalRotaryStepPayload | MechanicalRotaryTargetPayload>,
+    command: StudioCommand<MechanicalRotaryStepPayload | MechanicalRotaryTargetPayload | MechanicalRotaryContinuousTargetPayload>,
     result: MechanicalRotaryCommandResult
   ): void {
+    const eventType = result.mode === "incremental"
+      ? "MechanicalRotaryStepExecuted"
+      : result.mode === "principal-shortest"
+        ? "MechanicalRotaryTargetExecuted"
+        : "MechanicalRotaryContinuousTargetExecuted";
     this.session.events.record({
       id: `event-${this.session.events.list().length + 1}`,
-      type: result.mode === "incremental" ? "MechanicalRotaryStepExecuted" : "MechanicalRotaryTargetExecuted",
+      type: eventType,
       occurredAt: command.issuedAt,
       source: command.source,
       payload: {
