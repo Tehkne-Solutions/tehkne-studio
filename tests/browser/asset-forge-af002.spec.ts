@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-const AF002_BYTES = 22_600;
-const AF002_SHA256 = "48e8363cdc38b5ae93ace0b975c42498663e03c922970fb2b60e80c65d26b50e";
+const AF002_BYTES = 138_120;
+const AF002_SHA256 = "2eda04ec02fb31c65c2d1ecb342c18bc4d7eaedd02af9a93b676b8a66d1fc6e6";
 
-test("AF-002 runtime review loads both real GLBs and proves zero-gap socket snap in Chromium", async ({ page }, testInfo) => {
+test("AF-002 v0.5 HERO_CANDIDATE runtime loads both real GLBs and proves zero-gap socket snap in Chromium", async ({ page }, testInfo) => {
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -22,7 +22,14 @@ test("AF-002 runtime review loads both real GLBs and proves zero-gap socket snap
 
   expect(couplerResponse.status()).toBe(200);
   expect(couplerResponse.headers()["content-type"]).toContain("model/gltf-binary");
+  expect(couplerResponse.headers()["x-tehkne-asset-version"]).toBe("0.5.0-hero-quality");
+  expect(couplerResponse.headers()["x-tehkne-asset-stage"]).toBe("HERO_CANDIDATE");
+  expect(couplerResponse.headers()["x-tehkne-asset-triangles"]).toBe("19520");
   expect(couplerResponse.headers()["x-tehkne-asset-sha256"]).toBe(AF002_SHA256);
+  expect(couplerResponse.headers()["x-tehkne-runtime-promoted"]).toBe("true");
+  expect(couplerResponse.headers()["x-tehkne-hero-promoted"]).toBe("true");
+  expect(couplerResponse.headers()["x-tehkne-golden-asset"]).toBe("false");
+  expect(couplerResponse.headers()["x-tehkne-signature"]).toBe("Tehkné Solutions");
   expect((await couplerResponse.body()).byteLength).toBe(AF002_BYTES);
 
   await page.goto("/asset-forge/af002", { waitUntil: "networkidle" });
@@ -40,10 +47,10 @@ test("AF-002 runtime review loads both real GLBs and proves zero-gap socket snap
   const canvas = page.locator("canvas");
   await expect(canvas).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(1500);
-  await page.screenshot({ path: testInfo.outputPath("af002-runtime-snap.png"), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath("af002-v05-hero-candidate-runtime-snap.png"), fullPage: true });
 
   expect(pageErrors, `page errors: ${pageErrors.join(" | ")}`).toEqual([]);
   expect(consoleErrors, `console errors: ${consoleErrors.join(" | ")}`).toEqual([]);
 
-  console.log(`AF002_BROWSER_EVIDENCE bytes=${AF002_BYTES} sha256=${AF002_SHA256} topology=connectedTo motor_socket=SOCKET_MECH_AXIS_OUT coupler_socket=SOCKET_MECH_AXIS_IN endpoint_gap_m=0.000000`);
+  console.log(`AF002_BROWSER_EVIDENCE stage=HERO_CANDIDATE version=0.5.0-hero-quality bytes=${AF002_BYTES} triangles=19520 sha256=${AF002_SHA256} runtime_promoted=true hero_promoted=true golden_asset=false topology=connectedTo motor_socket=SOCKET_MECH_AXIS_OUT coupler_socket=SOCKET_MECH_AXIS_IN endpoint_gap_m=0.000000 signature=Tehkné Solutions`);
 });
