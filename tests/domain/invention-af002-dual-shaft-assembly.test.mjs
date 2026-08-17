@@ -28,9 +28,9 @@ test("S2.33 preserves AF-002 engineering-reference authority and dual rotary por
   assert.ok(definition);
   assert.equal(definition.metadata.assetForgeId, "AF-002");
   assert.equal(definition.metadata.assetForgeSku, "TS_MECH_SHAFT_COUPLER_A");
-  assert.ok(["ENGINEERING_REFERENCE", "RUNTIME_CANDIDATE"].includes(definition.metadata.assetForgeStage));
+  assert.ok(["ENGINEERING_REFERENCE", "RUNTIME_CANDIDATE", "HERO_CANDIDATE"].includes(definition.metadata.assetForgeStage));
   assert.equal(definition.metadata.signature, "Tehkné Solutions");
-  assert.ok(["PROXY_EXPLICIT_ENGINEERING_REFERENCE", "FALLBACK_ONLY_RUNTIME_CANDIDATE"].includes(definition.metadata.spatialProxy.status));
+  assert.ok(["PROXY_EXPLICIT_ENGINEERING_REFERENCE", "FALLBACK_ONLY_RUNTIME_CANDIDATE", "FALLBACK_ONLY_HERO_CANDIDATE"].includes(definition.metadata.spatialProxy.status));
   assert.deepEqual(definition.metadata.spatialProxy.portAnchors["axis-in"].position, [0, 0, -0.0175]);
   assert.deepEqual(definition.metadata.spatialProxy.portAnchors["axis-out"].position, [0, 0, 0.0175]);
   assert.deepEqual(definition.metadata.spatialProxy.portAnchors["axis-in"].axis, [0, 0, -1]);
@@ -45,6 +45,14 @@ test("S2.33 preserves AF-002 engineering-reference authority and dual rotary por
   assert.equal(definition.metadata.physicalClaims.stiffness, false);
   assert.equal(definition.metadata.physicalClaims.damping, false);
   assert.equal(definition.metadata.physicalClaims.manufacturingCertification, false);
+  if (definition.metadata.assetForgeStage === "HERO_CANDIDATE") {
+    assert.equal(definition.metadata.assetForgeVersion, "0.5.0-hero-quality");
+    assert.equal(definition.metadata.runtimeAsset.status, "HERO_CANDIDATE");
+    assert.equal(definition.metadata.runtimeAsset.bytes, 138120);
+    assert.equal(definition.metadata.runtimeAsset.sha256, "2eda04ec02fb31c65c2d1ecb342c18bc4d7eaedd02af9a93b676b8a66d1fc6e6");
+    assert.equal(definition.metadata.visualAsset.status, "HERO_CANDIDATE");
+    assert.equal(definition.metadata.visualAsset.triangles, 19520);
+  }
 });
 
 test("S2.33 AF-002 participates in two distinct canonical connectedTo relationships without a parallel transmission graph", async () => {
