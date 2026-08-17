@@ -3,10 +3,20 @@ import { gunzipSync } from "node:zlib";
 import chunk0 from "./lod0/payload-v050-0";
 import chunk1 from "./lod0/payload-v050-1";
 import chunk2 from "./lod0/payload-v050-2";
-import chunk3 from "./lod0/payload-v050-3";
+import chunk3s0 from "./lod0/payload-v050-3s0";
+import chunk3s1 from "./lod0/payload-v050-3s1";
+import chunk3s2 from "./lod0/payload-v050-3s2";
+import chunk3s3 from "./lod0/payload-v050-3s3";
+import chunk3s4 from "./lod0/payload-v050-3s4";
+import chunk3s5 from "./lod0/payload-v050-3s5";
 import chunk4 from "./lod0/payload-v050-4";
 import chunk5 from "./lod0/payload-v050-5";
-import chunk6 from "./lod0/payload-v050-6";
+import chunk6s0 from "./lod0/payload-v050-6s0";
+import chunk6s1 from "./lod0/payload-v050-6s1";
+import chunk6s2 from "./lod0/payload-v050-6s2";
+import chunk6s3 from "./lod0/payload-v050-6s3";
+import chunk6s4 from "./lod0/payload-v050-6s4";
+import chunk6s5 from "./lod0/payload-v050-6s5";
 
 const EXPECTED_GZIP_BYTES = 31462;
 const EXPECTED_GZIP_SHA256 = "81d01b94a46d6cd160c8ebc47603ec911fe37ed6cab9c3bac1e655e202f4827c";
@@ -18,7 +28,26 @@ function sha256(buffer: Buffer) {
 }
 
 export async function GET() {
-  const compressed = Buffer.from(chunk0 + chunk1 + chunk2 + chunk3 + chunk4 + chunk5 + chunk6, "base64");
+  const encoded = [
+    chunk0,
+    chunk1,
+    chunk2,
+    chunk3s0,
+    chunk3s1,
+    chunk3s2,
+    chunk3s3,
+    chunk3s4,
+    chunk3s5,
+    chunk4,
+    chunk5,
+    chunk6s0,
+    chunk6s1,
+    chunk6s2,
+    chunk6s3,
+    chunk6s4,
+    chunk6s5
+  ].join("");
+  const compressed = Buffer.from(encoded, "base64");
   if (compressed.length !== EXPECTED_GZIP_BYTES || sha256(compressed) !== EXPECTED_GZIP_SHA256) {
     return new Response("AF-002 runtime transport integrity failure", { status: 500 });
   }
