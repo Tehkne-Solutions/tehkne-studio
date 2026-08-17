@@ -4,10 +4,10 @@ import { resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
 
 const ROOT = resolve(process.cwd());
-const EXPECTED_GZIP_BYTES = 5032;
-const EXPECTED_GZIP_SHA256 = "2bd7f252777249e6b27cadded8fb90485968dd41d6b933c33d3d1338a65c0e38";
-const EXPECTED_GLB_BYTES = 22600;
-const EXPECTED_GLB_SHA256 = "48e8363cdc38b5ae93ace0b975c42498663e03c922970fb2b60e80c65d26b50e";
+const EXPECTED_GZIP_BYTES = 31462;
+const EXPECTED_GZIP_SHA256 = "81d01b94a46d6cd160c8ebc47603ec911fe37ed6cab9c3bac1e655e202f4827c";
+const EXPECTED_GLB_BYTES = 138120;
+const EXPECTED_GLB_SHA256 = "2eda04ec02fb31c65c2d1ecb342c18bc4d7eaedd02af9a93b676b8a66d1fc6e6";
 const EXPECTED_SOCKET_TRANSLATIONS = new Map([
   ["SOCKET_MECH_AXIS_IN", [0, 0, -0.0175]],
   ["SOCKET_MECH_AXIS_OUT", [0, 0, 0.0175]],
@@ -24,11 +24,13 @@ function sha256(buffer) {
 }
 
 function payload(index) {
-  const path = resolve(ROOT, `apps/studio-web/app/api/asset-forge/af002/coupler/lod0/payload-v030-${index}.ts`);
+  const path = resolve(ROOT, `apps/studio-web/app/api/asset-forge/af002/coupler/lod0/payload-v050-${index}.ts`);
   const source = readFileSync(path, "utf8").trim();
-  const match = source.match(/^export default "([A-Za-z0-9+/=]+)";$/);
-  if (!match) fail(`invalid payload module ${path}`);
-  return match[1];
+  const direct = source.match(/^export default "([A-Za-z0-9+/=]+)";$/);
+  if (direct) return direct[1];
+  const declared = source.match(/^const payload = "([A-Za-z0-9+/=]+)";\s*export default payload;$/s);
+  if (!declared) fail(`invalid payload module ${path}`);
+  return declared[1];
 }
 
 function glbDocument(glb) {
@@ -47,7 +49,7 @@ function glbDocument(glb) {
   fail("GLB JSON chunk missing");
 }
 
-const compressed = Buffer.from(payload(0) + payload(1), "base64");
+const compressed = Buffer.from(Array.from({ length: 7 }, (_, index) => payload(index)).join(""), "base64");
 if (compressed.length !== EXPECTED_GZIP_BYTES) fail(`gzip bytes ${compressed.length} != ${EXPECTED_GZIP_BYTES}`);
 if (sha256(compressed) !== EXPECTED_GZIP_SHA256) fail("gzip SHA-256 mismatch");
 
@@ -70,15 +72,20 @@ const extension = JSON.parse(readFileSync(resolve(ROOT, "library/components/exte
 const component = extension.components?.find((entry) => entry.definitionId === "mechanical.coupler.shaft-a-v1");
 if (!component) fail("AF-002 component extension missing");
 const metadata = component.metadata ?? {};
-if (metadata.assetForgeStage !== "RUNTIME_CANDIDATE") fail("component stage is not RUNTIME_CANDIDATE");
+if (metadata.assetForgeVersion !== "0.5.0-hero-quality") fail("component version is not v0.5 hero quality");
+if (metadata.assetForgeStage !== "HERO_CANDIDATE") fail("component stage is not HERO_CANDIDATE");
 if (metadata.runtimeAsset?.url !== "/api/asset-forge/af002/coupler") fail("runtime URL mismatch");
+if (metadata.runtimeAsset?.status !== "HERO_CANDIDATE") fail("runtime asset status mismatch");
+if (metadata.runtimeAsset?.bytes !== EXPECTED_GLB_BYTES) fail("runtime component byte count mismatch");
 if (metadata.runtimeAsset?.sha256 !== EXPECTED_GLB_SHA256) fail("runtime component SHA mismatch");
-if (metadata.spatialProxy?.status !== "FALLBACK_ONLY_RUNTIME_CANDIDATE") fail("proxy is not fallback-only");
+if (metadata.visualAsset?.triangles !== 19520) fail("runtime visual triangle count mismatch");
+if (metadata.spatialProxy?.status !== "FALLBACK_ONLY_HERO_CANDIDATE") fail("proxy is not HERO fallback-only");
 for (const forbidden of ["torqueCapacity", "maxRpm", "misalignmentCapacity", "stiffness", "damping", "manufacturingCertification"]) {
   if (metadata.physicalClaims?.[forbidden] !== false) fail(`unsupported physical claim ${forbidden} must remain false`);
 }
+if (JSON.stringify(metadata).includes("GOLDEN_ASSET")) fail("GOLDEN_ASSET must remain blocked");
 
-console.log(`AF002_RUNTIME_CANDIDATE PASS gzip_bytes=${compressed.length} glb_bytes=${glb.length} sockets=${EXPECTED_SOCKET_TRANSLATIONS.size}`);
+console.log(`AF002_HERO_CANDIDATE_RUNTIME PASS gzip_bytes=${compressed.length} glb_bytes=${glb.length} triangles=19520 sockets=${EXPECTED_SOCKET_TRANSLATIONS.size}`);
 console.log(`AF002_RUNTIME_GLB_SHA256 ${EXPECTED_GLB_SHA256}`);
 console.log("AF002_NEXT_GATE STUDIO_RENDER_AND_AF001_SNAP_EVIDENCE");
 console.log("Tehkné Solutions");
