@@ -30,27 +30,27 @@
       "metadata": {
         "assetForgeId": "AF-002",
         "assetForgeSku": "TS_MECH_SHAFT_COUPLER_A",
-        "assetForgeVersion": "0.3.0-dcc-candidate",
-        "assetForgeStage": "RUNTIME_CANDIDATE",
+        "assetForgeVersion": "0.5.0-hero-quality",
+        "assetForgeStage": "HERO_CANDIDATE",
         "provenance": "tools/asset_forge/af002_v02/dcc_qa_evidence.json",
         "signature": "Tehkné Solutions",
         "runtimeAsset": {
           "kind": "glb",
           "url": "/api/asset-forge/af002/coupler",
-          "bytes": 22600,
-          "sha256": "48e8363cdc38b5ae93ace0b975c42498663e03c922970fb2b60e80c65d26b50e",
-          "status": "RUNTIME_CANDIDATE"
+          "bytes": 138120,
+          "sha256": "2eda04ec02fb31c65c2d1ecb342c18bc4d7eaedd02af9a93b676b8a66d1fc6e6",
+          "status": "HERO_CANDIDATE"
         },
         "visualAsset": {
           "kind": "gltf",
           "assetId": "TS_MECH_SHAFT_COUPLER_A",
-          "version": "0.3.0-dcc-candidate",
-          "status": "RUNTIME_CANDIDATE",
+          "version": "0.5.0-hero-quality",
+          "status": "HERO_CANDIDATE",
           "lod": "LOD0",
           "runtimeUrl": "/api/asset-forge/af002/coupler",
-          "triangles": 1792,
-          "bytes": 22600,
-          "sha256": "48e8363cdc38b5ae93ace0b975c42498663e03c922970fb2b60e80c65d26b50e"
+          "triangles": 19520,
+          "bytes": 138120,
+          "sha256": "2eda04ec02fb31c65c2d1ecb342c18bc4d7eaedd02af9a93b676b8a66d1fc6e6"
         },
         "portSocketMap": {
           "axis-in": "SOCKET_MECH_AXIS_IN",
@@ -77,7 +77,7 @@
         },
         "spatialProxy": {
           "kind": "shaft-coupler",
-          "status": "FALLBACK_ONLY_RUNTIME_CANDIDATE",
+          "status": "FALLBACK_ONLY_HERO_CANDIDATE",
           "dimensionsM": { "radius": 0.015, "length": 0.035, "boreRadius": 0.005 },
           "portAnchors": {
             "axis-in": { "name": "SOCKET_MECH_AXIS_IN", "position": [0, 0, -0.0175], "axis": [0, 0, -1] },
