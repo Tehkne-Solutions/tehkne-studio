@@ -8,6 +8,7 @@ const EXPECTED_GZIP_BYTES = 31462;
 const EXPECTED_GZIP_SHA256 = "81d01b94a46d6cd160c8ebc47603ec911fe37ed6cab9c3bac1e655e202f4827c";
 const EXPECTED_GLB_BYTES = 138120;
 const EXPECTED_GLB_SHA256 = "2eda04ec02fb31c65c2d1ecb342c18bc4d7eaedd02af9a93b676b8a66d1fc6e6";
+const PAYLOAD_SUFFIXES = ["0", "1", "2", "3s0", "3s1", "3s2", "3s3", "3s4", "3s5", "4", "5", "6s0", "6s1", "6s2", "6s3", "6s4", "6s5"];
 const EXPECTED_SOCKET_TRANSLATIONS = new Map([
   ["SOCKET_MECH_AXIS_IN", [0, 0, -0.0175]],
   ["SOCKET_MECH_AXIS_OUT", [0, 0, 0.0175]],
@@ -23,8 +24,8 @@ function sha256(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
-function payload(index) {
-  const path = resolve(ROOT, `apps/studio-web/app/api/asset-forge/af002/coupler/lod0/payload-v050-${index}.ts`);
+function payload(suffix) {
+  const path = resolve(ROOT, `apps/studio-web/app/api/asset-forge/af002/coupler/lod0/payload-v050-${suffix}.ts`);
   const source = readFileSync(path, "utf8").trim();
   const direct = source.match(/^export default "([A-Za-z0-9+/=]+)";$/);
   if (direct) return direct[1];
@@ -49,7 +50,7 @@ function glbDocument(glb) {
   fail("GLB JSON chunk missing");
 }
 
-const compressed = Buffer.from(Array.from({ length: 7 }, (_, index) => payload(index)).join(""), "base64");
+const compressed = Buffer.from(PAYLOAD_SUFFIXES.map(payload).join(""), "base64");
 if (compressed.length !== EXPECTED_GZIP_BYTES) fail(`gzip bytes ${compressed.length} != ${EXPECTED_GZIP_BYTES}`);
 if (sha256(compressed) !== EXPECTED_GZIP_SHA256) fail("gzip SHA-256 mismatch");
 
