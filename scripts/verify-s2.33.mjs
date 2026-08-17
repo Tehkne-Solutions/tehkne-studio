@@ -25,11 +25,11 @@ if (extension.signature !== "Tehkné Solutions") throw new Error("S2.33 extensio
 const coupler = extension.components?.find((entry) => entry.definitionId === "mechanical.coupler.shaft-a-v1");
 if (!coupler) throw new Error("S2.33 AF-002 component definition missing");
 if (coupler.metadata?.assetForgeId !== "AF-002" || coupler.metadata?.assetForgeSku !== "TS_MECH_SHAFT_COUPLER_A") throw new Error("S2.33 component identity mismatch");
-const allowedStages = new Set(["ENGINEERING_REFERENCE", "RUNTIME_CANDIDATE"]);
+const allowedStages = new Set(["ENGINEERING_REFERENCE", "RUNTIME_CANDIDATE", "HERO_CANDIDATE"]);
 if (!allowedStages.has(coupler.metadata?.assetForgeStage)) throw new Error(`S2.33 unauthorized AF-002 presentation stage: ${coupler.metadata?.assetForgeStage}`);
 const allowedProvenance = new Set([referencePath, "tools/asset_forge/af002_v02/dcc_qa_evidence.json"]);
 if (!allowedProvenance.has(coupler.metadata?.provenance)) throw new Error("S2.33 component must retain canonical AF-002 reference/DCC provenance");
-const allowedProxyStatuses = new Set(["PROXY_EXPLICIT_ENGINEERING_REFERENCE", "FALLBACK_ONLY_RUNTIME_CANDIDATE"]);
+const allowedProxyStatuses = new Set(["PROXY_EXPLICIT_ENGINEERING_REFERENCE", "FALLBACK_ONLY_RUNTIME_CANDIDATE", "FALLBACK_ONLY_HERO_CANDIDATE"]);
 if (!allowedProxyStatuses.has(coupler.metadata?.spatialProxy?.status)) throw new Error("S2.33 AF-002 proxy/fallback stage is unauthorized");
 for (const [portId, direction, socket] of [["axis-in", "in", inputSocket], ["axis-out", "out", outputSocket]]) {
   const port = coupler.ports?.[portId];
@@ -42,6 +42,13 @@ for (const [portId, direction, socket] of [["axis-in", "in", inputSocket], ["axi
 for (const claim of ["torqueCapacity", "maxRpm", "misalignmentCapacity", "stiffness", "damping", "manufacturingCertification"]) {
   if (reference.claims?.[claim] !== false || coupler.metadata?.physicalClaims?.[claim] !== false) throw new Error(`S2.33 unsupported AF-002 physical claim must remain false: ${claim}`);
 }
+if (coupler.metadata?.assetForgeStage === "HERO_CANDIDATE") {
+  const runtime = coupler.metadata?.runtimeAsset;
+  const visual = coupler.metadata?.visualAsset;
+  if (coupler.metadata.assetForgeVersion !== "0.5.0-hero-quality") throw new Error("S2.33 HERO candidate version mismatch");
+  if (runtime?.status !== "HERO_CANDIDATE" || runtime?.bytes !== 138120 || runtime?.sha256 !== "2eda04ec02fb31c65c2d1ecb342c18bc4d7eaedd02af9a93b676b8a66d1fc6e6") throw new Error("S2.33 HERO runtime fingerprint mismatch");
+  if (visual?.status !== "HERO_CANDIDATE" || visual?.triangles !== 19520 || visual?.bytes !== 138120 || visual?.sha256 !== runtime.sha256) throw new Error("S2.33 HERO visual fingerprint mismatch");
+}
 
 const testSource = await readFile("tests/domain/invention-af002-dual-shaft-assembly.test.mjs", "utf8");
 for (const token of [
@@ -53,8 +60,8 @@ for (const token of [
   "transmissionGraph"
 ]) if (!testSource.includes(token)) throw new Error(`S2.33 dual-shaft evidence missing: ${token}`);
 
-for (const forbidden of ["GOLDEN_ASSET", "HERO_CANDIDATE", "torqueSolver", "rpmSolver", "transmissionMap", "parallelTransmissionGraph"]) {
-  if (JSON.stringify(coupler).includes(forbidden)) throw new Error(`S2.33 cannot invent AF-002 hero/dynamics state: ${forbidden}`);
+for (const forbidden of ["GOLDEN_ASSET", "torqueSolver", "rpmSolver", "transmissionMap", "parallelTransmissionGraph"]) {
+  if (JSON.stringify(coupler).includes(forbidden)) throw new Error(`S2.33 cannot invent AF-002 golden/dynamics state: ${forbidden}`);
 }
 
-console.log("S2.33 AF-002 Dual-Shaft Assembly PASS · canonical engineering-reference authority + stage-monotonic presentation through RUNTIME_CANDIDATE + two rotary ports mirrored from AF-002 socket authority + motor→coupler→wheel connectedTo topology + fallback proxy preserved + no torque/RPM fiction + Tehkné Solutions");
+console.log("S2.33 AF-002 Dual-Shaft Assembly PASS · canonical engineering-reference authority + stage-monotonic presentation through HERO_CANDIDATE + v0.5 runtime fingerprint + two rotary ports mirrored from AF-002 socket authority + motor→coupler→wheel connectedTo topology + fallback proxy preserved + no GOLDEN/torque/RPM fiction + Tehkné Solutions");
